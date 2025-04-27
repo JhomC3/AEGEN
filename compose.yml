@@ -1,0 +1,29 @@
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      - N8N_HOST= localhost
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - NODE_ENV=production
+      - GENERIC_TIMEZONE=America/Bogota
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: unless-stopped
+
+  search_yt_agent:
+    build:
+      context: ./langchain_agents/search_yt_agent
+
+    container_name: search_yt_agent
+
+    environment:
+      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
+
+    restart: unless-stopped
+
+volumes:
+  n8n_data:
