@@ -1,0 +1,100 @@
+[build-system]
+requires = ["setuptools >= 65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "onchainiq"
+version = "0.1.0"
+description = "Sistema multiagente para analisis onchain/offchain"
+authors = [{ name = "Jhonn Muñoz C.", email = "jhonnmcortes@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+license-files = ["LICENSE"]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "pydantic-settings",
+    "pandas",
+    "numpy",
+    "langchain",
+    "google-generativeai",
+    "python-dotenv",
+    "httpx",
+    "structlog",
+    "python-json-logger",
+    "redis[hiredis]",
+    "fastapi-cache2[redis]",
+]
+
+[project.optional-dependencies]
+dev = ["onchainiq[test, lint, doc]", "ipykernel"]
+
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+    "pytest-mock",
+    "responses",
+    "freezegun",
+]
+
+lint = [
+    "black",
+    "ruff",
+    "mypy",
+    "pre-commit",
+    "bandit",
+    "safety",
+    # --- Stubs de Tipos ---
+    "types-redis",
+    # "Types-requests",
+]
+
+doc = ["mkdocs", "mkdocs-material", "pymdown.extensions"]
+
+[project.urls]
+Homepage = "https://github.com/JhomC3/OnchainIQ"
+Documentation = "https://github.com/JhomC3/OnchainIQ/docs"
+Repository = "https://github.com/JhomC3/OnchainIQ"
+Issues = "https://github.com/JhomC3/OnchainIQ/issues"
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "C", "B", "N", "UP", "ASYNC", "TID"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.black]
+line-length = 88
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --cov=src --cov-report=term-missing"
+testpaths = ["tests"]
+
+asyncio_mode = "auto"
+
+[tool.bandit]
+skips = ["B101"]
+
+# disallow_untyped_def = true # Asegúrate de que esta línea y las siguientes usen # para comentarios si estaban activas
+# warn_redundant_cast = true
+# warn_unuused_ignore = true

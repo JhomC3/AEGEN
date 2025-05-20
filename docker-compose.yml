@@ -1,0 +1,69 @@
+# docker-compose.yml (Base para producción)
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: onchainiq_app_prod # Nombre distinto para prod
+    # No mapear puertos por defecto (proxy inverso manejará esto)
+    # ports:
+    #   - "8000" # Solo expone dentro de Docker
+    env_file:
+      - .env # Usar variables de .env (asegurar que APP_ENV=prod)
+    # No montar volúmenes en producción (excepto datos persistentes si aplica)
+    # volumes:
+    #   - logs_data:/app/logs # Ejemplo si se loguea a archivo
+    networks:
+      - onchainiq_network
+    restart: unless-stopped # Reiniciar si falla
+    healthcheck:
+      # Replicar healthcheck del Dockerfile o ajustarlo
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      redis:
+        # Depende del servicio de Redis
+        condition: service_healthy # Esperar a que Redis esté listo
+      # vector_db: # Si tienes un servicio de Vector DB
+      #   condition: service_started
+
+  redis:
+    image: redis:alpine3.21
+    container_name: onchainiq_redis
+    networks:
+      - onchainiq_network
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+  # vector_db: # Ejemplo con ChromaDB persistente
+  #   image: chromadb/chroma:latest
+  #   container_name: onchainiq_vector_db
+  #   environment:
+  #     - IS_PERSISTENT=TRUE
+  #     - CHROMA_SERVER_HOST=0.0.0.0 # Escuchar en todas las interfaces
+  #   volumes:
+  #     - chromadb_data:/chroma/.chroma/index
+  #   networks:
+  #     - onchainiq_network
+  #   ports: # Exponer solo si se accede externamente a ChromaDB
+  #      - "8001:8000"
+  #   restart: unless-stopped
+
+volumes:
+  redis_data:
+  chromadb_data:
+    # logs_data:
+
+networks:
+  onchainiq_network:
+    driver: bridge
