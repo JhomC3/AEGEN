@@ -9,7 +9,7 @@ from .exceptions import AppBaseError  # Importar tu excepción base
 logger = logging.getLogger(__name__)
 
 
-async def app_base_exception_handler(request: Request, exc: AppBaseError):
+async def app_base_exception_handler(request: Request, exc: Exception) -> Response:
     if not isinstance(exc, AppBaseError):
         return await generic_exception_handler(request, exc)
     logger.error(
