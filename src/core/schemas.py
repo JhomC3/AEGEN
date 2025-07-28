@@ -233,6 +233,16 @@ class AnalyzeResponse(BaseModel):
     }
 
 
+class IngestionResponse(BaseModel):
+    """Respuesta para el endpoint de ingestión no bloqueante."""
+
+    task_id: str = Field(..., description="Unique identifier for the accepted task.")
+    message: str = Field(
+        default="Request accepted for processing.",
+        description="Confirms that the request has been accepted.",
+    )
+
+
 # --- Esquemas Internos (Ejemplos, si los agentes necesitan estructuras bien definidas) ---
 class PlanStep(BaseModel):
     """Representa un paso en el plan de análisis."""

@@ -11,8 +11,9 @@ from src.api.routers import analysis as analysis_router
 from src.api.routers import status as status_router
 from src.core.config import settings
 from src.core.dependencies import (
+    get_workflow_coordinator,
     initialize_global_resources,
-    prime_agent_dependencies,
+    prime_dependencies,
     shutdown_global_resources,
 )
 from src.core.error_handling import register_exception_handlers
@@ -33,12 +34,9 @@ async def lifespan(app: FastAPI):
     )
     logger.info(f"Lifespan: Debug mode is {'ON' if settings.DEBUG_MODE else 'OFF'}.")
 
-    redis_client = (
-        await initialize_global_resources()
-    )  # Inicializa Redis, LLM clients, etc.
-    if (
-        redis_client and settings.REDIS_URL
-    ):  # Solo inicializa caché si Redis está disponible
+    redis_client, event_bus = await initialize_global_resources()
+
+    if redis_client and settings.REDIS_URL:
         try:
             FastAPICache.init(RedisBackend(redis_client), prefix="aegen-cache")
             logger.info(
@@ -53,12 +51,15 @@ async def lifespan(app: FastAPI):
             "Lifespan: Redis client not available. FastAPI Cache NOT initialized."
         )
 
-    prime_agent_dependencies()  # "Calienta" los singletons de agentes
+    # "Calienta" las dependencias singleton y suscribe los workers
+    prime_dependencies()
+    coordinator = get_workflow_coordinator()
+    await event_bus.subscribe("workflow_tasks", coordinator.handle_workflow_event)
 
     logger.info("Lifespan: Application startup complete.")
     yield
     logger.info(f"Lifespan: Shutting down {settings.APP_NAME}...")
-    await shutdown_global_resources()  # Limpia Redis, LLM clients, etc.
+    await shutdown_global_resources()
     logger.info("Lifespan: Application shutdown complete.")
 
 
@@ -68,22 +69,17 @@ app = FastAPI(
     version=settings.APP_VERSION,
     description="API para análisis blockchain multi-agente, impulsada por IA.",
     lifespan=lifespan,
-    debug=settings.DEBUG_MODE,  # Controla el modo debug de FastAPI
-    # openapi_url="/api/v1/openapi.json", # Si quieres cambiar la URL de OpenAPI
-    # docs_url="/api/docs", # Si quieres cambiar la URL de Swagger
-    # redoc_url="/api/redoc", # Si quieres cambiar la URL de ReDoc
-    openapi_tags=[  # Define tags para agrupar endpoints en Swagger
+    debug=settings.DEBUG_MODE,
+    openapi_tags=[
         {"name": "Status", "description": "Endpoints de estado y monitoreo de la API."},
         {
             "name": "Analysis",
-            "description": "Operaciones principales de análisis blockchain.",
+            "description": "Operaciones principales de análisis y ingestión.",
         },
-        # Puedes añadir más tags para otros grupos de endpoints
     ],
 )
 
 # --- Middleware ---
-# CORS (Configuración flexible)
 if settings.ALLOWED_HOSTS == ["*"]:
     logger.warning(
         "CORS 'allow_origins' está configurado como '*' (permitir todo). Considera restringirlo en producción."
@@ -91,13 +87,12 @@ if settings.ALLOWED_HOSTS == ["*"]:
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.ALLOWED_HOSTS,  # Usa la config de Pydantic
+    allow_origins=settings.ALLOWED_HOSTS,
     allow_credentials=True,
-    allow_methods=["*"],  # O especifica: ["GET", "POST"]
-    allow_headers=["*"],  # O especifica: ["Content-Type", "Authorization"]
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
-# Trusted Host (Solo si no es debug y hay hosts definidos)
 if not settings.DEBUG_MODE and settings.ALLOWED_HOSTS != ["*"]:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
     logger.info(f"TrustedHostMiddleware enabled for hosts: {settings.ALLOWED_HOSTS}")
@@ -108,9 +103,23 @@ register_exception_handlers(app)
 
 
 # --- Routers ---
-app.include_router(status_router.router)  # Incluye el router de status
-app.include_router(
-    analysis_router.router, prefix="/api/v1"
-)  # Incluye el router de análisis con prefijo
+app.include_router(status_router.router)
+app.include_router(analysis_router.router, prefix="/api/v1")
 
 logger.info(f"FastAPI application '{settings.APP_NAME}' configured and ready.")
+
+
+# --- Punto de entrada para Uvicorn (si se ejecuta directamente) ---
+if __name__ == "__main__":
+    logger.info(
+        f"Running {settings.APP_NAME} directly with Uvicorn. This is for development only."
+    )
+    import uvicorn
+
+    uvicorn.run(
+        "src.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        log_level=settings.LOG_LEVEL.lower(),
+    )
