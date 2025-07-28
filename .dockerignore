@@ -1,0 +1,99 @@
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Environment
+.env
+.venv/
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Python cache and compiled files
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+.python-version
+
+# Packaging
+dist/
+build/
+wheels/
+*.dist-info/
+pip-wheel-metadata/
+sdist/
+*.tar.gz
+*.whl
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Databases
+*.sqlite3
+*.sqlite3-journal
+*.db
+
+# Testing
+tests/
+test/
+*.test.py
+*.tests.py
+test_*.py
+*_test.py
+*_tests.py
+*.spec.py
+pytest.ini
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+nosetests.xml
+
+# Jupyter Notebooks
+*.ipynb
+.ipynb_checkpoints/
+
+# Python tools cache and config
+.mypy_cache/
+.tox/
+.nox/
+.hypothesis/
+.cache/
+.ruff_cache/
+.pylintrc
+# pyproject.toml
+# poetry.lock
+# Pipfile.lock
+
+# IDE and editor files
+.vscode/
+.idea/
+*.project
+*.pydevproject
+*.sublime-workspace
+*.sublime-project
+*.tmproj
+.DS_Store
+Thumbs.db
+
+# Temporary and backup files
+*.swp
+*.swo
+*.swn
+*~
+*.bak
+*.tmp
+*.temp
+
+# Local Docker configuration
+Dockerfile.local
+docker-compose.yml.override

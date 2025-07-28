@@ -1,0 +1,120 @@
+[build-system]
+requires = ["setuptools >= 65.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aegen"
+version = "0.1.0"
+description = "Sistema multiagente"
+authors = [{ name = "Jhonn Muñoz C.", email = "jhonnmcortes@gmail.com" }]
+readme = "README.md"
+requires-python = ">=3.13"
+license = "MIT"
+license-files = ["LICENSE"]
+
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "fastapi",
+    "fastapi-cache2[redis]",
+    "google",
+    "google-api-python-client",
+    "google-genai",
+    "google-generativeai",
+    "httpx",
+    "langchain",
+    "langchain[google-genai]",
+    "langchain-tavily",
+    "langgraph",
+    "langsmith",
+    "numpy",
+    "openai-whisper",
+    "pandas",
+    "pydantic-settings",
+    "python-dotenv",
+    "python-json-logger",
+    "python-telegram-bot",
+    "yt-dlp",
+    "redis[hiredis]",
+    "structlog",
+    "uvicorn[standard]",
+    "chromadb",
+    "whisper",
+    "PIL",
+    "pytesseract",
+    "pypdf",
+    "python-docx",
+    "python-pptx",
+    "openpyxl",
+]
+
+[project.optional-dependencies]
+dev = ["aegen[test, lint, doc]", "ipykernel"]
+
+test = [
+    "pytest",
+    "pytest-cov",
+    "pytest-asyncio",
+    "pytest-mock",
+    "responses",
+    "freezegun",
+]
+
+lint = [
+    "black",
+    "ruff",
+    "mypy",
+    "pre-commit",
+    "bandit",
+    "safety",
+    # --- Stubs de Tipos ---
+    "types-redis",
+    # "Types-requests",
+]
+
+doc = ["mkdocs", "mkdocs-material", "pymdown.extensions"]
+
+[project.urls]
+Homepage = "https://github.com/JhomC3/aegen"
+Documentation = "https://github.com/JhomC3/aegen/docs"
+Repository = "https://github.com/JhomC3/aegen"
+Issues = "https://github.com/JhomC3/aegen/issues"
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "C", "B", "N", "UP", "ASYNC", "TID"]
+ignore = ["E501"]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.black]
+line-length = 88
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+explicit_package_bases = true
+
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q --cov=src --cov-report=term-missing"
+testpaths = ["tests"]
+
+asyncio_mode = "auto"
+
+[tool.bandit]
+skips = ["B101"]
+
+# disallow_untyped_def = true # Asegúrate de que esta línea y las siguientes usen # para comentarios si estaban activas
+# warn_redundant_cast = true
+# warn_unuused_ignore = true
