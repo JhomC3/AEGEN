@@ -21,12 +21,17 @@ from pathlib import Path
 from typing import (
     Any,
     Literal,
+    TypeAlias,
     TypedDict,
     cast,
 )
 
 # Optional, Type (si se usan explícitamente)
 from .config import settings
+
+# --- Tipos para JSON ---
+JsonValue: TypeAlias = str | int | float | bool | None | list[Any] | dict[str, Any]
+JsonDict: TypeAlias = dict[str, JsonValue]
 
 # Formatos
 TEXT_FORMAT = "%(asctime)s | %(name)-12s | %(levelname)-8s | %(filename)s:%(lineno)d | %(funcName)s | %(message)s"
@@ -36,9 +41,33 @@ TEXT_FORMAT = "%(asctime)s | %(name)-12s | %(levelname)-8s | %(filename)s:%(line
 class JsonFormatter(logging.Formatter):
     """Formateador personalizado para logs en JSON."""
 
+    _STANDARD_ATTRS = {
+        "args",
+        "asctime",
+        "created",
+        "exc_info",
+        "exc_text",
+        "filename",
+        "funcName",
+        "levelname",
+        "levelno",
+        "lineno",
+        "message",
+        "module",
+        "msecs",
+        "msg",
+        "name",
+        "pathname",
+        "process",
+        "processName",
+        "relativeCreated",
+        "stack_info",
+        "thread",
+        "threadName",
+    }
+
     def format(self, record: LogRecord) -> str:
-        # Usar tipos incorporados
-        log_output: dict[str, str | int | float | None | list[Any] | dict[str, Any]] = {
+        log_output: JsonDict = {
             "timestamp": self.formatTime(record, self.datefmt),
             "level": record.levelname,
             "name": record.name,
@@ -50,36 +79,12 @@ class JsonFormatter(logging.Formatter):
         if record.exc_info:
             log_output["exc_info"] = self.formatException(record.exc_info)
 
-        standard_attrs = {
-            "args",
-            "asctime",
-            "created",
-            "exc_info",
-            "exc_text",
-            "filename",
-            "funcName",
-            "levelname",
-            "levelno",
-            "lineno",
-            "message",
-            "module",
-            "msecs",
-            "msg",
-            "name",
-            "pathname",
-            "process",
-            "processName",
-            "relativeCreated",
-            "stack_info",
-            "thread",
-            "threadName",
-        }
         extra_data_val = getattr(record, "extra_data", None)
         if isinstance(extra_data_val, dict):
             # Ayuda a Pylance con el tipo de las claves
             typed_extra_data = cast(dict[str, Any], extra_data_val)
             for key, value in typed_extra_data.items():
-                if key not in standard_attrs and key not in log_output:
+                if key not in self._STANDARD_ATTRS and key not in log_output:
                     log_output[key] = value
         return json.dumps(log_output)
 
@@ -123,6 +128,8 @@ def setup_logging() -> logging.Logger:
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
 
+    is_production = settings.APP_ENV == settings.APP_ENV.PRODUCTION
+
     valid_log_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
     log_level_setting = settings.LOG_LEVEL.upper()
     if log_level_setting not in valid_log_levels:
@@ -134,7 +141,41 @@ def setup_logging() -> logging.Logger:
     else:
         effective_log_level = log_level_setting
 
-    is_production = settings.APP_ENV == settings.APP_ENV.PRODUCTION
+    # Lista de loggers de terceros que se configurarán con un nivel WARNING
+    # para reducir el ruido en los logs.
+    third_party_loggers_to_silence = [
+        "httpx",
+        "google.generativeai",
+        "fastapi",
+        "sqlalchemy.engine",
+        "pydantic",
+    ]
+
+    # Construcción dinámica de la configuración de loggers
+    loggers_config: LoggersConfig = {
+        # El logger raíz captura todo por defecto
+        "": {
+            "level": effective_log_level,
+            "handlers": ["console", "file"],
+            "propagate": True,
+        },
+        # Configuraciones específicas que no siguen el patrón común
+        "uvicorn": {"level": "INFO", "handlers": ["console"], "propagate": False},
+        "uvicorn.error": {"level": "INFO", "handlers": ["console"], "propagate": False},
+        "uvicorn.access": {
+            "level": "WARNING" if is_production else "INFO",
+            "handlers": ["console"],
+            "propagate": False,
+        },
+    }
+
+    for logger_name in third_party_loggers_to_silence:
+        loggers_config[logger_name] = {
+            "level": "WARNING",
+            "handlers": ["console", "file"],
+            "propagate": False,
+        }
+
     log_file = log_dir / f"AEGEN_{settings.APP_ENV.value}.log"
 
     config: LoggingDictConfiguration = {
@@ -167,53 +208,7 @@ def setup_logging() -> logging.Logger:
                 "encoding": "utf8",
             },
         },
-        "loggers": {
-            "": {  # Coincide con LoggerConfig
-                "level": effective_log_level,
-                "handlers": ["console", "file"],
-                "propagate": True,
-            },
-            "httpx": {
-                "level": "WARNING",
-                "handlers": ["console", "file"],
-                "propagate": False,
-            },
-            "google.generativeai": {
-                "level": "WARNING",
-                "handlers": ["console", "file"],
-                "propagate": False,
-            },
-            "uvicorn": {
-                "level": "INFO",
-                "handlers": ["console"],
-                "propagate": False,
-            },
-            "uvicorn.error": {
-                "level": "INFO",
-                "handlers": ["console"],
-                "propagate": False,
-            },
-            "uvicorn.access": {
-                "level": "WARNING" if is_production else "INFO",
-                "handlers": ["console"],
-                "propagate": False,
-            },
-            "fastapi": {
-                "level": "WARNING",
-                "handlers": ["console", "file"],
-                "propagate": False,
-            },
-            "sqlalchemy.engine": {
-                "level": "WARNING",
-                "handlers": ["console", "file"],
-                "propagate": False,
-            },
-            "pydantic": {
-                "level": "WARNING",
-                "handlers": ["console", "file"],
-                "propagate": False,
-            },
-        },
+        "loggers": loggers_config,
     }
 
     logging.config.dictConfig(cast(dict[str, Any], config))
