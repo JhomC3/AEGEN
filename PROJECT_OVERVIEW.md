@@ -24,6 +24,9 @@ Actualmente, AEGEN opera como un sistema monolítico contenido en un único serv
   - **Logging Estructurado:** Logs en formato JSON en producción.
   - **ID de Correlación (`trace_id`):** Seguimiento de peticiones de extremo a extremo.
   - **Métricas de API:** Métricas de rendimiento (latencia, RPS, errores) expuestas en el endpoint `/metrics` para Prometheus.
+- **Resiliencia Básica:**
+  - **Reintentos (Retries):** Los workflows fallidos se reintentan automáticamente con una espera exponencial.
+  - **Idempotencia:** Se previene el procesamiento duplicado de tareas mediante el seguimiento de `task_id` en memoria.
 
 ```
 ┌───────────────────────────────────────────────────┐
@@ -51,20 +54,19 @@ Actualmente, AEGEN opera como un sistema monolítico contenido en un único serv
 
 ## 🗺️ **Próximos Pasos y Hoja de Ruta (Roadmap)**
 
-Con la observabilidad básica implementada (logs y métricas), el siguiente paso crucial es robustecer el sistema.
+Con la Fase 1 del Monolito Inteligente y Resiliente completada, el sistema ahora es observable y robusto. Los siguientes pasos se centran en prepararlo para la evolución a un sistema distribuido.
 
-1.  **Añadir Resiliencia Básica (Paso 5):**
-    -   **Acción:** Crear un decorador `@retry_on_failure` para los workflows, que implemente una lógica de reintentos con back-off exponencial.
-    -   **Acción:** Implementar idempotencia básica en los workers usando el `task_id` del evento para evitar el procesamiento duplicado.
-    -   **Objetivo:** Aumentar la robustez del sistema ante fallos transitorios de red o de servicios externos.
+1.  **Desarrollar el `MigrationDecisionEngine` (Paso 7 - Futuro):**
+    -   **Acción:** Crear el motor que consumirá las métricas de Prometheus para decidir objetivamente cuándo es el momento de migrar a la Fase 2.
+    -   **Objetivo:** Automatizar las decisiones de escalado basadas en evidencia, eliminando las conjeturas.
 
-2.  **Desarrollar el `MigrationDecisionEngine` (Paso 7 - Futuro):**
-    -   **Acción:** Crear el motor que consumirá las métricas de Prometheus para decidir objetivamente cuándo es el momento de migrar a la Fase 2 (arquitectura distribuida con Redis).
-    -   **Objetivo:** Automatizar las decisiones de escalado basadas en evidencia.
+2.  **Implementar `RedisEventBus` (Paso 8 - Futuro):**
+    -   **Acción:** Desarrollar la implementación del `IEventBus` utilizando Redis Streams.
+    -   **Objetivo:** Preparar el componente clave para la transición a un sistema distribuido, persistente y más escalable.
 
-3.  **Implementar `RedisEventBus` (Paso 8 - Futuro):**
-    -   **Acción:** Desarrollar la implementación del `IEventBus` utilizando Redis Streams para habilitar la persistencia y la comunicación entre servicios distribuidos.
-    -   **Objetivo:** Preparar el sistema para la transición a la Fase 2.
+3.  **Contenerización de Workers (Paso 9 - Futuro):**
+    -   **Acción:** Modificar el `Dockerfile` para poder lanzar contenedores que solo ejecuten los workers.
+    -   **Objetivo:** Habilitar el despliegue y escalado independiente de los workers y la API.
 
 ---
 
