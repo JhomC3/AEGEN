@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
+from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.api.routers import analysis as analysis_router
 from src.api.routers import status as status_router
@@ -17,8 +18,6 @@ from src.core.dependencies import (
     shutdown_global_resources,
 )
 from src.core.error_handling import register_exception_handlers
-
-# Configurar logging ANTES de importar cualquier otro módulo de la app que pueda usar logging
 from src.core.logging_config import setup_logging
 from src.core.middleware import CorrelationIdMiddleware
 
@@ -99,6 +98,11 @@ app.add_middleware(
 if not settings.DEBUG_MODE and settings.ALLOWED_HOSTS != ["*"]:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
     logger.info(f"TrustedHostMiddleware enabled for hosts: {settings.ALLOWED_HOSTS}")
+
+
+# --- Métricas de Prometheus ---
+Instrumentator().instrument(app).expose(app)
+logger.info("Prometheus Instrumentator configured. Metrics available at /metrics.")
 
 
 # --- Manejadores de Excepciones ---

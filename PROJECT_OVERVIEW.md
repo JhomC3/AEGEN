@@ -16,26 +16,27 @@ La arquitectura de AEGEN está diseñada para evolucionar en fases claras.
 
 Actualmente, AEGEN opera como un sistema monolítico contenido en un único servicio Docker. Aunque es un monolito, está internamente desacoplado y es observable.
 
--   **API (FastAPI):** Recibe las peticiones y las publica como eventos en el bus.
--   **IEventBus (InMemoryEventBus):** Un bus de eventos en memoria (`asyncio.Queue`) que desacopla la recepción de la tarea de su procesamiento.
--   **Workers (Background Tasks):** Consumidores de eventos que se ejecutan como tareas de fondo dentro del mismo proceso de la API.
--   **WorkflowRegistry:** Permite el descubrimiento y la ejecución de flujos de trabajo de manera dinámica.
--   **Observabilidad "Día Cero":**
-    -   **Logging Estructurado:** Todos los logs se emiten en formato JSON en producción.
-    -   **ID de Correlación (`trace_id`):** Cada petición tiene un `trace_id` único que se propaga por todos los logs, permitiendo un seguimiento completo de la solicitud.
+- **API (FastAPI):** Recibe las peticiones y las publica como eventos en el bus.
+- **IEventBus (InMemoryEventBus):** Un bus de eventos en memoria (`asyncio.Queue`) que desacopla la recepción de la tarea de su procesamiento.
+- **Workers (Background Tasks):** Consumidores de eventos que se ejecutan como tareas de fondo dentro del mismo proceso de la API.
+- **WorkflowRegistry:** Permite el descubrimiento y la ejecución de flujos de trabajo de manera dinámica.
+- **Observabilidad "Día Cero":**
+  - **Logging Estructurado:** Logs en formato JSON en producción.
+  - **ID de Correlación (`trace_id`):** Seguimiento de peticiones de extremo a extremo.
+  - **Métricas de API:** Métricas de rendimiento (latencia, RPS, errores) expuestas en el endpoint `/metrics` para Prometheus.
 
 ```
 ┌───────────────────────────────────────────────────┐
-│                   Servicio AEGEN (Contenedor Docker)                  │
+│      Servicio AEGEN (Contenedor Docker)           │
 │ ┌───────────────────────────────────────────────┐ │
-│ │                    FastAPI App                  │ │
+│ │                    FastAPI App                │ │
 │ │ ┌───────────────┐   ┌───────────────────────┐ │ │
 │ │ │ Endpoint /api │──▶│     IEventBus         │ │ │
 │ │ └───────────────┘   │ (InMemoryEventBus)    │ │ │
 │ │                     └───────────┬───────────┘ │ │
-│ └─────────────────────────────│─────────────────┘ │
-│                               │                   │
-│ ┌─────────────────────────────▼─────────────────┐ │
+│ └─────────────────────────────────┬─────────────┘ │
+│                                   │               │
+│ ┌─────────────────────────────────▼─────────────┐ │
 │ │            Workers (asyncio.create_task)      │ │
 │ │ ┌───────────────┐   ┌───────────────────────┐ │ │
 │ │ │   Worker 1    │◀──│  WorkflowRegistry     │ │ │
@@ -50,20 +51,20 @@ Actualmente, AEGEN opera como un sistema monolítico contenido en un único serv
 
 ## 🗺️ **Próximos Pasos y Hoja de Ruta (Roadmap)**
 
-Con la Fase 1 completada, los siguientes pasos se centran en la resiliencia y la preparación para la transición a un sistema distribuido.
+Con la observabilidad básica implementada (logs y métricas), el siguiente paso crucial es robustecer el sistema.
 
-1.  **Implementar Métricas con Prometheus (Paso 4):**
-    -   **Acción:** Activar y configurar `prometheus-fastapi-instrumentator` en `main.py` para exponer métricas clave de la API (latencia, RPS, errores).
-    -   **Objetivo:** Obtener visibilidad cuantitativa del rendimiento del sistema.
-
-2.  **Añadir Resiliencia Básica (Paso 5):**
+1.  **Añadir Resiliencia Básica (Paso 5):**
     -   **Acción:** Crear un decorador `@retry_on_failure` para los workflows, que implemente una lógica de reintentos con back-off exponencial.
     -   **Acción:** Implementar idempotencia básica en los workers usando el `task_id` del evento para evitar el procesamiento duplicado.
-    -   **Objetivo:** Aumentar la robustez del sistema ante fallos transitorios.
+    -   **Objetivo:** Aumentar la robustez del sistema ante fallos transitorios de red o de servicios externos.
 
-3.  **Desarrollar el `MigrationDecisionEngine` (Paso 7 - Futuro):**
+2.  **Desarrollar el `MigrationDecisionEngine` (Paso 7 - Futuro):**
     -   **Acción:** Crear el motor que consumirá las métricas de Prometheus para decidir objetivamente cuándo es el momento de migrar a la Fase 2 (arquitectura distribuida con Redis).
     -   **Objetivo:** Automatizar las decisiones de escalado basadas en evidencia.
+
+3.  **Implementar `RedisEventBus` (Paso 8 - Futuro):**
+    -   **Acción:** Desarrollar la implementación del `IEventBus` utilizando Redis Streams para habilitar la persistencia y la comunicación entre servicios distribuidos.
+    -   **Objetivo:** Preparar el sistema para la transición a la Fase 2.
 
 ---
 
@@ -108,21 +109,22 @@ AEGEN/
 
 ## 🔧 **Tecnologías Principales**
 
--   **🐍 Python 3.13**
--   **⚡ FastAPI**: Framework web asíncrono.
--   **📦 Pydantic**: Validación de datos.
--   **📝 StructLog**: Logging estructurado para observabilidad.
--   **Prometheus & Grafana**: Para métricas y monitorización.
--   **🔴 Redis**: Preparado para actuar como message broker en Fase 2.
--   **🐳 Docker & Docker Compose**: Para containerización y orquestación.
--   **✅ Ruff, Black, MyPy**: Herramientas de calidad de código.
+- **🐍 Python 3.13**
+- **⚡ FastAPI**: Framework web asíncrono.
+- **📦 Pydantic**: Validación de datos.
+- **📝 StructLog**: Logging estructurado para observabilidad.
+- **Prometheus & Grafana**: Para métricas y monitorización.
+- **🔴 Redis**: Preparado para actuar como message broker en Fase 2.
+- **🐳 Docker & Docker Compose**: Para containerización y orquestación.
+- **✅ Ruff, Black, MyPy**: Herramientas de calidad de código.
 
 ---
 
 ## 🚀 **Inicio Rápido**
 
 ### **Prerrequisitos**
--   Docker y Docker Compose
+
+- Docker y Docker Compose
 
 ### **Instalación y Ejecución**
 
@@ -132,17 +134,20 @@ AEGEN/
 
 ### **Uso Básico**
 
--   **Documentación Interactiva:** [http://localhost:8000/docs](http://localhost:8000/docs)
--   **Endpoint de Análisis:**
-    ```http
-    POST http://localhost:8000/api/v1/analysis/
-    Content-Type: application/json
+- **Documentación Interactiva:** [http://localhost:8000/docs](http://localhost:8000/docs)
+- **Endpoint de Análisis:**
 
-    {
-      "query": "Analiza los riesgos del protocolo Uniswap V4"
-    }
-    ```
-    La API devolverá un `HTTP 202 Accepted` y un `X-Correlation-ID` en las cabeceras. Puedes usar este ID para rastrear la solicitud en los logs.
+  ```http
+  POST http://localhost:8000/api/v1/analysis/
+  Content-Type: application/json
+
+  {
+    "query": "Analiza los riesgos del protocolo Uniswap V4"
+  }
+  ```
+
+  La API devolverá un `HTTP 202 Accepted` y un `X-Correlation-ID` en las cabeceras. Puedes usar este ID para rastrear la solicitud en los logs.
 
 ---
-*Documentación viva del proyecto. Versión 1.1.0*
+
+_Documentación viva del proyecto. Versión 1.1.0_
