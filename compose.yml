@@ -1,4 +1,13 @@
 services:
+  redis:
+    image: redis:7-alpine
+    container_name: aegen-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+
   n8n:
     image: n8nio/n8n:latest
     container_name: n8n
@@ -26,4 +35,5 @@ services:
     restart: unless-stopped
 
 volumes:
+  redis_data:
   n8n_data:

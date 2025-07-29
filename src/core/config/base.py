@@ -41,6 +41,10 @@ class BaseAppSettings(BaseSettings):
     DEBUG_MODE: bool = False
     ALLOWED_HOSTS: list[str] = ["*"]
 
+    # Umbrales para el MigrationDecisionEngine
+    CPU_THRESHOLD_PERCENT: float = 80.0
+    MEMORY_THRESHOLD_PERCENT: float = 80.0
+
     # --- Validación ---
     # Validar que claves esenciales existan en producción
     @model_validator(mode="after")

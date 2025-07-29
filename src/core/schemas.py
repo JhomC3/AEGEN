@@ -51,6 +51,25 @@ class ServiceStatus(str, Enum):
     DEGRADED = "degraded"
 
 
+class SystemState(str, Enum):
+    """Enum para representar el estado recomendado del sistema."""
+
+    STAY_LOCAL = "STAY_LOCAL"
+    MIGRATE_TO_DISTRIBUTED = "MIGRATE_TO_DISTRIBUTED"
+
+
+# --- Esquemas del Sistema ---
+
+
+class SystemStatus(BaseModel):
+    """Modelo de datos para el estado del sistema."""
+
+    cpu_usage_percent: float
+    memory_usage_percent: float
+    state: SystemState
+    message: str
+
+
 # --- Esquemas para Solicitudes API ---
 class AnalyzeQuery(BaseModel):
     query: str = Field(

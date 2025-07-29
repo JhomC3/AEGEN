@@ -8,6 +8,7 @@ from redis import asyncio as aioredis
 # Importar clases de Agentes (¡Asegúrate de que los archivos existan!)
 from src.agents.orchestrator import WorkflowCoordinator
 from src.core.bus.in_memory import InMemoryEventBus
+from src.core.bus.redis import RedisEventBus
 from src.core.config import settings
 from src.core.interfaces.bus import IEventBus
 
@@ -18,40 +19,41 @@ from src.core.interfaces.bus import IEventBus
 logger = logging.getLogger(__name__)
 
 # --- Gestión de Recursos Globales (ej. cliente Redis) ---
-redis_connection = None
+redis_connection: aioredis.Redis | None = None
 event_bus: IEventBus | None = None
 
 
-async def initialize_global_resources():
+async def initialize_global_resources() -> tuple[aioredis.Redis | None, IEventBus]:
     """Inicializa recursos globales como Redis y el bus de eventos."""
     global redis_connection, event_bus
     try:
-        redis_connection = aioredis.from_url(
-            settings.REDIS_URL, encoding="utf8", decode_responses=True
-        )
+        # Usamos decode_responses=False porque nuestro RedisEventBus maneja la (de)serialización
+        redis_connection = aioredis.from_url(settings.REDIS_URL, decode_responses=False)
         await redis_connection.ping()
         logger.info("Successfully connected to Redis.")
+        # Si Redis está disponible, usamos RedisEventBus
+        event_bus = RedisEventBus(redis_connection)
+        logger.info("Event Bus initialized (RedisEventBus).")
     except Exception as e:
-        logger.error(f"Failed to connect to Redis: {e}")
+        logger.error(
+            f"Failed to connect to Redis: {e}. Falling back to InMemoryEventBus."
+        )
         redis_connection = None  # Marcar como no disponible
-
-    # Inicializar el bus de eventos
-    # En Fase 1, es siempre en memoria. En Fase 2, esto podría leer config.
-    event_bus = InMemoryEventBus()
-    logger.info("Event Bus initialized (InMemoryEventBus).")
+        event_bus = InMemoryEventBus()
+        logger.info("Event Bus initialized (InMemoryEventBus).")
 
     return redis_connection, event_bus
 
 
 async def shutdown_global_resources():
     """Cierra conexiones y recursos globales."""
+    if isinstance(event_bus, RedisEventBus) or isinstance(event_bus, InMemoryEventBus):
+        await event_bus.shutdown()
+        logger.info("Event Bus shut down.")
+
     if redis_connection:
         await redis_connection.close()
         logger.info("Redis connection closed.")
-
-    if isinstance(event_bus, InMemoryEventBus):
-        await event_bus.shutdown()
-        logger.info("Event Bus shut down.")
 
 
 # --- Inyección de Dependencias ---

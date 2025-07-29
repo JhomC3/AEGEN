@@ -34,6 +34,7 @@ dependencies = [
     "numpy",
     "openai-whisper",
     "pandas",
+    "psutil",
     "pydantic-settings",
     "python-dotenv",
     "python-json-logger",

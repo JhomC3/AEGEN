@@ -56,15 +56,20 @@ Actualmente, AEGEN opera como un sistema monolítico contenido en un único serv
 
 Con la Fase 1 del Monolito Inteligente y Resiliente completada, el sistema ahora es observable y robusto. Los siguientes pasos se centran en prepararlo para la evolución a un sistema distribuido.
 
-1.  **Desarrollar el `MigrationDecisionEngine` (Paso 7 - Futuro):**
+1.  **Añadir Resiliencia Básica (Paso 5 - Futuro):**
+    -   **Acción:** Crear un decorador `@retry_on_failure` para los workflows, que implemente una lógica de reintentos con back-off exponencial.
+    -   **Acción:** Implementar idempotencia básica en los workers usando el `task_id` del evento para evitar el procesamiento duplicado.
+    -   **Objetivo:** Aumentar la robustez del sistema ante fallos transitorios.
+
+2.  **Desarrollar el `MigrationDecisionEngine` (Paso 7 - Futuro):**
     -   **Acción:** Crear el motor que consumirá las métricas de Prometheus para decidir objetivamente cuándo es el momento de migrar a la Fase 2.
     -   **Objetivo:** Automatizar las decisiones de escalado basadas en evidencia, eliminando las conjeturas.
 
-2.  **Implementar `RedisEventBus` (Paso 8 - Futuro):**
+3.  **Implementar `RedisEventBus` (Paso 8 - Futuro):**
     -   **Acción:** Desarrollar la implementación del `IEventBus` utilizando Redis Streams.
     -   **Objetivo:** Preparar el componente clave para la transición a un sistema distribuido, persistente y más escalable.
 
-3.  **Contenerización de Workers (Paso 9 - Futuro):**
+4.  **Contenerización de Workers (Paso 9 - Futuro):**
     -   **Acción:** Modificar el `Dockerfile` para poder lanzar contenedores que solo ejecuten los workers.
     -   **Objetivo:** Habilitar el despliegue y escalado independiente de los workers y la API.
 
