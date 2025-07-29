@@ -20,6 +20,7 @@ from src.core.error_handling import register_exception_handlers
 
 # Configurar logging ANTES de importar cualquier otro módulo de la app que pueda usar logging
 from src.core.logging_config import setup_logging
+from src.core.middleware import CorrelationIdMiddleware
 
 setup_logging()  # ¡Llamar aquí, muy al principio!
 
@@ -80,6 +81,8 @@ app = FastAPI(
 )
 
 # --- Middleware ---
+app.add_middleware(CorrelationIdMiddleware)
+
 if settings.ALLOWED_HOSTS == ["*"]:
     logger.warning(
         "CORS 'allow_origins' está configurado como '*' (permitir todo). Considera restringirlo en producción."

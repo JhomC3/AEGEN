@@ -1,25 +1,28 @@
-# 🤖 AEGEN: Sistema de Agentes bajo la Arquitectura de Evolución Pragmática Unificada (AEP-U)
+# 🤖 AEGEN: Sistema de Agentes con Arquitectura Evolutiva
 
 ## 📖 **Introducción y Filosofía**
 
-**AEGEN** es un sistema de agentes inteligentes diseñado para ser robusto, escalable y mantenible. Su desarrollo se guía por la **Arquitectura de Evolución Pragmática Unificada (AEP-U)**, una estrategia operativa que prioriza la simplicidad, la observabilidad y la evolución basada en evidencia.
+**AEGEN** es un sistema de agentes inteligentes diseñado para ser robusto, escalable y mantenible. Su desarrollo se guía por una **arquitectura evolutiva y pragmática**, una estrategia que prioriza la simplicidad, la observabilidad y la evolución basada en evidencia.
 
-La AEP-U nos permite comenzar con un **monolito inteligente** que es rápido de desarrollar y, a medida que las métricas del sistema lo justifiquen, evolucionar de manera controlada y automatizada hacia una arquitectura distribuida, evitando la sobreingeniería y la complejidad prematura.
+Este enfoque nos permite comenzar con un **monolito inteligente** que es rápido de desarrollar y, a medida que las métricas del sistema lo justifiquen, evolucionar de manera controlada y automatizada hacia una arquitectura distribuida, evitando la sobreingeniería y la complejidad prematura.
 
 ---
 
-## 🏗️ **Arquitectura del Sistema**
+## 🏗️ **Arquitectura y Estado Actual**
 
-La arquitectura de AEGEN está diseñada para evolucionar en tres fases claras.
+La arquitectura de AEGEN está diseñada para evolucionar en fases claras.
 
-### **Fase 1: El Monolito Inteligente y Resiliente (Estado Actual)**
+### **Fase 1: El Monolito Inteligente y Resiliente (Completa)**
 
-Actualmente, AEGEN opera como un sistema monolítico contenido en un único servicio Docker. Aunque es un monolito, está internamente desacoplado gracias a un bus de eventos asíncrono en memoria.
+Actualmente, AEGEN opera como un sistema monolítico contenido en un único servicio Docker. Aunque es un monolito, está internamente desacoplado y es observable.
 
-- **API (FastAPI):** Recibe las peticiones y las publica como eventos en el bus.
-- **IEventBus (InMemoryEventBus):** Un bus de eventos en memoria (`asyncio.Queue`) que desacopla la recepción de la tarea de su procesamiento.
-- **Workers (Background Tasks):** Consumidores de eventos que se ejecutan como tareas de fondo dentro del mismo proceso de la API, gestionados por el `InMemoryEventBus`.
-- **WorkflowRegistry:** Permite el descubrimiento y la ejecución de flujos de trabajo de manera dinámica.
+-   **API (FastAPI):** Recibe las peticiones y las publica como eventos en el bus.
+-   **IEventBus (InMemoryEventBus):** Un bus de eventos en memoria (`asyncio.Queue`) que desacopla la recepción de la tarea de su procesamiento.
+-   **Workers (Background Tasks):** Consumidores de eventos que se ejecutan como tareas de fondo dentro del mismo proceso de la API.
+-   **WorkflowRegistry:** Permite el descubrimiento y la ejecución de flujos de trabajo de manera dinámica.
+-   **Observabilidad "Día Cero":**
+    -   **Logging Estructurado:** Todos los logs se emiten en formato JSON en producción.
+    -   **ID de Correlación (`trace_id`):** Cada petición tiene un `trace_id` único que se propaga por todos los logs, permitiendo un seguimiento completo de la solicitud.
 
 ```
 ┌───────────────────────────────────────────────────┐
@@ -43,34 +46,24 @@ Actualmente, AEGEN opera como un sistema monolítico contenido en un único serv
 └───────────────────────────────────────────────────┘
 ```
 
-### **Fase 2: Transición Controlada a Distribuido (Roadmap Futuro)**
-
-Cuando el `MigrationDecisionEngine` (un componente futuro) detecte que se han superado los umbrales de rendimiento (latencia, CPU), el sistema evolucionará:
-
-1.  **Cambio de Implementación:** Se activará el `RedisEventBus` mediante una variable de entorno.
-2.  **Despliegue Separado:** Los workers se ejecutarán en sus propios contenedores, permitiendo el escalado horizontal independiente de la API.
-
-### **Fase 3: Madurez Operativa (Roadmap Futuro)**
-
-En esta fase, se introducirán optimizaciones avanzadas solo donde sea necesario:
-
--   **Workers Especializados:** Colas y workers dedicados por tipo de tarea para un escalado granular.
--   **Patrones Avanzados:** Implementación condicional de Sagas o Circuit Breakers para flujos de trabajo complejos.
--   **Observabilidad Distribuida:** Tracing completo con OpenTelemetry.
-
 ---
 
-## 🗺️ **Hoja de Ruta Evolutiva (Roadmap)**
+## 🗺️ **Próximos Pasos y Hoja de Ruta (Roadmap)**
 
-El sistema está preparado para evolucionar a través de las siguientes fases, guiadas por métricas:
+Con la Fase 1 completada, los siguientes pasos se centran en la resiliencia y la preparación para la transición a un sistema distribuido.
 
--   **Fase 2: Transición Controlada a Distribuido**
-    -   **Disparador**: Superar umbrales de rendimiento (e.g., latencia P95 > 500ms, carga de CPU > 85%) monitoreados por un futuro `MigrationDecisionEngine`.
-    -   **Acción**: Cambiar la implementación del `IEventBus` a `RedisEventBus` (usando Redis Streams) mediante una variable de entorno. Desplegar los workers en contenedores separados para escalar horizontalmente.
+1.  **Implementar Métricas con Prometheus (Paso 4):**
+    -   **Acción:** Activar y configurar `prometheus-fastapi-instrumentator` en `main.py` para exponer métricas clave de la API (latencia, RPS, errores).
+    -   **Objetivo:** Obtener visibilidad cuantitativa del rendimiento del sistema.
 
--   **Fase 3: Madurez Operativa y Especialización**
-    -   **Disparador**: Necesidad de optimización de costos o gestión de carga granular en tareas específicas.
-    -   **Acción**: Crear colas de eventos especializadas por tipo de tarea en Redis. Implementar patrones avanzados (Sagas, Circuit Breakers) solo donde sea estrictamente necesario y validado por reglas de CI. Integrar tracing distribuido completo con OpenTelemetry.
+2.  **Añadir Resiliencia Básica (Paso 5):**
+    -   **Acción:** Crear un decorador `@retry_on_failure` para los workflows, que implemente una lógica de reintentos con back-off exponencial.
+    -   **Acción:** Implementar idempotencia básica en los workers usando el `task_id` del evento para evitar el procesamiento duplicado.
+    -   **Objetivo:** Aumentar la robustez del sistema ante fallos transitorios.
+
+3.  **Desarrollar el `MigrationDecisionEngine` (Paso 7 - Futuro):**
+    -   **Acción:** Crear el motor que consumirá las métricas de Prometheus para decidir objetivamente cuándo es el momento de migrar a la Fase 2 (arquitectura distribuida con Redis).
+    -   **Objetivo:** Automatizar las decisiones de escalado basadas en evidencia.
 
 ---
 
@@ -92,33 +85,23 @@ AEGEN/
 ├── 📄 pyproject.toml
 ├── 📄 README.md
 ├── 📄 PROJECT_OVERVIEW.md
-├── 🗂️ data/
-├── 🗂️ docs/
-├── 🗂️ notebooks/
-├── 🗂️ scripts/
 ├── 🗂️ src/
 │   ├── 📄 main.py                     # Punto de entrada de FastAPI y configuración
 │   ├── 🗂️ agents/                    # Lógica de agentes y workflows
-│   │   └── 🗂️ workflows/
 │   ├── 🗂️ api/                       # Endpoints de la API (Routers)
-│   │   └── 🗂️ routers/
 │   ├── 🗂️ core/                      # Núcleo de la aplicación
 │   │   ├── 📄 dependencies.py
 │   │   ├── 📄 error_handling.py
 │   │   ├── 📄 exceptions.py
 │   │   ├── 📄 logging_config.py
+│   │   ├── 📄 middleware.py           # Middlewares (e.g., CorrelationId)
 │   │   ├── 📄 registry.py             # WorkflowRegistry
 │   │   ├── 📄 schemas.py
-│   │   ├── 🗂️ bus/                   # Implementaciones de IEventBus
-│   │   │   └── 📄 in_memory.py
-│   │   ├── 🗂️ config/                # Gestión de configuración
-│   │   └── 🗂️ interfaces/            # Contratos (ABCs)
-│   │       ├── 📄 bus.py
-│   │       ├── 📄 tool.py
-│   │       └── 📄 workflow.py
-│   ├── 🗂️ tools/                     # Herramientas reutilizables
-│   └── 🗂️ vector_db/                 # Interacción con BD vectorial
-└── 🗂️ tests/                         # Pruebas unitarias y de integración
+│   │   ├── 🗂️ bus/
+│   │   └── 🗂️ interfaces/
+│   ├── 🗂️ tools/
+│   └── 🗂️ vector_db/
+└── 🗂️ tests/
 ```
 
 ---
@@ -143,39 +126,14 @@ AEGEN/
 
 ### **Instalación y Ejecución**
 
-1.  **Clonar el repositorio:**
-    ```bash
-    git clone https://github.com/JhomC3/aegen.git
-    cd aegen
-    ```
+1.  **Clonar el repositorio y entrar al directorio.**
+2.  **Configurar variables de entorno:** `cp .env.example .env`
+3.  **Levantar los servicios:** `make up` o `docker-compose up -d --build`
 
-2.  **Configurar variables de entorno:**
-    ```bash
-    cp .env.example .env
-    # Edita .env si necesitas añadir claves de API para las herramientas
-    ```
+### **Uso Básico**
 
-3.  **Levantar los servicios con Docker Compose:**
-    Este comando construirá la imagen de la aplicación y levantará los servicios definidos en `compose.yml` (API, Redis, etc.).
-    ```bash
-    make up
-    ```
-  3.  **Ejecutar con Docker Compose:**
-    ```bash
-    docker compose up -d --build
-    ```
-
-4.  **(Alternativa) Ejecutar localmente para desarrollo:**
-    ```bash
-    # Asegúrate de tener las dependencias instaladas con `poetry install`
-    poetry run uvicorn src.main:app --reload --port 8000
-    ```
-
-5.  **Acceder a la API:**
-    La documentación de la API estará disponible en [http://localhost:8000/docs](http://localhost:8000/docs).
-
+-   **Documentación Interactiva:** [http://localhost:8000/docs](http://localhost:8000/docs)
 -   **Endpoint de Análisis:**
-    Envía una petición POST al endpoint principal para iniciar un flujo de trabajo.
     ```http
     POST http://localhost:8000/api/v1/analysis/
     Content-Type: application/json
@@ -184,7 +142,7 @@ AEGEN/
       "query": "Analiza los riesgos del protocolo Uniswap V4"
     }
     ```
-    La API devolverá un `HTTP 202 Accepted` inmediatamente, y el trabajo se procesará en segundo plano.
+    La API devolverá un `HTTP 202 Accepted` y un `X-Correlation-ID` en las cabeceras. Puedes usar este ID para rastrear la solicitud en los logs.
 
 ---
-*Documentación actualizada según la Arquitectura de Evolución Pragmática Unificada (AEP-U). Versión 1.0.0*
+*Documentación viva del proyecto. Versión 1.1.0*

@@ -28,14 +28,32 @@ from typing import (
 
 # Optional, Type (si se usan explícitamente)
 from .config import settings
+from .middleware import correlation_id
 
 # --- Tipos para JSON ---
 JsonValue: TypeAlias = str | int | float | bool | None | list[Any] | dict[str, Any]
 JsonDict: TypeAlias = dict[str, JsonValue]
 
 # Formatos
-TEXT_FORMAT = "%(asctime)s | %(name)-12s | %(levelname)-8s | %(filename)s:%(lineno)d | %(funcName)s | %(message)s"
+TEXT_FORMAT = "%(asctime)s | %(correlation_id)s | %(name)-12s | %(levelname)-8s | %(filename)s:%(lineno)d | %(funcName)s | %(message)s"
 # JSON_FORMAT (el diccionario) no se usa directamente, JsonFormatter lo implementa.
+
+
+class CorrelationIdFilter(logging.Filter):
+    """Filtro para inyectar el correlation_id en los registros de log."""
+
+    def filter(self, record: LogRecord) -> bool:
+        """
+        Añade el ID de correlación al registro.
+
+        Args:
+            record: El registro de log.
+
+        Returns:
+            True para indicar que el registro debe ser procesado.
+        """
+        record.correlation_id = correlation_id.get()
+        return True
 
 
 class JsonFormatter(logging.Formatter):
@@ -64,6 +82,7 @@ class JsonFormatter(logging.Formatter):
         "stack_info",
         "thread",
         "threadName",
+        "correlation_id",  # Añadir para que no se duplique
     }
 
     def format(self, record: LogRecord) -> str:
@@ -72,6 +91,7 @@ class JsonFormatter(logging.Formatter):
             "level": record.levelname,
             "name": record.name,
             "message": record.getMessage(),
+            "correlation_id": getattr(record, "correlation_id", None),
             "filename": record.filename,
             "lineno": record.lineno,
             "function": record.funcName,
@@ -115,9 +135,10 @@ class LoggerConfig(TypedDict):
 LoggersConfig = dict[str, LoggerConfig]
 
 
-class LoggingDictConfiguration(TypedDict):
+class LoggingDictConfiguration(TypedDict, total=False):
     version: Literal[1]
     disable_existing_loggers: bool
+    filters: dict[str, Any]
     formatters: FormattersConfig
     handlers: HandlersConfig
     loggers: LoggersConfig
@@ -181,6 +202,11 @@ def setup_logging() -> logging.Logger:
     config: LoggingDictConfiguration = {
         "version": 1,
         "disable_existing_loggers": False,
+        "filters": {
+            "correlation_id": {
+                "()": CorrelationIdFilter,
+            },
+        },
         "formatters": {
             "standard_text": {  # Coincide con StandardTextFormatterConfig
                 "format": TEXT_FORMAT,
@@ -197,6 +223,7 @@ def setup_logging() -> logging.Logger:
                 "level": "INFO",
                 "formatter": "standard_json" if is_production else "standard_text",
                 "stream": sys.stdout,  # sys.stdout es TextIO
+                "filters": ["correlation_id"],
             },
             "file": {  # Coincide con dict[str, Any] dentro de HandlerEntry
                 "()": RotatingFileHandler,  # type: ignore[assignment]
@@ -206,6 +233,7 @@ def setup_logging() -> logging.Logger:
                 "maxBytes": 10485760,
                 "backupCount": 5,
                 "encoding": "utf8",
+                "filters": ["correlation_id"],
             },
         },
         "loggers": loggers_config,
