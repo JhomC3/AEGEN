@@ -1,6 +1,6 @@
 # 🤖 AEGEN: Manual de Arquitectura y Desarrollo
 
-**Versión del Documento: 2.0.0**
+**Versión del Documento: 2.1.0**
 
 > **Nota del Arquitecto:** Este documento es la **fuente de verdad** y la **constitución** del proyecto AEGEN. Todo desarrollador (humano o IA) que contribuya a este proyecto debe leer, entender y adherirse a los principios y convenciones aquí descritos. El código que no siga estas directrices no será aceptado.
 
@@ -54,14 +54,19 @@ AEGEN/
 │   │   ├── __init__.py
 │   │   ├── orchestrator.py
 │   │   └── workflows/
+│   │       ├── __init__.py
 │   │       ├── base_workflow.py
 │   │       └── research/
+│   │           ├── __init__.py
 │   │           └── researcher.py
 │   ├── api/
+│   │   ├── __init__.py
 │   │   └── routers/
+│   │       ├── __init__.py
 │   │       ├── analysis.py
 │   │       └── status.py
 │   ├── core/
+│   │   ├── __init__.py
 │   │   ├── bus/
 │   │   │   ├── in_memory.py
 │   │   │   └── redis.py
@@ -79,11 +84,17 @@ AEGEN/
 │   │   ├── registry.py
 │   │   └── schemas.py
 │   ├── tools/
+│   │   ├── document_processing.py
+│   │   ├── image_processing.py
+│   │   ├── speech_processing.py
 │   │   ├── documents/
+│   │   │   └── process_documents.py
 │   │   └── youtube/
+│   │       └── youtube_tools.py
 │   └── vector_db/
 │       └── chroma_manager.py
 └── tests/
+    ├── __init__.py
     ├── conftest.py
     ├── integration/
     │   └── test_api_endpoints.py
@@ -93,21 +104,21 @@ AEGEN/
 
 ### 3.2. Descripción Detallada de Componentes
 
-- `src/main.py`: **Ensamblador de la Aplicación.** Punto de entrada de FastAPI. Su única responsabilidad es configurar y unir todos los componentes: `lifespan`, middlewares, routers, etc. **No debe contener lógica de negocio.**
+- `src/main.py`: **Ensamblador de la Aplicación.** Punto de entrada de FastAPI. Su única responsabilidad es configurar y unir todos los componentes. **No debe contener lógica de negocio.**
 
-- `src/core/interfaces/`: **Contratos de Comportamiento (ABCs).** El corazón del desacoplamiento. Define las interfaces (`IEventBus`, `IWorkflow`, `ITool`) que garantizan que los componentes sean intercambiables.
+- `src/core/interfaces/`: **Contratos de Comportamiento (ABCs).** El corazón del desacoplamiento. Define las interfaces (`IEventBus`, `IWorkflow`, `ITool`).
 
-- `src/core/bus/`: **Implementaciones del Bus de Eventos.** Contiene las implementaciones concretas de `IEventBus` (`in_memory.py`, `redis.py`).
+- `src/core/bus/`: **Implementaciones del Bus de Eventos.** Contiene las implementaciones concretas de `IEventBus`.
 
-- `src/core/schemas.py`: **Contratos de Datos.** Define todos los modelos Pydantic para la validación de datos de la API y la estructura de los eventos. **Toda estructura de datos compartida debe definirse aquí.**
+- `src/core/schemas.py`: **Contratos de Datos.** Define todos los modelos Pydantic para la validación de datos de la API y la estructura de los eventos.
 
-- `src/api/routers/`: **Capa de API.** Expone los endpoints HTTP. Su única función es: 1) Recibir peticiones, 2) Validarlas con un esquema de `schemas.py`, 3) Publicar un evento en el `IEventBus`. **No debe contener lógica de negocio.**
+- `src/api/routers/`: **Capa de API.** Expone los endpoints HTTP. Su única función es recibir, validar y publicar eventos. **No debe contener lógica de negocio.**
 
-- `src/agents/workflows/`: **Cerebro de la Lógica de Negocio.** Orquesta la secuencia de pasos para completar una tarea. Aquí es donde se usa LangChain/LangGraph para crear agentes que razonan y planifican.
+- `src/agents/workflows/`: **Cerebro de la Lógica de Negocio.** Orquesta la secuencia de pasos para completar una tarea. Aquí es donde se usa LangChain/LangGraph.
 
-- `src/tools/`: **Caja de Herramientas.** Contiene funciones atómicas y reutilizables que realizan tareas específicas (ej. `transcribir_audio`, `buscar_en_la_web`). Son invocadas por los workflows. **No deben contener lógica de orquestación.**
+- `src/tools/`: **Caja de Herramientas.** Contiene funciones atómicas y reutilizables que realizan tareas específicas. Son invocadas por los workflows.
 
-- `tests/`: **Garantía de Calidad.** Contiene las pruebas del sistema. Ver la sección de Estrategia de Pruebas.
+- `tests/`: **Garantía de Calidad.** Contiene las pruebas del sistema.
 
 ---
 
@@ -116,11 +127,11 @@ AEGEN/
 La funcionalidad no se considera completa sin pruebas. Nuestro objetivo es mantener una cobertura de código superior al 85%.
 
 - **Pruebas Unitarias (`tests/unit/`):**
-  - **Qué probar:** Componentes aislados. Probar una `Tool` individualmente, un `Workflow` con `Tools` mockeadas, o la lógica de un `schema`.
+  - **Qué probar:** Componentes aislados (Tools, Workflows con dependencias mockeadas, etc.).
   - **Objetivo:** Verificar que cada pieza de lógica funciona correctamente por sí sola.
 
 - **Pruebas de Integración (`tests/integration/`):**
-  - **Qué probar:** El flujo completo desde la API hasta el worker. Se prueba que al llamar a un endpoint, se publica el evento correcto y el `WorkflowCoordinator` lo procesa.
+  - **Qué probar:** El flujo completo desde la API hasta el worker.
   - **Objetivo:** Asegurar que los componentes interactúan correctamente entre sí.
 
 ---
@@ -129,14 +140,14 @@ La funcionalidad no se considera completa sin pruebas. Nuestro objetivo es mante
 
 ### **Roadmap Funcional: Construcción de la Inteligencia (Prioridad Actual)**
 
-1.  **Implementar el Workflow Orquestador:** Crear un `OrchestratorWorkflow` con LangGraph para interpretar y planificar la ejecución de peticiones en lenguaje natural.
+1.  **Implementar el Workflow Orquestador:** Crear un `OrchestratorWorkflow` con LangGraph.
 2.  **Desarrollar Herramientas (Tools) Base:** Implementar `SpeechToTextTool` y `ExcelWriterTool`.
 3.  **Adaptar la API para Entradas Multimodales:** Modificar el endpoint de ingestión para manejar cargas de archivos.
 
 ### **Roadmap de Infraestructura: Evolución de la Plataforma (Futuro)**
 
-1.  **Contenerización de Workers:** El `Dockerfile` ya está preparado con un target `worker`. El siguiente paso es actualizar `docker-compose.yml` para lanzar un servicio `worker` que use este target, permitiendo el escalado independiente.
-2.  **Transición a Fase 2:** Cuando las métricas lo justifiquen, se activará el `RedisEventBus` en la configuración y se escalará el servicio `worker` en `docker-compose.yml`.
+1.  **Contenerización de Workers:** Actualizar `docker-compose.yml` para lanzar un servicio `worker` que use el target `worker` del `Dockerfile`.
+2.  **Transición a Fase 2:** Activar el `RedisEventBus` y escalar el servicio `worker` cuando las métricas lo justifiquen.
 
 ---
 
@@ -157,4 +168,4 @@ La funcionalidad no se considera completa sin pruebas. Nuestro objetivo es mante
 
 ---
 
-_Documentación viva del proyecto. Versión 2.0.0_
+_Documentación viva del proyecto. Versión 2.1.0_
