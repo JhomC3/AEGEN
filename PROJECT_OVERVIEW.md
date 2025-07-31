@@ -66,6 +66,15 @@ Estas reglas son mandatorias y forzadas por herramientas automatizadas.
   • HOW: Archivos clave modificados, si es relevante.
   ```
 
+- **Principio del Código de Referencia (La Regla del "Mejor que Esto"):**
+  - **Directriz:** Antes de escribir una nueva clase o función, DEBES buscar un ejemplo existente de alta calidad en el codebase para usarlo como estándar mínimo.
+  - **Arquetipo para `Tools`:** El archivo `src/tools/speech_processing.py` es el estándar de oro actual. Cualquier nueva `Tool` debe, como mínimo:
+    1.  Estar encapsulada en una **Clase** para gestionar estado y dependencias.
+    2.  Utilizar **Carga Diferida (Lazy Loading)** para recursos pesados (como modelos de ML).
+    3.  Ejecutar operaciones bloqueantes (CPU o I/O síncrono) en un hilo separado usando `asyncio.to_thread` para no bloquear el event loop.
+    4.  Integrarse con el ecosistema del proyecto (usar `settings` para configuración, decoradores como `@tool` si aplica).
+    5.  Tener un manejo de errores robusto y logging contextualizado.
+
 ## 🏗️ 3. El Blueprint: Arquitectura y Diagnóstico de Estado
 
 Este es el mapa completo del proyecto, incluyendo un **diagnóstico honesto y accionable** de su estado actual.
@@ -108,8 +117,8 @@ AEGEN/
     │       └── transcription/
     │           └── audio_transcriber.py # ❌ Placeholder.
     └── tools/                  # 🛠️ Funciones atómicas.
-        ├── telegram_interface.py # ❌ Placeholder.
-        └── speech_to_text.py   # ❌ Placeholder.
+        ├── speech_processing.py  # ✅ Implementado y probado.
+        └── telegram_interface.py # ❌ Placeholder.
 └── tests/                      # 🚧 EN PROGRESO. Deuda técnica crítica siendo saldada.
     ├── conftest.py             # ✅ Fixtures base implementadas.
     ├── unit/                   # 🚧 EN PROGRESO. Replicando src/.
@@ -223,6 +232,21 @@ make docs
 ### **Ciclo de Vida de una Funcionalidad (Flujo de Git Mandatorio)**
 
 **Instrucción para Agente IA:** Antes de iniciar cualquier nueva funcionalidad, corrección o refactorización, DEBES seguir este ciclo. No se permite el `push` directo a `develop`. Cada unidad de trabajo debe ser encapsulada en un Pull Request.
+
+**Paso 0: Sincronización de Contexto (Mandatorio)**
+Antes de escribir una sola línea de código, debes tener un contexto absoluto del estado del proyecto. Este paso no es opcional.
+
+1.  **Contexto Histórico (`¿De dónde venimos?`):**
+    *   **Acción:** Lee el archivo `@history_llm_chat.txt`.
+    *   **Objetivo:** Entender las decisiones, errores y correcciones recientes. Presta especial atención a las últimas 500 líneas para comprender el contexto inmediato de la última sesión de trabajo.
+
+2.  **Contexto Real (`¿Dónde estamos?`):**
+    *   **Acción:** Usa `glob` o `list_directory` para inspeccionar la estructura de archivos actual en `src/`.
+    *   **Objetivo:** Verificar la existencia y el estado real de los componentes. No confíes ciegamente en la documentación; contrástala siempre con el código fuente. Este paso previene la creación de duplicados y la desalineación con la realidad.
+
+3.  **Contexto Estratégico (`¿Para dónde vamos?`):**
+    *   **Acción:** Estudia en detalle este documento (`@PROJECT_OVERVIEW.md`), específicamente el "Blueprint" y el "Plan de Batalla".
+    *   **Objetivo:** Asegurarte de que la siguiente acción está alineada con la FASE actual del roadmap. Si encuentras una discrepancia entre el código real y este documento, tu primera tarea es corregir el documento.
 
 **Paso 1: Sincronizar y Crear Rama**
 Asegúrate de que tu `develop` local está actualizado con el repositorio remoto y crea una nueva rama descriptiva para tu tarea.
