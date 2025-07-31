@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from src.core.dependencies import get_event_bus
 from src.core.interfaces.bus import IEventBus
+from src.core.middleware import correlation_id
 from src.core.schemas import AnalyzeQuery, IngestionResponse
 
 router = APIRouter(prefix="/analysis", tags=["Analysis"])
@@ -32,6 +33,7 @@ async def ingest_request(
     la publica en el bus de eventos.
     """
     task_id = str(uuid4())
+    trace_id = correlation_id.get()
     logger.info(f"Received ingestion request. Assigning TaskID: {task_id}")
 
     # El nombre de la tarea podría ser dinámico en el futuro
@@ -39,6 +41,7 @@ async def ingest_request(
 
     event = {
         "task_id": task_id,
+        "trace_id": trace_id,
         "task_name": task_name,
         "query": request.query,
         "user_id": request.user_id,

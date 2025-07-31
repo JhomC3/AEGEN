@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, Dict
+from typing import Any
 
 import whisper
 from core.config import settings
@@ -25,7 +25,7 @@ class SpeechToText:
         return self.whisper_model
 
     @tool
-    async def transcribe_with_whisper(self, audio_path: str) -> Dict[str, Any]:
+    async def transcribe_with_whisper(self, audio_path: str) -> dict[str, Any]:
         """
         Toma un archivo de audio y lo transcribe usando Whisper y devuleve un texto completo de la transcripción.
         """

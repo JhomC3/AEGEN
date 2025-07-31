@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
 from typing import Final
 
-from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseFunction
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
@@ -18,7 +19,7 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
     """Middleware to add a correlation ID to every request."""
 
     async def dispatch(
-        self, request: Request, call_next: RequestResponseFunction
+        self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """
         Dispatches the request, adding a correlation ID.
@@ -43,6 +44,6 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         response = await call_next(request)
 
         # Añade el ID de correlación a las cabeceras de la respuesta.
-        response.headers["X-Correlation-ID"] = correlation_id.get()
+        response.headers["X-Correlation-ID"] = correlation_id_value
 
         return response

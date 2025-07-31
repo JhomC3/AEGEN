@@ -20,7 +20,7 @@ classifiers = [
 
 dependencies = [
     "fastapi",
-    "fastapi-cache2[redis]",
+    "fastapi-cache2>=0.2.0",
     "google",
     "google-api-python-client",
     "google-genai",
@@ -36,6 +36,7 @@ dependencies = [
     "pandas",
     "psutil",
     "pydantic-settings",
+    "prometheus-fastapi-instrumentator",
     "python-dotenv",
     "python-json-logger",
     "python-telegram-bot",
@@ -45,7 +46,7 @@ dependencies = [
     "uvicorn[standard]",
     "chromadb",
     "whisper",
-    "PIL",
+    "Pillow",
     "pytesseract",
     "pypdf",
     "python-docx",

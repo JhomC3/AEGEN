@@ -23,7 +23,7 @@ class ChromaManager:
 
             self.collection = self.client.get_or_create_collection(
                 name=collection_name,
-                embedding_function=embedding_function,
+                embedding_function=embedding_function,  # type: ignore[arg-type]
             )
             self.logger.info(
                 f"ChromaDB connection established. Collection '{collection_name}' is ready."

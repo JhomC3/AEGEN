@@ -2,7 +2,7 @@
 import asyncio
 import json
 import logging
-from typing import Awaitable, Callable, Set, Tuple
+from collections.abc import Awaitable, Callable
 
 import redis.asyncio as aioredis
 from redis.exceptions import RedisError
@@ -24,7 +24,7 @@ class RedisEventBus(IEventBus):
         self._redis = redis_client
         self._subscribers: dict[str, list[Callable[[dict], Awaitable[None]]]] = {}
         self._tasks: list[asyncio.Task] = []
-        self._consumer_group_created: Set[Tuple[str, str]] = set()
+        self._consumer_group_created: set[tuple[str, str]] = set()
         logger.info("RedisEventBus initialized.")
 
     async def publish(self, topic: str, event: dict) -> None:

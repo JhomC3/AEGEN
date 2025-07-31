@@ -1,6 +1,6 @@
 # src/core/interfaces/bus.py
 from abc import ABC, abstractmethod
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 
 class IEventBus(ABC):

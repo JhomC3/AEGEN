@@ -1,6 +1,5 @@
 # src/agents/orchestrator.py
 import logging
-from typing import Set
 
 from src.core.registry import workflow_registry
 from src.core.resilience import retry_on_failure
@@ -19,7 +18,7 @@ class WorkflowCoordinator:
         logger.info("WorkflowCoordinator instance created.")
         # Para la Fase 1, usamos un set en memoria para la idempotencia.
         # En Fase 2, esto sería reemplazado por un sistema persistente (ej. Redis).
-        self.processed_tasks: Set[str] = set()
+        self.processed_tasks: set[str] = set()
 
     async def handle_workflow_event(self, event: dict) -> None:
         """

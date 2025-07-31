@@ -2,7 +2,7 @@
 import asyncio
 import logging
 from collections import defaultdict
-from typing import Awaitable, Callable
+from collections.abc import Awaitable, Callable
 
 from src.core.interfaces.bus import IEventBus
 
@@ -11,10 +11,10 @@ logger = logging.getLogger(__name__)
 
 class InMemoryEventBus(IEventBus):
     """
-    Una implementación en memoria del IEventBus usando asyncio.Queue.
+    Una implementación en memoria del IEventBus.
 
-    Ideal para desarrollo local y pruebas, ya que no requiere dependencias externas.
-    Cada topic es una cola de asyncio.
+    Implementa un patrón fan-out: un único consumidor por topic que distribuye
+    el evento a múltiples handlers suscritos.
     """
 
     def __init__(self) -> None:
@@ -22,7 +22,7 @@ class InMemoryEventBus(IEventBus):
         self._subscribers: dict[str, list[Callable[[dict], Awaitable[None]]]] = (
             defaultdict(list)
         )
-        self._tasks: list[asyncio.Task] = []
+        self._consumer_tasks: dict[str, asyncio.Task] = {}
         logger.info("InMemoryEventBus initialized.")
 
     async def publish(self, topic: str, event: dict) -> None:
@@ -36,39 +36,53 @@ class InMemoryEventBus(IEventBus):
         self, topic: str, handler: Callable[[dict], Awaitable[None]]
     ) -> None:
         """
-        Suscribe un handler a un topic y crea una tarea en segundo plano
-        para consumir eventos de ese topic.
+        Suscribe un handler a un topic.
+
+        Si es la primera suscripción para este topic, crea una única
+        tarea consumidora en segundo plano.
         """
+        # Añadir el handler a la lista de suscriptores para este topic
         self._subscribers[topic].append(handler)
-        task = asyncio.create_task(self._consumer(topic, handler))
-        self._tasks.append(task)
+
+        # Si no hay una tarea consumidora para este topic, crearla.
+        if topic not in self._consumer_tasks:
+            task = asyncio.create_task(self._consumer(topic))
+            self._consumer_tasks[topic] = task
+            logger.info(f"Consumer task created for topic '{topic}'.")
+
         logger.info(f"Handler {handler.__name__} subscribed to topic '{topic}'.")
 
-    async def _consumer(
-        self, topic: str, handler: Callable[[dict], Awaitable[None]]
-    ) -> None:
-        """Tarea consumidora que espera eventos en una cola y los procesa."""
+    async def _consumer(self, topic: str) -> None:
+        """
+        Tarea consumidora que espera eventos en una cola y los distribuye
+        a todos los handlers suscritos.
+        """
         queue = self._queues[topic]
         while True:
             try:
                 event = await queue.get()
                 logger.debug(
-                    f"Handler {handler.__name__} consumed event from '{topic}'."
+                    f"Consumed event from '{topic}', distributing to handlers."
                 )
-                await handler(event)
+
+                # Obtener todos los handlers para este topic
+                handlers = self._subscribers.get(topic, [])
+                if handlers:
+                    # Ejecutar todos los handlers concurrentemente
+                    await asyncio.gather(*(handler(event) for handler in handlers))
+
                 queue.task_done()
             except asyncio.CancelledError:
                 logger.info(f"Consumer for topic '{topic}' cancelled.")
                 break
             except Exception:
-                logger.exception(
-                    f"Error in handler {handler.__name__} for topic '{topic}'."
-                )
+                logger.exception(f"Error in consumer for topic '{topic}'.")
 
     async def shutdown(self) -> None:
         """Cancela todas las tareas consumidoras pendientes."""
         logger.info("Shutting down InMemoryEventBus...")
-        for task in self._tasks:
+        tasks_to_cancel = list(self._consumer_tasks.values())
+        for task in tasks_to_cancel:
             task.cancel()
-        await asyncio.gather(*self._tasks, return_exceptions=True)
+        await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
         logger.info("All consumer tasks cancelled.")

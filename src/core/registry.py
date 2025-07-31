@@ -1,6 +1,5 @@
 # src/core/registry.py
 import logging
-from typing import Type
 
 from src.core.interfaces.workflow import IWorkflow
 
@@ -16,7 +15,7 @@ class WorkflowRegistry:
     """
 
     _instance = None
-    _registry: dict[str, Type[IWorkflow]] = {}
+    _registry: dict[str, type[IWorkflow]] = {}
 
     def __new__(cls):
         if cls._instance is None:
@@ -35,7 +34,7 @@ class WorkflowRegistry:
             El decorador.
         """
 
-        def decorator(cls: Type[IWorkflow]):
+        def decorator(cls: type[IWorkflow]):
             if not issubclass(cls, IWorkflow):
                 raise TypeError(
                     f"Class {cls.__name__} must implement the IWorkflow interface."
@@ -50,7 +49,7 @@ class WorkflowRegistry:
 
         return decorator
 
-    def get_workflow(self, task_name: str) -> Type[IWorkflow] | None:
+    def get_workflow(self, task_name: str) -> type[IWorkflow] | None:
         """
 
         Obtiene la clase de workflow para un nombre de tarea dado.
@@ -63,7 +62,7 @@ class WorkflowRegistry:
         """
         return self._registry.get(task_name)
 
-    def get_all_workflows(self) -> dict[str, Type[IWorkflow]]:
+    def get_all_workflows(self) -> dict[str, type[IWorkflow]]:
         """Devuelve una copia del registro completo."""
         return self._registry.copy()
 

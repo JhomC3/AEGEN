@@ -2,8 +2,9 @@
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from functools import wraps
-from typing import Awaitable, Callable, ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar
 
 P = ParamSpec("P")
 R = TypeVar("R")

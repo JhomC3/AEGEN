@@ -30,7 +30,7 @@ from typing import (
 from .config import settings
 from .middleware import correlation_id
 
-# --- Tipos para JSON ---
+# --- Tipos para JSON --- # ruff: noqa: UP040
 JsonValue: TypeAlias = str | int | float | bool | None | list[Any] | dict[str, Any]
 JsonDict: TypeAlias = dict[str, JsonValue]
 
