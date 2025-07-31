@@ -218,6 +218,53 @@ make docs
 
 ## 🔧 7. Guía de Contribución (Humano & LLM-First)
 
+### **Ciclo de Vida de una Funcionalidad (Flujo de Git Mandatorio)**
+
+**Instrucción para Agente IA:** Antes de iniciar cualquier nueva funcionalidad, corrección o refactorización, DEBES seguir este ciclo. No se permite el `push` directo a `develop`. Cada unidad de trabajo debe ser encapsulada en un Pull Request.
+
+**Paso 1: Sincronizar y Crear Rama**
+Asegúrate de que tu `develop` local está actualizado con el repositorio remoto y crea una nueva rama descriptiva para tu tarea.
+
+```bash
+# Vuelve a la rama principal y trae los últimos cambios
+git checkout develop
+git pull origin develop
+
+# Crea y muévete a tu nueva rama de funcionalidad
+git checkout -b feature/nombre-descriptivo-de-la-tarea
+```
+
+**Paso 2: Desarrollar y Verificar Localmente**
+Realiza los cambios de código en tu rama. Antes de considerar el trabajo terminado, DEBES cumplir el **Checklist Pre-Commit** de forma local.
+
+```bash
+# Ejecuta los linters y formateadores
+make lint
+
+# Ejecuta la suite de pruebas completa
+make test
+```
+Solo si ambos comandos pasan sin errores, puedes continuar.
+
+**Paso 3: Publicar y Crear Pull Request (PR)**
+Sube tu rama al repositorio remoto y crea un Pull Request (PR) hacia `develop`.
+
+```bash
+# Sube tu rama al repositorio remoto
+git push origin feature/nombre-descriptivo-de-la-tarea
+```
+- **Acción Manual/UI:** Ve a la interfaz de GitHub.
+- **Crea el PR:** Configura el PR para fusionar tu rama (`feature/...`) en la rama `base: develop`.
+- **Documenta el PR:** Usa la plantilla de commit para el título y la descripción, explicando el QUÉ y el PORQUÉ de tus cambios.
+
+**Paso 4: Fusión y Limpieza**
+- **Verificación de CI:** Espera a que todos los chequeos automáticos en el PR (GitHub Actions) se muestren en verde (✅). Si algo falla, vuelve al paso 2.
+- **Fusionar:** Una vez aprobado y verificado, fusiona el PR usando el botón en la interfaz de GitHub.
+- **Limpiar:** Elimina la rama de funcionalidad (`Delete branch`) después de la fusión para mantener el repositorio limpio.
+- **Finalizar:** Vuelve al Paso 1 para la siguiente tarea.
+
+---
+
 - **Prompt de Sistema Interno:** Antes de generar código, lee `PROJECT_OVERVIEW.md`. Prioriza la claridad, sigue los estándares y escribe tests para toda nueva funcionalidad.
 - **Checklist Pre-Commit (forzada por `pre-commit` hook):**
   1.  `make lint` pasa.
