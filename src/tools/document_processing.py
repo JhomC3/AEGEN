@@ -1,8 +1,8 @@
 import asyncio
 import csv
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict
 
 import docx
 import openpyxl
@@ -11,7 +11,7 @@ import pypdf
 from langchain_core.tools import tool
 
 # --- Registry for Document Readers ---
-READER_REGISTRY: Dict[str, Callable[[str], str]] = {}
+READER_REGISTRY: dict[str, Callable[[str], str]] = {}
 
 
 def register_reader(*extensions: str):

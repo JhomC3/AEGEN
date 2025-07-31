@@ -51,6 +51,25 @@ class ServiceStatus(str, Enum):
     DEGRADED = "degraded"
 
 
+class SystemState(str, Enum):
+    """Enum para representar el estado recomendado del sistema."""
+
+    STAY_LOCAL = "STAY_LOCAL"
+    MIGRATE_TO_DISTRIBUTED = "MIGRATE_TO_DISTRIBUTED"
+
+
+# --- Esquemas del Sistema ---
+
+
+class SystemStatus(BaseModel):
+    """Modelo de datos para el estado del sistema."""
+
+    cpu_usage_percent: float
+    memory_usage_percent: float
+    state: SystemState
+    message: str
+
+
 # --- Esquemas para Solicitudes API ---
 class AnalyzeQuery(BaseModel):
     query: str = Field(
@@ -233,6 +252,16 @@ class AnalyzeResponse(BaseModel):
     }
 
 
+class IngestionResponse(BaseModel):
+    """Respuesta para el endpoint de ingestión no bloqueante."""
+
+    task_id: str = Field(..., description="Unique identifier for the accepted task.")
+    message: str = Field(
+        default="Request accepted for processing.",
+        description="Confirms that the request has been accepted.",
+    )
+
+
 # --- Esquemas Internos (Ejemplos, si los agentes necesitan estructuras bien definidas) ---
 class PlanStep(BaseModel):
     """Representa un paso en el plan de análisis."""
@@ -326,3 +355,33 @@ class DocumentError(BaseModel):
             ]
         }
     }
+
+
+# --- Esquemas para Eventos Internos ---
+
+
+class GenericMessageEvent(BaseModel):
+    """
+    Define la estructura de un evento de mensaje genérico que se publica en el bus.
+    Actúa como un Data Transfer Object (DTO) para estandarizar la información
+    de diferentes fuentes de ingesta (Telegram, API, etc.).
+    """
+
+    task_id: str = Field(..., description="Identificador único de la tarea.")
+    task_name: str = Field(..., description="Nombre de la tarea a ejecutar.")
+    user_info: dict[str, Any] = Field(
+        ...,
+        description="Información sobre el usuario y el chat (user_id, user_name, chat_id).",
+    )
+    message_type: str = Field(
+        ..., description="Tipo de mensaje (ej. 'text', 'image', 'audio')."
+    )
+    content: Any = Field(
+        ...,
+        description="Contenido principal del mensaje (texto, objeto de archivo, etc.).",
+    )
+    file_name: str | None = Field(None, description="Nombre del archivo, si aplica.")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Metadatos adicionales específicos de la plataforma.",
+    )

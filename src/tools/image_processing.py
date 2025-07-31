@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, Dict
+from typing import Any
 
 import pytesseract
 from langchain_core.tools import tool
@@ -10,10 +10,10 @@ from PIL import Image
 class ImageToText:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
-        self.stats: Dict[str, int] = {"image_processed": 0, "errors": 0}
+        self.stats: dict[str, int] = {"image_processed": 0, "errors": 0}
 
     @tool
-    async def image_to_text_tool(self, file_path: str) -> Dict[str, Any]:
+    async def image_to_text_tool(self, file_path: str) -> dict[str, Any]:
         """Procesa un archivo de imagen para extraer texto (OCR)."""
         try:
             self.logger.info(f"Processing image {file_path}")
@@ -42,5 +42,5 @@ class ImageToText:
             raise
 
     @tool
-    def get_stats(self) -> Dict[str, int]:
+    def get_stats(self) -> dict[str, int]:
         return self.stats.copy()
