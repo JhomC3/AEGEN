@@ -105,10 +105,11 @@ AEGEN/
     │   ├── orchestrator.py     # 🚧 Coordinador con resiliencia básica.
     │   └── workflows/          # ❌ Esqueletos. Ningún workflow funcional.
     │       ├── base_workflow.py  # ❌ Falta la clase base abstracta.
-    │       └── research/
-    │           └── basic_research.py # ❌ Placeholder.
+    │       └── transcription/
+    │           └── audio_transcriber.py # ❌ Placeholder.
     └── tools/                  # 🛠️ Funciones atómicas.
-        └── web_search.py       # ❌ Placeholder.
+        ├── telegram_interface.py # ❌ Placeholder.
+        └── speech_to_text.py   # ❌ Placeholder.
 └── tests/                      # 🚧 EN PROGRESO. Deuda técnica crítica siendo saldada.
     ├── conftest.py             # ✅ Fixtures base implementadas.
     ├── unit/                   # 🚧 EN PROGRESO. Replicando src/.
@@ -159,15 +160,16 @@ def mock_event_bus() -> AsyncMock:
 
 El roadmap no es una lista de deseos, es un plan de fases con detonantes observables.
 
-#### FASE 0: FUNDACIÓN (Prioridad Crítica - Sprints 1-2)
+#### FASE 0: WORKFLOW FUNDACIONAL (Prioridad Crítica)
 
-- **Meta:** Saldar la deuda técnica de testing y construir el primer workflow funcional.
+- **Meta:** Implementar el primer flujo de valor de extremo a extremo, validando la arquitectura y entregando una capacidad tangible.
+- **Workflow a Construir:** **Transcripción de Audio desde Telegram.**
 - **Acciones Inmediatas:**
-  1.  Implementar `tests/conftest.py` y los tests unitarios para `core/`.
-  2.  Implementar el workflow `basic_research.py` usando una `WebSearchTool` real.
-  3.  Escribir tests de integración para el flujo `POST /analysis/ingest` → `Orchestrator` → `BasicResearchWorkflow`.
-  4.  Configurar el pipeline de CI en GitHub Actions para que falle si `--cov-fail-under=85`.
-- **Definition of Done:** `make test` pasa con >85% de cobertura.
+  1.  Implementar una `TelegramTool` para descargar archivos y enviar mensajes.
+  2.  Implementar una `SpeechToTextTool` que use un modelo como Whisper.
+  3.  Implementar el `TranscriptionWorkflow` que orqueste las dos herramientas.
+  4.  Escribir tests unitarios para las tools y un test de integración para el workflow completo.
+- **Definition of Done:** Un usuario puede enviar un audio a un bot de Telegram y recibir la transcripción como respuesta.
 
 #### FASE 1: MONOLITO OBSERVABLE (Estado Actual Post-Fundación)
 
