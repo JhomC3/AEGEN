@@ -8,6 +8,7 @@ import docx
 import openpyxl
 import pptx
 import pypdf
+
 from core.schemas import DocumentContent, DocumentError
 
 READER_REGISTRY: dict[str, Callable[[str], str]] = {}

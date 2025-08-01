@@ -56,4 +56,5 @@ class SpeechToText:
 
     @tool
     def get_stats(self) -> dict[str, int]:
+        """Devuelve las estadísticas de uso de la herramienta."""
         return self.stats.copy()

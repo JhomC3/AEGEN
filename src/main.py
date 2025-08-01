@@ -8,8 +8,7 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from prometheus_fastapi_instrumentator import Instrumentator
 
-from src.api.routers import analysis as analysis_router
-from src.api.routers import status as status_router
+from src.api.routers import analysis, status, webhooks
 from src.core.config import settings
 from src.core.dependencies import (
     get_workflow_coordinator,
@@ -110,8 +109,9 @@ register_exception_handlers(app)
 
 
 # --- Routers ---
-app.include_router(status_router.router)
-app.include_router(analysis_router.router, prefix="/api/v1")
+app.include_router(status.router, prefix="/system", tags=["System"])
+app.include_router(analysis.router, prefix="/api/v1/analysis", tags=["Analysis"])
+app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
 
 logger.info(f"FastAPI application '{settings.APP_NAME}' configured and ready.")
 

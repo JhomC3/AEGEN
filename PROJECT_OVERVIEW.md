@@ -112,18 +112,19 @@ AEGEN/
     │   └── schemas.py          # ✅ Contratos Pydantic.
     ├── agents/                 # 🧠 Lógica de orquestación.
     │   ├── orchestrator.py     # 🚧 Coordinador con resiliencia básica.
-    │   └── workflows/          # ❌ Esqueletos. Ningún workflow funcional.
+    │   └── workflows/          # ✅ Primer workflow funcional.
     │       ├── base_workflow.py  # ❌ Falta la clase base abstracta.
     │       └── transcription/
-    │           └── audio_transcriber.py # ❌ Placeholder.
+    │           └── audio_transcriber.py # ✅ Implementado.
     └── tools/                  # 🛠️ Funciones atómicas.
         ├── speech_processing.py  # ✅ Implementado y probado.
-        └── telegram_interface.py # ❌ Placeholder.
+        └── telegram_interface.py # ✅ Implementado y probado.
 └── tests/                      # 🚧 EN PROGRESO. Deuda técnica crítica siendo saldada.
     ├── conftest.py             # ✅ Fixtures base implementadas.
     ├── unit/                   # 🚧 EN PROGRESO. Replicando src/.
     │   └── core/               # ✅ Módulos base cubiertos.
-    └── integration/            # ❌ Vacío.
+    │   └── tools/              # ✅ TelegramTool cubierto.
+    └── integration/            # ✅ Primer test de integración.
 ```
 
 ## 🧪 4. La Garantía: Estrategia de Testing No Negociable
@@ -169,16 +170,11 @@ def mock_event_bus() -> AsyncMock:
 
 El roadmap no es una lista de deseos, es un plan de fases con detonantes observables.
 
-#### FASE 0: WORKFLOW FUNDACIONAL (Prioridad Crítica)
+#### FASE 0: WORKFLOW FUNDACIONAL (✅ Completada)
 
 - **Meta:** Implementar el primer flujo de valor de extremo a extremo, validando la arquitectura y entregando una capacidad tangible.
-- **Workflow a Construir:** **Transcripción de Audio desde Telegram.**
-- **Acciones Inmediatas:**
-  1.  Implementar una `TelegramTool` para descargar archivos y enviar mensajes.
-  2.  Implementar una `SpeechToTextTool` que use un modelo como Whisper.
-  3.  Implementar el `TranscriptionWorkflow` que orqueste las dos herramientas.
-  4.  Escribir tests unitarios para las tools y un test de integración para el workflow completo.
-- **Definition of Done:** Un usuario puede enviar un audio a un bot de Telegram y recibir la transcripción como respuesta.
+- **Workflow Construido:** **Transcripción de Audio desde Telegram.**
+- **Definition of Done:** Un usuario puede enviar un audio a un bot de Telegram y recibir la transcripción como respuesta. (Verificado por tests de integración).
 
 #### FASE 1: MONOLITO OBSERVABLE (Estado Actual Post-Fundación)
 
@@ -237,16 +233,18 @@ make docs
 Antes de escribir una sola línea de código, debes tener un contexto absoluto del estado del proyecto. Este paso no es opcional.
 
 1.  **Contexto Histórico (`¿De dónde venimos?`):**
-    *   **Acción:** Lee el archivo `@history_llm_chat.txt`.
-    *   **Objetivo:** Entender las decisiones, errores y correcciones recientes. Presta especial atención a las últimas 500 líneas para comprender el contexto inmediato de la última sesión de trabajo.
+
+    - **Acción:** Lee el archivo `@history_llm_chat.txt`.
+    - **Objetivo:** Entender las decisiones, errores y correcciones recientes. Presta especial atención a las últimas 500 líneas para comprender el contexto inmediato de la última sesión de trabajo.
 
 2.  **Contexto Real (`¿Dónde estamos?`):**
-    *   **Acción:** Usa `glob` o `list_directory` para inspeccionar la estructura de archivos actual en `src/`.
-    *   **Objetivo:** Verificar la existencia y el estado real de los componentes. No confíes ciegamente en la documentación; contrástala siempre con el código fuente. Este paso previene la creación de duplicados y la desalineación con la realidad.
+
+    - **Acción:** Usa `glob` o `list_directory` para inspeccionar la estructura de archivos actual en `AEGEN/`.
+    - **Objetivo:** Verificar la existencia y el estado real de los componentes. No confíes ciegamente en la documentación; contrástala siempre con el código fuente. Este paso previene la creación de duplicados y la desalineación con la realidad.
 
 3.  **Contexto Estratégico (`¿Para dónde vamos?`):**
-    *   **Acción:** Estudia en detalle este documento (`@PROJECT_OVERVIEW.md`), específicamente el "Blueprint" y el "Plan de Batalla".
-    *   **Objetivo:** Asegurarte de que la siguiente acción está alineada con la FASE actual del roadmap. Si encuentras una discrepancia entre el código real y este documento, tu primera tarea es corregir el documento.
+    - **Acción:** Estudia en detalle este documento (`@PROJECT_OVERVIEW.md`), específicamente el "Blueprint" y el "Plan de Batalla".
+    - **Objetivo:** Asegurarte de que la siguiente acción está alineada con la FASE actual del roadmap. Si encuentras una discrepancia entre el código real y este documento, tu primera tarea es corregir el documento.
 
 **Paso 1: Sincronizar y Crear Rama**
 Asegúrate de que tu `develop` local está actualizado con el repositorio remoto y crea una nueva rama descriptiva para tu tarea.
@@ -270,6 +268,7 @@ make lint
 # Ejecuta la suite de pruebas completa
 make test
 ```
+
 Solo si ambos comandos pasan sin errores, puedes continuar.
 
 **Paso 3: Publicar y Crear Pull Request (PR)**
@@ -279,11 +278,13 @@ Sube tu rama al repositorio remoto y crea un Pull Request (PR) hacia `develop`.
 # Sube tu rama al repositorio remoto
 git push origin feature/nombre-descriptivo-de-la-tarea
 ```
+
 - **Acción Manual/UI:** Ve a la interfaz de GitHub.
 - **Crea el PR:** Configura el PR para fusionar tu rama (`feature/...`) en la rama `base: develop`.
 - **Documenta el PR:** Usa la plantilla de commit para el título y la descripción, explicando el QUÉ y el PORQUÉ de tus cambios.
 
 **Paso 4: Fusión y Limpieza**
+
 - **Verificación de CI:** Espera a que todos los chequeos automáticos en el PR (GitHub Actions) se muestren en verde (✅). Si algo falla, vuelve al paso 2.
 - **Fusionar:** Una vez aprobado y verificado, fusiona el PR usando el botón en la interfaz de GitHub.
 - **Limpiar:** Elimina la rama de funcionalidad (`Delete branch`) después de la fusión para mantener el repositorio limpio.
