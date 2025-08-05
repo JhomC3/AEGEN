@@ -1,16 +1,17 @@
 import asyncio
 import csv
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, Dict, Union
 
 import docx
 import openpyxl
 import pptx
 import pypdf
+
 from core.schemas import DocumentContent, DocumentError
 
-READER_REGISTRY: Dict[str, Callable[[str], str]] = {}
+READER_REGISTRY: dict[str, Callable[[str], str]] = {}
 
 
 def register_reader(*extensions: str):
@@ -98,7 +99,7 @@ class DocumentProcessor:
         self,
         file_path: str,
         file_name: str,
-    ) -> Union[DocumentContent, DocumentError]:
+    ) -> DocumentContent | DocumentError:
         """Procesa un archivo de documento para extraer su contenido."""
         self.logger.info(f"Iniciando procesamiento del archivo: {file_name}")
         file_extension = Path(file_name).suffix.lower()

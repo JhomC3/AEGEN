@@ -1,59 +1,92 @@
 import asyncio
 import logging
-from typing import Any, Dict
+from typing import Any
 
 import whisper
-from core.config import settings
 from langchain_core.tools import tool
 
+from src.core.config import settings
 
-class SpeechToText:
-    def __init__(self, model: str = settings.DEFAULT_WHISPER_MODEL):
-        self.logger = logging.getLogger(__name__)
-        self.whisper_model = None
-        self.model = model
-        self.stats: dict[str, int] = {"transcriptions": 0, "errors": 0}
-        self.logger.info(
-            f"Iniciando herramienta de transcripción con modelo: {self.model} de Whisper"
-        )
+logger = logging.getLogger(__name__)
 
-    def _get_whisper_model(self):
-        if self.whisper_model is None:
-            self.logger.info(f"Cargando modelo Whisper: {self.model}")
-            self.whisper_model = whisper.load_model(self.model)
-            self.logger.info(f"Modelo Whisper cargado: {self.model}")
-        return self.whisper_model
 
-    @tool
-    async def transcribe_with_whisper(self, audio_path: str) -> Dict[str, Any]:
-        """
-        Toma un archivo de audio y lo transcribe usando Whisper y devuleve un texto completo de la transcripción.
-        """
-        try:
-            self.logger.info(f"Iniciando transcripción para el archivo: {audio_path}")
-            model_to_transcribe = self._get_whisper_model()
-            result = await asyncio.to_thread(
-                model_to_transcribe.transcribe(audio_path, fp16=False)
+class WhisperModelManager:
+    """
+    Gestiona la carga y el acceso al modelo Whisper.
+    Asegura que el modelo se cargue una sola vez (patrón singleton).
+    """
+
+    _instance = None
+
+    # Declarar atributos de instancia para que mypy los reconozca
+    model_name: str
+    logger: logging.Logger
+    _whisper_model: Any = None
+
+    def __new__(cls, model_name: str = settings.DEFAULT_WHISPER_MODEL):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls._instance.model_name = model_name
+            cls._instance.logger = logging.getLogger(cls.__name__)
+            cls._instance.logger.info(
+                f"WhisperModelManager inicializado con el modelo: {model_name}"
             )
-            transcript: str = result["text"]
-            language: str = result.get("language", "unknown")
-            audio_info = {
-                "transcript": transcript,
-                "language": language,
-            }
+        return cls._instance
 
-            self.logger.info(f"Transcripción completa para: {audio_path}")
-            self.stats["transcriptions"] += 1
-            return audio_info
-
-        except Exception as e:
-            error_message = f"Ocurrió un error al transcribir el audio: {e}"
-            self.logger.error(
-                f"Herramienta de Transcripción: {error_message}", exc_info=True
+    async def get_model(self):
+        """
+        Carga el modelo Whisper si aún no está cargado y lo devuelve.
+        La carga se realiza en un hilo separado para no bloquear el bucle de eventos.
+        """
+        if self._whisper_model is None:
+            self.logger.info(f"Cargando el modelo Whisper: {self.model_name}...")
+            self._whisper_model = await asyncio.to_thread(
+                whisper.load_model, self.model_name
             )
-            self.stats["errors"] += 1
-            raise
+            self.logger.info(f"Modelo Whisper '{self.model_name}' cargado con éxito.")
+        return self._whisper_model
 
-    @tool
-    def get_stats(self) -> dict[str, int]:
-        return self.stats.copy()
+
+# Instancia única del gestor del modelo para toda la aplicación
+whisper_manager = WhisperModelManager()
+
+# Estadísticas a nivel de módulo para mantener un seguimiento
+transcription_stats = {"transcriptions": 0, "errors": 0}
+
+
+@tool
+async def transcribe_with_whisper(audio_path: str) -> dict[str, Any]:
+    """
+    Toma un archivo de audio, lo transcribe usando Whisper y devuelve el texto.
+    """
+    try:
+        logger.info(f"Iniciando transcripción para el archivo: {audio_path}")
+        model = await whisper_manager.get_model()
+
+        # Ejecutar la transcripción (que es bloqueante) en un hilo separado
+        result = await asyncio.to_thread(model.transcribe, audio_path, fp16=False)
+
+        transcript = result.get("text", "")
+        language = result.get("language", "unknown")
+
+        audio_info = {
+            "transcript": transcript,
+            "language": language,
+        }
+
+        logger.info(f"Transcripción completa para: {audio_path}")
+        transcription_stats["transcriptions"] += 1
+        return audio_info
+
+    except Exception as e:
+        error_message = f"Ocurrió un error al transcribir el audio: {e}"
+        logger.error(f"{error_message}", exc_info=True)
+        transcription_stats["errors"] += 1
+        # Propagar la excepción para que el workflow la maneje
+        raise
+
+
+@tool
+def get_transcription_stats() -> dict[str, int]:
+    """Devuelve las estadísticas de uso de la herramienta de transcripción."""
+    return transcription_stats.copy()

@@ -1,29 +1,66 @@
 services:
-  n8n:
-    image: n8nio/n8n:latest
-    container_name: n8n
-    ports:
-      - "127.0.0.1:5678:5678"
-    environment:
-      - N8N_HOST= localhost
-      - N8N_PORT=5678
-      - N8N_PROTOCOL=http
-      - NODE_ENV=production
-      - GENERIC_TIMEZONE=America/Bogota
-    volumes:
-      - n8n_data:/home/node/.n8n
-    restart: unless-stopped
-
-  search_yt_agent:
+  app:
     build:
-      context: ./langchain_agents/search_yt_agent
+      context: .
+      dockerfile: Dockerfile
+    container_name: aegen_app_prod # Nombre distinto para prod
+    # No mapear puertos por defecto (proxy inverso manejará esto)
+    ports:
+      - "8000:8000" # Mapea el puerto 8000 del contenedor al puerto 8000 del host
+    env_file:
+      - .env # Usar variables de .env (asegurar que APP_ENV=prod)
+    # No montar volúmenes en producción (excepto datos persistentes si aplica)
+    # volumes:
+    #   - logs_data:/app/logs # Ejemplo si se loguea a archivo
+    networks:
+      - aegen_network
+    restart: unless-stopped # Reiniciar si falla
+    healthcheck:
+      # Replicar healthcheck del Dockerfile o ajustarlo
+      test: ["CMD", "curl", "-f", "http://localhost:8000/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      redis:
+        # Depende del servicio de Redis
+        condition: service_healthy # Esperar a que Redis esté listo
+      # vector_db: # Si tienes un servicio de Vector DB
+      #   condition: service_started
 
-    container_name: search_yt_agent
-
-    environment:
-      - YOUTUBE_API_KEY=${YOUTUBE_API_KEY}
-
+  redis:
+    image: redis:alpine3.21
+    container_name: aegen_redis
+    networks:
+      - aegen_network
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
+  # vector_db: # Ejemplo con ChromaDB persistente
+  #   image: chromadb/chroma:latest
+  #   container_name: aegen_vector_db
+  #   environment:
+  #     -   IS_PERSISTENT=TRUE
+  #     - CHROMA_SERVER_HOST=0.0.0.0 # Escuchar en todas las interfaces
+  #   volumes:
+  #     - chromadb_data:/chroma/.chroma/index
+  #   networks:
+  #     - aegen_network
+  #   ports: # Exponer solo si se accede externamente a ChromaDB
+  #      - "8001:8000"
+  #   restart: unless-stopped
 
 volumes:
-  n8n_data:
+  redis_data:
+  chromadb_data:
+    # logs_data:
+
+networks:
+  aegen_network:
+    driver: bridge

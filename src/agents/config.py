@@ -3,8 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 from typing import Any
 
-from core.config import settings
 from langchain_core.runnables import RunnableConfig
+
+from core.config import settings
 
 
 @dataclass(kw_only=True)

@@ -1,5 +1,5 @@
 # ---- Base Stage ----
-FROM python:3.13-alpine as base
+FROM python:3.13-slim as base
 ARG APP_DIR=/app
 WORKDIR ${APP_DIR}
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -11,8 +11,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     UV_EXTRA_INDEX_URL=''
 
 # Instalar dependencias básicas (shadow para useradd, curl para uv)
-RUN apk add --no-cache curl shadow && \
-    rm -rf /var/cache/apk/* # Limpiar cache de apk
+RUN apt-get update &&     apt-get install -y --no-install-recommends curl passwd ffmpeg &&     rm -rf /var/lib/apt/lists/* # Limpiar cache de apt
+
 
 # Crear usuario no-root
 ARG UID=10001
@@ -42,7 +42,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copia el código fuente y la configuración
 COPY --chown=appuser:appuser ./src ${APP_DIR}/src
-COPY --chown=appuser:appuser ./config ${APP_DIR}/config
+
 
 # Crear un directorio para logs y darle permisos al appuser
 RUN mkdir -p ${APP_DIR}/logs && chown appuser:appuser ${APP_DIR}/logs

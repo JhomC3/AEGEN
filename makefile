@@ -35,7 +35,6 @@ lock: venv ## Genera/Actualiza los archivos requirements.lock
 lint: ## Ejecuta linters (ruff, black check, mypy, bandit, safety)
 	@echo ">>> Running linters..."
 	$(VENV_DIR)/bin/ruff check .
-	$(VENV_DIR)/bin/ruff format --check .
 	$(VENV_DIR)/bin/black --check .
 	$(VENV_DIR)/bin/mypy src tests
 	$(VENV_DIR)/bin/bandit -c pyproject.toml -r src

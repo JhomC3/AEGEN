@@ -1,36 +1,62 @@
 # src/api/routers/analysis.py
 import logging
+from uuid import uuid4
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 
-# Importar la dependencia del orquestador
-from src.agents.orchestrator import OrchestratorAgent
-from src.core.dependencies import get_orchestrator_agent  # Asume DI
-from src.core.schemas import AnalyzeQuery, AnalyzeResponse
+from src.core.dependencies import get_event_bus
+from src.core.interfaces.bus import IEventBus
+from src.core.middleware import correlation_id
+from src.core.schemas import AnalyzeQuery, IngestionResponse
 
-router = APIRouter(prefix="/analyze", tags=["Analysis"])
+router = APIRouter(tags=["Analysis"])
 logger = logging.getLogger(__name__)
 
+event_bus_dependency = Depends(get_event_bus)
 
-orchestrator_dependency = Depends(get_orchestrator_agent)
 
-
-@router.post("/", response_model=AnalyzeResponse)
-async def analyze_request(
+@router.post(
+    "/ingest",
+    response_model=IngestionResponse,
+    status_code=status.HTTP_202_ACCEPTED,
+    summary="Ingests a query for asynchronous processing",
+    description="Receives a query, publishes it to the event bus for processing, and returns immediately.",
+)
+async def ingest_request(
     request: AnalyzeQuery,
-    # Inyectar el agente orquestador como dependencia
-    orchestrator: OrchestratorAgent = orchestrator_dependency,
+    event_bus: IEventBus = event_bus_dependency,
 ):
-    """Recibe una query y la procesa a través del sistema multi-agente."""
-    logger.info(f"Received analysis request via router: '{request.query}'")
+    """
+    Endpoint de ingestión no bloqueante.
+
+    Acepta una consulta, la envuelve en un evento con un ID de tarea único y
+    la publica en el bus de eventos.
+    """
+    task_id = str(uuid4())
+    trace_id = correlation_id.get()
+    logger.info(f"Received ingestion request. Assigning TaskID: {task_id}")
+
+    # El nombre de la tarea podría ser dinámico en el futuro
+    task_name = "research_task"
+
+    event = {
+        "task_id": task_id,
+        "trace_id": trace_id,
+        "task_name": task_name,
+        "query": request.query,
+        "user_id": request.user_id,
+        "session_id": str(request.session_id) if request.session_id else None,
+    }
+
     try:
-        result_data = await orchestrator.process_request(request.query)
-        # Aquí asumimos que process_request devuelve un dict compatible con AnalyzeResponse
-        # Se podría añadir validación o transformación si es necesario
-        return AnalyzeResponse(**result_data)
-    except Exception as e:  # Captura general, idealmente más específica
-        logger.exception(f"Unhandled error during analysis for query '{request.query}'")
+        await event_bus.publish("workflow_tasks", event)
+        logger.info(f"Task {task_id} published to 'workflow_tasks' topic.")
+        return IngestionResponse(
+            task_id=task_id, message="Request accepted for processing."
+        )
+    except Exception as e:
+        logger.exception(f"Failed to publish task {task_id} to the event bus.")
         raise HTTPException(
-            status_code=500, detail="An internal server error occurred."
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Failed to queue request due to an internal event bus error.",
         ) from e
-    # Manejadores de excepciones específicos pueden refinar esto

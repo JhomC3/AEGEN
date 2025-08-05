@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any
 
 
 class IWorkflow(ABC):
@@ -12,7 +12,7 @@ class IWorkflow(ABC):
     """
 
     @abstractmethod
-    async def run(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def run(self, data: dict[str, Any]) -> dict[str, Any]:
         """
         Ejecuta el workflow.
 
