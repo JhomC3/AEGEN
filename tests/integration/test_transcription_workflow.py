@@ -39,26 +39,19 @@ def test_telegram_webhook_to_event_bus(mock_event_bus_integration: AsyncMock):
     Verifica que un webhook de audio de Telegram publica
     correctamente un evento en el bus.
     """
-    # Payload de ejemplo de un mensaje de audio de Telegram
-    telegram_payload = {
-        "update_id": 123456789,
-        "message": {
-            "message_id": 168,
-            "chat": {"id": 98765, "type": "private"},
-            "date": 1678886400,
-            "audio": {
-                "file_id": "AQADBAADG_QAAg",
-                "file_unique_id": "AgADG_QAAg",
-                "duration": 10,
-                "mime_type": "audio/ogg",
-                "file_size": 16000,
-            },
-        },
+    # Datos extraídos del payload de Telegram
+    chat_id = 98765
+    file_id = "AQADBAADG_QAAg"
+
+    # Construir el payload que espera nuestra API, según el esquema TelegramWebhookRequest
+    request_payload = {
+        "task_name": "audio_transcription",
+        "payload": {"chat_id": chat_id, "file_id": file_id},
     }
 
-    response = client.post("/api/v1/webhooks/telegram", json=telegram_payload)
+    response = client.post("/api/v1/webhooks/telegram", json=request_payload)
 
-    assert response.status_code == 202
+    assert response.status_code == 202, f"Response body: {response.text}"
 
     # Verificar que el bus de eventos fue llamado
     mock_event_bus_integration.publish.assert_called_once()
@@ -68,10 +61,11 @@ def test_telegram_webhook_to_event_bus(mock_event_bus_integration: AsyncMock):
     topic = call_args.args[0]
     event = call_args.args[1]
 
-    assert topic == "workflow_events"
+    # El webhook aplana la estructura del evento para el bus
+    assert topic == "workflow_tasks"
     assert event["task_name"] == "audio_transcription"
-    assert event["chat_id"] == "98765"
-    assert event["file_id"] == "AQADBAADG_QAAg"
+    assert event["chat_id"] == chat_id
+    assert event["file_id"] == file_id
 
 
 @pytest.mark.asyncio
@@ -80,11 +74,11 @@ def test_telegram_webhook_to_event_bus(mock_event_bus_integration: AsyncMock):
     new_callable=AsyncMock,
 )
 @patch(
-    "src.agents.workflows.transcription.audio_transcriber.speech_to_text_tool",
+    "src.agents.workflows.transcription.audio_transcriber.transcribe_with_whisper",
     new_callable=AsyncMock,
 )
 async def test_orchestrator_runs_transcription_workflow(
-    mock_speech_tool: AsyncMock, mock_telegram_tool: AsyncMock
+    mock_transcribe_tool: AsyncMock, mock_telegram_tool: AsyncMock
 ):
     """
     Verifica que el orquestador ejecuta el workflow de transcripción
@@ -94,12 +88,12 @@ async def test_orchestrator_runs_transcription_workflow(
     mock_telegram_tool.download_file_from_telegram.return_value = (
         "path/to/mock/audio.ogg"
     )
-    mock_speech_tool.transcribe_with_whisper.return_value = {
+    mock_transcribe_tool.ainvoke.return_value = {
         "transcript": "Texto de prueba transcrito."
     }
     mock_telegram_tool.send_telegram_message.return_value = True
 
-    # Evento que el orquestador recibiría del bus
+    # El evento que recibe el workflow es plano, sin la clave 'payload'
     event_to_process = {
         "task_id": "test-123",
         "task_name": "audio_transcription",
@@ -114,8 +108,8 @@ async def test_orchestrator_runs_transcription_workflow(
     mock_telegram_tool.download_file_from_telegram.assert_called_once_with(
         file_id="file-id-abc", destination_folder=unittest.mock.ANY
     )
-    mock_speech_tool.transcribe_with_whisper.assert_called_once_with(
-        "path/to/mock/audio.ogg"
+    mock_transcribe_tool.ainvoke.assert_called_once_with(
+        {"audio_path": "path/to/mock/audio.ogg"}
     )
     mock_telegram_tool.send_telegram_message.assert_called_once_with(
         "chat-id-123", "Transcripción:\n\n---\n\nTexto de prueba transcrito."

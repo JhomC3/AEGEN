@@ -97,6 +97,7 @@ ignore = ["E501"]
 
 [tool.ruff.format]
 quote-style = "double"
+preview = true
 
 [tool.black]
 line-length = 88

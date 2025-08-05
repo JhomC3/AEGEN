@@ -1,5 +1,5 @@
 # docker-compose.override.yml (Solo para desarrollo)
-version: "3.8"
+
 
 services:
   app:

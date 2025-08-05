@@ -23,9 +23,16 @@ FILE_BASE_URL = f"https://api.telegram.org/file/bot{BOT_TOKEN}"
 
 
 @pytest.fixture
-def telegram_tool() -> TelegramTool:
-    """Fixture que proporciona una instancia de la TelegramTool."""
-    return TelegramTool(bot_token=SecretStr(BOT_TOKEN))
+def telegram_tool(monkeypatch) -> TelegramTool:
+    """
+    Fixture que proporciona una instancia de la TelegramTool, mockeando
+    el token de Telegram en la configuración para el entorno de prueba.
+    """
+    # Mockea la configuración para que la herramienta use el token de prueba
+    monkeypatch.setattr(
+        "src.core.config.settings.TELEGRAM_BOT_TOKEN", SecretStr(BOT_TOKEN)
+    )
+    return TelegramTool()
 
 
 @respx.mock

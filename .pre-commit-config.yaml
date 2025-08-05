@@ -24,7 +24,8 @@ repos:
     rev: v1.10.0 # Usa la última versión estable
     hooks:
       - id: mypy
+        language: system
+        entry: .venv/bin/mypy # Ruta explícita al ejecutable
         args: [--config-file=pyproject.toml, --explicit-package-bases, src]
         files: ^src/
         pass_filenames: false
-        additional_dependencies: ["pydantic", "types-requests", "types-redis"] # Añade stubs necesarios

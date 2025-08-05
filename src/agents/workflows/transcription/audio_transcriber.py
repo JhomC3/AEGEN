@@ -11,14 +11,10 @@ from pathlib import Path
 
 from src.core.interfaces.workflow import IWorkflow
 from src.core.registry import workflow_registry
-from src.tools.speech_processing import SpeechToText
+from src.tools.speech_processing import transcribe_with_whisper
 from src.tools.telegram_interface import telegram_tool
 
 logger = logging.getLogger(__name__)
-
-# Instanciar las herramientas que el workflow utilizará.
-# Esto sigue el patrón de tener instancias dedicadas por workflow si es necesario.
-speech_to_text_tool = SpeechToText()
 
 
 @workflow_registry.register("audio_transcription")
@@ -47,10 +43,9 @@ class AudioTranscriptionWorkflow(IWorkflow):
             return
 
         logger.info(
-            f"[TaskID: {task_id}] Iniciando workflow de transcripción para el chat {chat_id}."
+            f"[TaskID: {task_id}] Iniciando workflow de transcripción para el chat {chat_id}. "
         )
 
-        # Usar un directorio temporal seguro para manejar los archivos descargados
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
@@ -68,8 +63,8 @@ class AudioTranscriptionWorkflow(IWorkflow):
                 return
 
             # 2. Transcribir el audio a texto
-            transcription_result = await speech_to_text_tool.transcribe_with_whisper(
-                str(audio_file_path)
+            transcription_result = await transcribe_with_whisper.ainvoke(
+                {"audio_path": str(audio_file_path)}
             )
 
             if not transcription_result or not transcription_result.get("transcript"):
@@ -84,10 +79,9 @@ class AudioTranscriptionWorkflow(IWorkflow):
 
             # 3. Enviar el texto transcrito de vuelta al usuario
             logger.info(
-                f"[TaskID: {task_id}] Enviando transcripción al chat {chat_id}."
+                f"[TaskID: {task_id}] Enviando transcripción al chat {chat_id}. "
             )
 
-            # Formatear la respuesta para que sea más clara
             response_text = f"Transcripción:\n\n---\n\n{transcribed_text}"
 
             success = await telegram_tool.send_telegram_message(chat_id, response_text)
@@ -97,5 +91,3 @@ class AudioTranscriptionWorkflow(IWorkflow):
                 logger.error(
                     f"[TaskID: {task_id}] Falló el envío del mensaje de respuesta."
                 )
-
-        # El archivo temporal se limpia automáticamente al salir del bloque 'with'

@@ -112,6 +112,7 @@ register_exception_handlers(app)
 app.include_router(status.router, prefix="/system", tags=["System"])
 app.include_router(analysis.router, prefix="/api/v1/analysis", tags=["Analysis"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
+app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
 
 logger.info(f"FastAPI application '{settings.APP_NAME}' configured and ready.")
 

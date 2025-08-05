@@ -385,3 +385,20 @@ class GenericMessageEvent(BaseModel):
         default_factory=dict,
         description="Metadatos adicionales específicos de la plataforma.",
     )
+
+
+# --- Esquemas para Webhooks ---
+
+
+class TelegramAudioPayload(BaseModel):
+    """Payload para el webhook de transcripción de audio de Telegram."""
+
+    chat_id: int
+    file_id: str
+
+
+class TelegramWebhookRequest(BaseModel):
+    """Modelo para la petición completa al webhook de Telegram."""
+
+    task_name: Literal["audio_transcription"]
+    payload: TelegramAudioPayload

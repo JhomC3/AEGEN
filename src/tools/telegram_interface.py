@@ -18,7 +18,6 @@ from typing import cast
 
 import aiofiles
 import httpx
-from pydantic import SecretStr
 
 from src.core.config import settings
 
@@ -30,13 +29,16 @@ class TelegramTool:
     Herramienta para interactuar con la API de bots de Telegram.
     """
 
-    def __init__(self, bot_token: SecretStr | None = settings.TELEGRAM_BOT_TOKEN):
-        token = bot_token.get_secret_value() if bot_token else None
-        if not token or token == "YOUR_TELEGRAM_BOT_TOKEN":  # nosec B105
+    def __init__(self):
+        bot_token = settings.TELEGRAM_BOT_TOKEN
+        if (
+            not bot_token or bot_token.get_secret_value() == "YOUR_TELEGRAM_BOT_TOKEN"
+        ):  # nosec B105
             raise ValueError(
                 "El token del bot de Telegram no está configurado. "
                 "Por favor, añádelo a tus variables de entorno (TELEGRAM_BOT_TOKEN)."
             )
+        token = bot_token.get_secret_value()
         self.base_url = f"https://api.telegram.org/bot{token}"
         self.file_base_url = f"https://api.telegram.org/file/bot{token}"
 

@@ -9,7 +9,7 @@ from src.core.interfaces.bus import IEventBus
 from src.core.middleware import correlation_id
 from src.core.schemas import AnalyzeQuery, IngestionResponse
 
-router = APIRouter(prefix="/analysis", tags=["Analysis"])
+router = APIRouter(tags=["Analysis"])
 logger = logging.getLogger(__name__)
 
 event_bus_dependency = Depends(get_event_bus)

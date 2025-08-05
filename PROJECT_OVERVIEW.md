@@ -68,12 +68,12 @@ Estas reglas son mandatorias y forzadas por herramientas automatizadas.
 
 - **Principio del Código de Referencia (La Regla del "Mejor que Esto"):**
   - **Directriz:** Antes de escribir una nueva clase o función, DEBES buscar un ejemplo existente de alta calidad en el codebase para usarlo como estándar mínimo.
-  - **Arquetipo para `Tools`:** El archivo `src/tools/speech_processing.py` es el estándar de oro actual. Cualquier nueva `Tool` debe, como mínimo:
-    1.  Estar encapsulada en una **Clase** para gestionar estado y dependencias.
-    2.  Utilizar **Carga Diferida (Lazy Loading)** para recursos pesados (como modelos de ML).
-    3.  Ejecutar operaciones bloqueantes (CPU o I/O síncrono) en un hilo separado usando `asyncio.to_thread` para no bloquear el event loop.
-    4.  Integrarse con el ecosistema del proyecto (usar `settings` para configuración, decoradores como `@tool` si aplica).
-    5.  Tener un manejo de errores robusto y logging contextualizado.
+  - **Arquetipo para `Tools`:** El archivo `src/tools/speech_processing.py` es el estándar de oro actual. Cualquier nueva `Tool` debe, como mínimo, seguir su patrón de diseño:
+    1.  **Separación de Responsabilidades:** Implementar una clase **Manager** (ej. `WhisperModelManager`) para la gestión de recursos pesados (modelos, conexiones). Esta clase debe ser un Singleton para asegurar una única instancia.
+    2.  **Carga Diferida (Lazy Loading):** El recurso pesado (ej. el modelo de ML) no se carga en el `__init__`, sino en una función `get_model()` asíncrona la primera vez que se necesita.
+    3.  **Ejecución No Bloqueante:** Las operaciones bloqueantes (CPU o I/O síncrono) DEBEN ejecutarse en un hilo separado usando `asyncio.to_thread` para no detener el event loop principal.
+    4.  **Interfaz de Herramienta Limpia:** La función expuesta como herramienta (decorada con `@tool`) debe ser simple, asíncrona y delegar la lógica compleja al Manager.
+    5.  **Integración con el Ecosistema:** Usar `settings` para configuración y tener un manejo de errores robusto con logging contextualizado.
 
 ## 🏗️ 3. El Blueprint: Arquitectura y Diagnóstico de Estado
 
@@ -88,7 +88,7 @@ Este es el mapa completo del proyecto, incluyendo un **diagnóstico honesto y ac
 
 ```text
 AEGEN/
-├── Dockerfile                  # 🚧 Funcional, necesita target 'worker' para Fase 2.
+├── Dockerfile                  # ✅ Funcional, con dependencias de sistema para 'speech_processing'.
 ├── compose.yml                 # 🚧 Funcional, necesita servicio 'worker' para Fase 2.
 ├── makefile                    # ✅ Comandos de conveniencia (dev, test, lint).
 ├── pyproject.toml              # ✅ Dependencias y configuración de tools.
@@ -111,7 +111,7 @@ AEGEN/
     │   ├── logging_config.py   # ✅ Logging JSON con trace_id.
     │   └── schemas.py          # ✅ Contratos Pydantic.
     ├── agents/                 # 🧠 Lógica de orquestación.
-    │   ├── orchestrator.py     # 🚧 Coordinador con resiliencia básica.
+    │   ├── orchestrator.py     # ✅ Coordinador funcional con resiliencia y registro de workflows.
     │   └── workflows/          # ✅ Primer workflow funcional.
     │       ├── base_workflow.py  # ❌ Falta la clase base abstracta.
     │       └── transcription/
