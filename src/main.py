@@ -8,6 +8,8 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from prometheus_fastapi_instrumentator import Instrumentator
 
+# Importa explícitamente los módulos de workflow para asegurar su registro
+from src.agents.workflows.transcription import audio_transcriber  # noqa
 from src.api.routers import analysis, status, webhooks
 from src.core.config import settings
 from src.core.dependencies import (
