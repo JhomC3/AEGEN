@@ -1,36 +1,19 @@
 # AEGEN: El Playbook Constitucional
 
-> **Versión:** 5.0 (Edición Unificada y Definitiva)
+> **Versión:** 7.0 (Edición Foco-Total)
 > **Estado:** Prescriptivo y Vinculante
 
-**Preámbulo:** Este documento es la única fuente de verdad y la constitución del proyecto AEGEN. Sintetiza la visión arquitectónica, la honestidad diagnóstica y la granularidad ejecutable de todas las propuestas anteriores (O, C, G). Su lectura y adhesión no son opcionales; son un prerrequisito para escribir una sola línea de código. La ignorancia de estas directrices resultará en el rechazo del trabajo.
+**Preámbulo:** Este documento es la única fuente de verdad y la constitución del proyecto AEGEN. Tras una re-evaluación estratégica, se adopta una arquitectura nativa de LangChain para construir una plataforma de agentes federados. Su lectura y adhesión son un prerrequisito para escribir una sola línea de código.
 
 ## 📖 1. La Doctrina: Filosofía y Principios de Diseño
 
-La doctrina de AEGEN se basa en la **Arquitectura Evolutiva y Pragmática**. No diseñamos para un futuro hipotético; construimos para la realidad presente con la capacidad innata de evolucionar.
+La doctrina de AEGEN se basa en la **Arquitectura Evolutiva y Pragmática**.
 
-1.  **Simplicidad Pragmática:** La complejidad solo se introduce si su Retorno de Inversión (ROI) es medible (ej. reducción de latencia, manejo de carga). Siempre se parte de la solución más simple.
-2.  **Evolución Guiada por Evidencia:** La transición entre fases arquitectónicas (ej. Monolito → Distribuido) no es una decisión intuitiva. Es una acción detonada por el incumplimiento de umbrales cuantitativos específicos.
-3.  **Declaratividad > Imperatividad:** Las APIs deben ser configurables, no scripts lineales. Esto es clave para la predictibilidad, el testing y la facilidad de uso por parte de agentes LLM.
-
-    ```python
-    # ❌ Imperativo: Difícil de entender y modificar por un LLM
-    def process_data(user_id):
-        user = db.get_user(user_id)
-        if user.status == "active":
-            # ...lógica compleja...
-
-    # ✅ Declarativo: El "qué" está separado del "cómo"
-    @workflow_registry.register("process_user")
-    async def process_user_workflow(event: dict) -> ProcessResult:
-        return await ProcessUserPipeline(
-            user_id=event["user_id"],
-            steps=[ValidateUser(), EnrichProfile()],
-            output_format="json"
-        ).execute()
-    ```
-
-4.  **LLM-First:** Cada fragmento de código, documentación y comentario debe ser fácil de parsear, entender y extender por un modelo de lenguaje. La claridad y la estructura explícita son obligatorias.
+1.  **Simplicidad Pragmática:** La complejidad solo se introduce si su Retorno de Inversión (ROI) es medible. Se empieza simple y se evoluciona hacia la complejidad solo cuando un requisito funcional lo exige explícitamente.
+2.  **Evolución Guiada por Evidencia:** La transición entre fases arquitectónicas (ej. Monolito → Distribuido) es una acción detonada por el incumplimiento de umbrales cuantitativos específicos.
+3.  **Orquestación Basada en LangGraph:** La lógica de los agentes se modela como grafos de estado (`StateGraph`). Esto proporciona una estructura declarativa, observable (vía LangSmith) y extensible para flujos complejos, reemplazando la orquestación personalizada.
+4.  **LLM-First:** Cada componente debe ser fácil de entender y usar por un modelo de lenguaje. La claridad, la modularidad y las interfaces bien definidas son obligatorias.
+5.  **Abstracción de Canales:** El núcleo de los agentes debe ser agnóstico a la fuente de datos (Telegram, Discord, etc.). Esto se logra mediante una capa de **Adaptadores de Entrada** que traducen los eventos específicos de cada canal a un **Evento Canónico Interno**.
 
 ## 📜 2. La Ley: Estándares y Convenciones Ejecutables
 
@@ -66,9 +49,9 @@ Estas reglas son mandatorias y forzadas por herramientas automatizadas.
   • HOW: Archivos clave modificados, si es relevante.
   ```
 
-- **Principio del Código de Referencia (La Regla del "Mejor que Esto"):**
+- **Principio del Código de Referencia (La Regla del "Mejor que Esto")**:
   - **Directriz:** Antes de escribir una nueva clase o función, DEBES buscar un ejemplo existente de alta calidad en el codebase para usarlo como estándar mínimo.
-  - **Arquetipo para `Tools`:** El archivo `src/tools/speech_processing.py` es el estándar de oro actual. Cualquier nueva `Tool` debe, como mínimo, seguir su patrón de diseño:
+  - **Arquetipo para `Tools`:** El archivo `src/tools/speech_processing.py` sigue siendo el estándar de oro para el diseño de herramientas (ahora decoradas con `@tool` de LangChain). Cualquier nueva `Tool` debe, como mínimo, seguir su patrón de diseño:
     1.  **Separación de Responsabilidades:** Implementar una clase **Manager** (ej. `WhisperModelManager`) para la gestión de recursos pesados (modelos, conexiones). Esta clase debe ser un Singleton para asegurar una única instancia.
     2.  **Carga Diferida (Lazy Loading):** El recurso pesado (ej. el modelo de ML) no se carga en el `__init__`, sino en una función `get_model()` asíncrona la primera vez que se necesita.
     3.  **Ejecución No Bloqueante:** Las operaciones bloqueantes (CPU o I/O síncrono) DEBEN ejecutarse en un hilo separado usando `asyncio.to_thread` para no detener el event loop principal.
@@ -77,54 +60,35 @@ Estas reglas son mandatorias y forzadas por herramientas automatizadas.
 
 ## 🏗️ 3. El Blueprint: Arquitectura y Diagnóstico de Estado
 
-Este es el mapa completo del proyecto, incluyendo un **diagnóstico honesto y accionable** de su estado actual.
-
 **Leyenda de Estado:**
 
-- ✅: Implementado, probado y funcional.
-- 🚧: Implementación parcial, requiere trabajo.
-- ❌: No implementado o esqueleto. **BLOQUEANTE.**
-- 🗑️: Obsoleto, candidato a eliminación.
+- ✅: Implementado
+- 🚧: En progreso
+- ❌: No implementado
 
 ```text
 AEGEN/
-├── Dockerfile                  # ✅ Funcional, con dependencias de sistema para 'speech_processing'.
-├── compose.yml                 # 🚧 Funcional, necesita servicio 'worker' para Fase 2.
-├── makefile                    # ✅ Comandos de conveniencia (dev, test, lint).
-├── pyproject.toml              # ✅ Dependencias y configuración de tools.
-├── .pre-commit-config.yaml     # ✅ Hooks de calidad (ruff, black, mypy).
+├── Dockerfile                  # 🚧 A actualizar con dependencias de LangChain.
+├── compose.yml                 # ✅ Sin cambios para la Fase 1.
+├── pyproject.toml              # 🚧 A actualizar con dependencias de LangChain.
+├── .pre-commit-config.yaml     # ✅ Sin cambios.
 ├── PROJECT_OVERVIEW.md         # 📍 ESTE DOCUMENTO.
 └── src/
-    ├── main.py                 # ✅ Arranque FastAPI + middlewares + métricas.
-    ├── api/                    # 🌐 Capa HTTP (routers + schemas).
+    ├── main.py                 # 🚧 A refactorizar para invocar el grafo de transcripción.
+    ├── api/
     │   └── routers/
-    │       ├── analysis.py     # ✅ POST /analysis/ingest.
-    │       └── status.py       # ✅ GET /system/status, /metrics.
-    ├── core/                   # 🏗️ Infraestructura y abstracciones.
-    │   ├── interfaces/         # ✅ Contratos ABCs (IEventBus, IWorkflow, ITool).
-    │   ├── bus/
-    │   │   ├── in_memory.py    # ✅ Implementado y probado.
-    │   │   └── redis.py        # ❌ Esqueleto para Fase 2.
-    │   ├── engine.py           # ❌ MigrationDecisionEngine. CRÍTICO para evolución.
-    │   ├── middleware.py       # ✅ Implementado y probado.
-    │   ├── resilience.py       # ✅ Implementado y probado.
-    │   ├── logging_config.py   # ✅ Logging JSON con trace_id.
-    │   └── schemas.py          # ✅ Contratos Pydantic.
-    ├── agents/                 # 🧠 Lógica de orquestación.
-    │   ├── orchestrator.py     # ✅ Coordinador funcional con resiliencia y registro de workflows.
-    │   └── workflows/          # ✅ Primer workflow funcional.
-    │       ├── base_workflow.py  # ❌ Falta la clase base abstracta.
-    │       └── transcription/
-    │           └── audio_transcriber.py # ✅ Implementado.
-    └── tools/                  # 🛠️ Funciones atómicas.
-        ├── speech_processing.py  # ✅ Implementado y probado.
-        └── telegram_interface.py # ✅ Implementado y probado.
-└── tests/                      # 🚧 EN PROGRESO. Deuda técnica crítica siendo saldada.
-    ├── conftest.py             # ✅ Fixtures base implementadas.
-    ├── unit/                   # 🚧 EN PROGRESO. Replicando src/.
-    │   └── core/               # ✅ Módulos base cubiertos.
-    │   └── tools/              # ✅ TelegramTool cubierto.
-    └── integration/            # ✅ Primer test de integración.
+    │       └── webhooks.py     # 🚧 A refactorizar como "Adaptador de Telegram".
+    ├── core/
+    │   ├── schemas.py          # 🚧 A actualizar con CanonicalEvent y TranscriptionState.
+    │   └── ...
+    ├── agents/                 # 🧠 Lógica de orquestación basada en LangGraph.
+    │   ├── graph_state.py      # ❌ (Fase 1) A crear.
+    │   └── specialists/        # ❌ (Fase 1) Directorio para los agentes especializados.
+    │       └── transcription_agent.py # ❌ (Fase 1) A crear.
+    └── tools/                  # 🛠️ Funciones atómicas, a envolver con @tool de LangChain.
+        ├── speech_processing.py  # 🚧 A adaptar con @tool.
+        ├── telegram_interface.py # 🚧 A adaptar con @tool.
+└── tests/                      # 🚧 A reconstruir en paralelo con el desarrollo.
 ```
 
 ## 🧪 4. La Garantía: Estrategia de Testing No Negociable
@@ -166,38 +130,30 @@ def mock_event_bus() -> AsyncMock:
     app.dependency_overrides = {} # Limpiar después del test
 ```
 
-## 🗺️ 5. El Plan de Batalla: Roadmap Evolutivo con Triggers
+## 🗺️ 5. El Plan de Batalla: Roadmap de la Plataforma de Agentes
 
-El roadmap no es una lista de deseos, es un plan de fases con detonantes observables.
+El roadmap se re-enfoca para priorizar la entrega de un resultado funcional tangible antes de abordar la complejidad futura, sin perder la visión estratégica.
 
-#### FASE 0: WORKFLOW FUNDACIONAL (✅ Completada)
+#### FASE 1: AGENTE DE TRANSCRIPCIÓN END-TO-END (Foco Actual)
 
-- **Meta:** Implementar el primer flujo de valor de extremo a extremo, validando la arquitectura y entregando una capacidad tangible.
-- **Workflow Construido:** **Transcripción de Audio desde Telegram.**
-- **Definition of Done:** Un usuario puede enviar un audio a un bot de Telegram y recibir la transcripción como respuesta. (Verificado por tests de integración).
+- **Meta:** Lograr una "victoria rápida" que valide la nueva arquitectura y restaure la confianza en el proceso. El único objetivo es que un usuario envíe un audio a Telegram y reciba una transcripción, procesada de principio a fin por un agente de LangGraph.
+- **Acciones Clave (Lineales y Enfocadas):**
+    1.  **Configurar Entorno:** Automatizar el webhook de Telegram usando `pyngrok` para eliminar el flujo manual de `curl`.
+    2.  **Definir Contratos Mínimos:** Añadir a `schemas.py` únicamente los schemas `CanonicalEvent` y `TranscriptionState` necesarios para este flujo.
+    3.  **Adaptar Herramientas Mínimas:** Envolver las funciones necesarias en `telegram_interface.py` y `speech_processing.py` con el decorador `@tool` de LangChain.
+    4.  **Construir Grafo de Transcripción:** Crear un grafo simple y lineal en `transcription_agent.py` con tres nodos: `descargar_audio`, `transcribir_audio`, `responder_telegram`.
+    5.  **Conectar Webhook al Grafo:** Refactorizar `webhooks.py` para que actúe como un adaptador que convierte el update de Telegram en un `CanonicalEvent` e invoca **directamente** al grafo de transcripción.
+    6.  **Probar Flujo Completo:** Verificar que el sistema funciona de extremo a extremo.
 
-#### FASE 1: MONOLITO OBSERVABLE (Estado Actual Post-Fundación)
+#### FASE 2: MVP DEL AGENTE RAG Y EL ENRUTADOR MAESTRO (Visión a Futuro)
 
-- **Arquitectura:** API y Worker en el mismo proceso. `InMemoryEventBus`.
-- **Capacidades:** Logging JSON, métricas Prometheus, retries, idempotencia.
+- **Meta:** Construir el primer flujo de valor complejo, validando la arquitectura de agentes federados.
+- **Prerrequisito:** Éxito y validación de la Fase 1.
+- **Acciones Clave:** Construir el `RAGAgent` y un `MasterRouter` que pueda despachar tareas al agente de RAG o al de transcripción.
 
-#### FASE 2: DISTRIBUCIÓN CONTROLADA (Evolución Guiada por Datos)
+#### FASE 3: EXPANSIÓN DE LA FEDERACIÓN Y LA PLATAFORMA (Visión a Futuro)
 
-- **TRIGGER CUANTITATIVO:** El `MigrationDecisionEngine` devuelve `MIGRATE` cuando se cumple una de estas condiciones de forma sostenida (e.g., >5 min):
-  - `p95_request_latency_ms > 500`
-  - `cpu_utilization_percent > 85`
-  - `in_memory_queue_depth > 1000`
-- **Acciones:**
-  1.  Activar la implementación de `RedisEventBus` mediante variable de entorno (`EVENT_BUS_TYPE=redis`).
-  2.  Construir y desplegar el target `worker` del `Dockerfile`.
-  3.  Escalar el servicio `worker` a `replicas=2` en `compose.yml`.
-
-#### FASE 3: RESILIENCIA AVANZADA Y AUTOSCALING (Futuro)
-
-- **Trigger:** Lag en la cola de Redis > 2000 mensajes por 5 min.
-- **Acción:** Implementar KEDA + HPA para escalar los `worker` pods en Kubernetes.
-- **Trigger:** Tasa de error con sistemas externos > 1%.
-- **Acción:** Implementar patrón Circuit Breaker (`pybreaker`) y una Dead-Letter Queue (DLQ) en Redis.
+- **Meta:** Añadir más agentes (Análisis Financiero, Reportes) y enriquecer la plataforma con memoria a largo plazo y colas de tareas diferenciadas.
 
 ## 🚀 6. La Cabina: Guía de Operaciones y Desarrollo
 
@@ -310,12 +266,11 @@ git push origin feature/nombre-descriptivo-de-la-tarea
 
       Args:
           query: La consulta de búsqueda.
-      Returns:
-          Una lista de resultados.
+      Returns:          Una lista de resultados.
       """
       # ...código...
   ```
 
 ### VEREDICTO FINAL
 
-Este playbook es la síntesis definitiva. Es **ejecutable**, porque proporciona el código y los comandos para salir de la deuda técnica actual. Es **estratégico**, porque define un roadmap de evolución basado en métricas observables y no en intuición. Y es **LLM-First**, porque cada sección está diseñada para ser un contexto claro y accionable para la generación de código asistida. **Se adopta este documento como la constitución final del proyecto.**
+Este documento, en su versión 7.0, establece un plan de acción inmediato y enfocado, sin perder de vista la arquitectura definitiva basada en una federación de agentes orquestada por LangGraph. **Se adopta este documento como la constitución para el trabajo a continuación.**
