@@ -43,7 +43,8 @@ dependencies = [
     "yt-dlp",
     "redis[hiredis]",
     "structlog",
-    "uvicorn[standard]",
+    "uvicorn[standard]>=0.29.0,<0.30.0",
+    "python-telegram-bot[job-queue]>=21.0.1,<22.0.0",
     "chromadb",
     "whisper",
     "Pillow",
@@ -56,7 +57,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["aegen[test, lint, doc]", "ipykernel"]
+dev = ["aegen[test, lint, doc]", "ipykernel", "pyngrok"]
 
 test = [
     "pytest",

@@ -27,10 +27,11 @@ class BaseAppSettings(BaseSettings):
     CHROMA_API_KEY: SecretStr | None = None
     YOUTUBE_API_KEY: SecretStr | None = None
     TELEGRAM_BOT_TOKEN: SecretStr | None = None
+    NGROK_AUTHTOKEN: SecretStr | None = None
     # ... otros secretos
 
     # Conexiones
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = "redis://redis:6379/0"
 
     # Configs generales
     DEFAULT_LLM_MODEL: str = "google_genai:gemini-2.5-flash"

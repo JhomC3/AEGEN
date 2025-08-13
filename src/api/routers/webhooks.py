@@ -1,54 +1,122 @@
 # src/api/routers/webhooks.py
 import logging
+import tempfile
+from pathlib import Path
 from uuid import uuid4
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, BackgroundTasks, status
 
-from src.core.dependencies import get_event_bus
-from src.core.interfaces.bus import IEventBus
+from src.agents.specialists.transcription_agent import transcription_agent
+from src.core import schemas
 from src.core.middleware import correlation_id
-from src.core.schemas import IngestionResponse, TelegramWebhookRequest
+from src.tools import telegram_interface
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
-event_bus_dependency = Depends(get_event_bus)
+
+async def transcription_task(event: schemas.CanonicalEvent):
+    """
+    Tarea de fondo que orquesta el flujo de transcripción para Telegram.
+    Utiliza un directorio temporal para gestionar los archivos de forma segura.
+    """
+    task_id = event.event_id
+    logger.info(
+        f"[TaskID: {task_id}] Iniciando orquestación para chat {event.chat_id}."
+    )
+    state = schemas.TranscriptionState(event=event)
+
+    try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            logger.info(f"[TaskID: {task_id}] Directorio temporal creado: {temp_dir}")
+
+            # 1. Descargar el audio al directorio temporal
+            state.audio_file_path = (
+                await telegram_interface.download_telegram_audio.ainvoke(
+                    {
+                        "file_id": event.file_id,
+                        "destination_folder": str(temp_path),
+                    }
+                )
+            )
+            logger.info(
+                f"[TaskID: {task_id}] Audio descargado en {state.audio_file_path}"
+            )
+
+            # 2. Invocar al agente agnóstico de transcripción
+            logger.info(f"[TaskID: {task_id}] Invocando al agente de transcripción.")
+            agent_result = await transcription_agent.run(
+                audio_file_path=state.audio_file_path
+            )
+            state.transcription = agent_result.get("transcription")
+            state.error_message = agent_result.get("error_message")
+
+    except Exception as e:
+        logger.error(
+            f"[TaskID: {task_id}] Fallo no controlado en la orquestación: {e}",
+            exc_info=True,
+        )
+        state.error_message = "Ocurrió un error inesperado al procesar tu audio."
+
+    # 3. Enviar la respuesta final (éxito o error)
+    if state.error_message:
+        message = state.error_message
+    else:
+        transcription = state.transcription or "No se pudo obtener la transcripción."
+        message = f"Transcripción:\n\n---\n\n{transcription}"
+
+    logger.info(f"[TaskID: {task_id}] Enviando respuesta al chat {event.chat_id}.")
+    await telegram_interface.reply_to_telegram_chat.ainvoke(
+        {
+            "chat_id": str(event.chat_id),
+            "message": message,
+        }
+    )
+    logger.info(f"[TaskID: {task_id}] Orquestación finalizada.")
 
 
 @router.post(
     "/telegram",
-    response_model=IngestionResponse,
+    response_model=schemas.IngestionResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Webhook for Telegram events",
     description="Receives events (like audio messages) forwarded from a Telegram bot.",
 )
 async def telegram_webhook(
-    request: TelegramWebhookRequest,
-    event_bus: IEventBus = event_bus_dependency,
+    request: schemas.TelegramUpdate,
+    background_tasks: BackgroundTasks,
 ):
     """
-    Endpoint para recibir y procesar eventos de Telegram.
-
-    Actualmente, está diseñado para manejar el workflow 'audio_transcription'.
+    Endpoint que actúa como un 'Adaptador de Telegram'.
+    Convierte el evento de Telegram en un CanonicalEvent y lo encola para su procesamiento.
     """
-    task_id = str(uuid4())
     trace_id = correlation_id.get()
+
+    # Validar que el mensaje contiene un audio
+    if not request.message or not request.message.voice:
+        logger.warning(
+            f"Webhook de Telegram recibido sin mensaje de voz. UpdateID: {request.update_id}"
+        )
+        # Aún así devolvemos 202 para no alentar a Telegram a reintentar.
+        return schemas.IngestionResponse(
+            task_id=str(uuid4()),
+            message="Event received but no voice message found to process.",
+        )
+
+    event = schemas.CanonicalEvent(
+        source="telegram",
+        chat_id=request.message.chat.id,
+        file_id=request.message.voice.file_id,
+        metadata={"trace_id": trace_id, "update_id": request.update_id},
+    )
     logger.info(
-        f"Received Telegram webhook request for task '{request.task_name}'. Assigning TaskID: {task_id}"
+        f"Webhook de Telegram recibido. EventID: {event.event_id}, TraceID: {trace_id}"
     )
 
-    # Construir el evento para el bus a partir de la petición del webhook
-    event = {
-        "task_id": task_id,
-        "trace_id": trace_id,
-        "task_name": request.task_name,
-        "chat_id": request.payload.chat_id,
-        "file_id": request.payload.file_id,
-    }
+    # Encolar la tarea de orquestación completa en segundo plano
+    background_tasks.add_task(transcription_task, event)
 
-    await event_bus.publish("workflow_tasks", event)
-    logger.info(f"Task {task_id} published to 'workflow_tasks' topic.")
-
-    return IngestionResponse(
-        task_id=task_id, message="Telegram event accepted for processing."
+    return schemas.IngestionResponse(
+        task_id=str(event.event_id), message="Telegram event accepted for processing."
     )

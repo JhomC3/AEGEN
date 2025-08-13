@@ -1,6 +1,6 @@
 # AEGEN: El Playbook Constitucional
 
-> **Versión:** 7.0 (Edición Foco-Total)
+> **Versión:** 8.0 (Edición Post-Fase 1)
 > **Estado:** Prescriptivo y Vinculante
 
 **Preámbulo:** Este documento es la única fuente de verdad y la constitución del proyecto AEGEN. Tras una re-evaluación estratégica, se adopta una arquitectura nativa de LangChain para construir una plataforma de agentes federados. Su lectura y adhesión son un prerrequisito para escribir una sola línea de código.
@@ -22,25 +22,8 @@ Estas reglas son mandatorias y forzadas por herramientas automatizadas.
 - **Tipado Estricto:** Obligatorio en toda interfaz pública. `Any` solo se permite con un comentario `TODO: [TICKET-ID] Justificar y reemplazar Any`. Forzado por `mypy --strict`.
 - **Formato de Código:** No negociable. Forzado por `black` y `ruff`.
 - **Organización de Imports:** Forzado por `ruff --select I`. Orden: `stdlib → third-party → internal`.
-
-  ```python
-  # ✅ Obligatorio
-  # Standard library
-  import asyncio
-  from pathlib import Path
-
-  # Third-party
-  import httpx
-  from pydantic import BaseModel
-
-  # Internal
-  from src.core.interfaces import IWorkflow
-  from src.tools import WebSearchTool
-  ```
-
 - **Async I/O Obligatorio:** Toda operación de I/O (HTTP, DB, archivos) DEBE ser `async`. Prohibido el uso de librerías síncronas como `requests`.
 - **Plantilla de Commit (Forzada por Git Hook):**
-
   ```
   feat(scope): resumen imperativo y conciso
 
@@ -48,47 +31,42 @@ Estas reglas son mandatorias y forzadas por herramientas automatizadas.
   • WHAT: La solución técnica a alto nivel.
   • HOW: Archivos clave modificados, si es relevante.
   ```
-
 - **Principio del Código de Referencia (La Regla del "Mejor que Esto")**:
   - **Directriz:** Antes de escribir una nueva clase o función, DEBES buscar un ejemplo existente de alta calidad en el codebase para usarlo como estándar mínimo.
-  - **Arquetipo para `Tools`:** El archivo `src/tools/speech_processing.py` sigue siendo el estándar de oro para el diseño de herramientas (ahora decoradas con `@tool` de LangChain). Cualquier nueva `Tool` debe, como mínimo, seguir su patrón de diseño:
-    1.  **Separación de Responsabilidades:** Implementar una clase **Manager** (ej. `WhisperModelManager`) para la gestión de recursos pesados (modelos, conexiones). Esta clase debe ser un Singleton para asegurar una única instancia.
-    2.  **Carga Diferida (Lazy Loading):** El recurso pesado (ej. el modelo de ML) no se carga en el `__init__`, sino en una función `get_model()` asíncrona la primera vez que se necesita.
-    3.  **Ejecución No Bloqueante:** Las operaciones bloqueantes (CPU o I/O síncrono) DEBEN ejecutarse en un hilo separado usando `asyncio.to_thread` para no detener el event loop principal.
-    4.  **Interfaz de Herramienta Limpia:** La función expuesta como herramienta (decorada con `@tool`) debe ser simple, asíncrona y delegar la lógica compleja al Manager.
-    5.  **Integración con el Ecosistema:** Usar `settings` para configuración y tener un manejo de errores robusto con logging contextualizado.
+  - **Arquetipo para `Tools`:** El archivo `src/tools/speech_processing.py` sigue siendo el estándar de oro para el diseño de herramientas (ahora decoradas con `@tool` de LangChain).
+  - **NUEVO - Principio de Orquestación de Archivos:** Basado en la lección aprendida en la Fase 1:
+    - **Regla:** Las `Tools` deben ser, en la medida de lo posible, sin estado y no deben gestionar la creación o eliminación de archivos en el sistema. La responsabilidad del ciclo de vida de los archivos (creación, lectura, eliminación) recae en el **orquestador** (ej. la tarea de fondo en `webhooks.py`).
+    - **Implementación:** El orquestador debe usar directorios temporales (`tempfile.TemporaryDirectory`) para manejar los archivos necesarios para una tarea. La ruta a estos archivos se pasa explícitamente a las `Tools`. Esto asegura que los archivos no persistan innecesariamente y que las `Tools` sean más puras y reutilizables.
 
 ## 🏗️ 3. El Blueprint: Arquitectura y Diagnóstico de Estado
 
 **Leyenda de Estado:**
-
-- ✅: Implementado
-- 🚧: En progreso
-- ❌: No implementado
+- ✅: Implementado y Validado
+- 🎯: Foco Actual
+- 🚧: En Progreso
+- ❌: No Implementado
 
 ```text
 AEGEN/
-├── Dockerfile                  # 🚧 A actualizar con dependencias de LangChain.
-├── compose.yml                 # ✅ Sin cambios para la Fase 1.
+├── Dockerfile                  # ✅ Configuración base robusta.
+├── compose.yml                 # ✅ Sin cambios.
 ├── pyproject.toml              # 🚧 A actualizar con dependencias de LangChain.
-├── .pre-commit-config.yaml     # ✅ Sin cambios.
 ├── PROJECT_OVERVIEW.md         # 📍 ESTE DOCUMENTO.
 └── src/
-    ├── main.py                 # 🚧 A refactorizar para invocar el grafo de transcripción.
+    ├── main.py                 # ✅ Routers configurados.
     ├── api/
     │   └── routers/
-    │       └── webhooks.py     # 🚧 A refactorizar como "Adaptador de Telegram".
+    │       └── webhooks.py     # ✅ Refactorizado para robustez con temp files.
     ├── core/
-    │   ├── schemas.py          # 🚧 A actualizar con CanonicalEvent y TranscriptionState.
+    │   ├── schemas.py          # ✅ Schemas de Fase 1 implementados.
     │   └── ...
     ├── agents/                 # 🧠 Lógica de orquestación basada en LangGraph.
-    │   ├── graph_state.py      # ❌ (Fase 1) A crear.
-    │   └── specialists/        # ❌ (Fase 1) Directorio para los agentes especializados.
-    │       └── transcription_agent.py # ❌ (Fase 1) A crear.
-    └── tools/                  # 🛠️ Funciones atómicas, a envolver con @tool de LangChain.
-        ├── speech_processing.py  # 🚧 A adaptar con @tool.
-        ├── telegram_interface.py # 🚧 A adaptar con @tool.
-└── tests/                      # 🚧 A reconstruir en paralelo con el desarrollo.
+    │   └── specialists/
+    │       └── transcription_agent.py # ✅ Agente agnóstico implementado.
+    └── tools/                  # 🛠️ Funciones atómicas, envueltas con @tool.
+        ├── speech_processing.py  # ✅ Adaptado con @tool.
+        ├── telegram_interface.py # ✅ Refactorizado para aceptar path de destino.
+└── tests/                      # 🚧 En progreso (Test de integración clave añadido).
 ```
 
 ## 🧪 4. La Garantía: Estrategia de Testing No Negociable
@@ -134,18 +112,20 @@ def mock_event_bus() -> AsyncMock:
 
 El roadmap se re-enfoca para priorizar la entrega de un resultado funcional tangible antes de abordar la complejidad futura, sin perder la visión estratégica.
 
-#### FASE 1: AGENTE DE TRANSCRIPCIÓN END-TO-END (Foco Actual)
+#### ✅ FASE 1: AGENTE DE TRANSCRIPCIÓN END-TO-END (Completada)
 
-- **Meta:** Lograr una "victoria rápida" que valide la nueva arquitectura y restaure la confianza en el proceso. El único objetivo es que un usuario envíe un audio a Telegram y reciba una transcripción, procesada de principio a fin por un agente de LangGraph.
-- **Acciones Clave (Lineales y Enfocadas):**
-    1.  **Configurar Entorno:** Automatizar el webhook de Telegram usando `pyngrok` para eliminar el flujo manual de `curl`.
-    2.  **Definir Contratos Mínimos:** Añadir a `schemas.py` únicamente los schemas `CanonicalEvent` y `TranscriptionState` necesarios para este flujo.
-    3.  **Adaptar Herramientas Mínimas:** Envolver las funciones necesarias en `telegram_interface.py` y `speech_processing.py` con el decorador `@tool` de LangChain.
-    4.  **Construir Grafo de Transcripción:** Crear un grafo simple y lineal en `transcription_agent.py` con tres nodos: `descargar_audio`, `transcribir_audio`, `responder_telegram`.
-    5.  **Conectar Webhook al Grafo:** Refactorizar `webhooks.py` para que actúe como un adaptador que convierte el update de Telegram en un `CanonicalEvent` e invoca **directamente** al grafo de transcripción.
-    6.  **Probar Flujo Completo:** Verificar que el sistema funciona de extremo a extremo.
+- **Meta:** Lograr una "victoria rápida" que valide la nueva arquitectura. Un usuario envía un audio a Telegram y recibe una transcripción.
+- **Resultado:** **Éxito.** El flujo funciona de manera robusta y limpia.
+- **Acciones Clave Realizadas:**
+    1.  **Configurar y Probar Entorno:** Se validó el entorno local con Docker.
+    2.  **Depurar Test de Integración:** Se corrigió un test E2E (`test_telegram_webhook.py`) que fallaba por un payload incorrecto, desbloqueando la validación del flujo.
+    3.  **Depurar Flujo Real:** Se diagnosticó un `AttributeError` en tiempo de ejecución debido a una configuración faltante (`TELEGRAM_DOWNLOAD_DIR`).
+    4.  **Refactorizar para Robustez:** En lugar de simplemente añadir la configuración, se refactorizó el flujo para usar directorios temporales, eliminando la dependencia de una carpeta fija y asegurando la limpieza automática de archivos. Esto implicó:
+        - Modificar `telegram_interface.py` para que la herramienta de descarga sea más flexible.
+        - Modificar `webhooks.py` para orquestar la creación y eliminación de archivos temporales.
+    5.  **Validación Final:** Se confirmó el éxito del flujo completo con una prueba manual.
 
-#### FASE 2: MVP DEL AGENTE RAG Y EL ENRUTADOR MAESTRO (Visión a Futuro)
+#### 🎯 FASE 2: MVP DEL AGENTE RAG Y EL ENRUTADOR MAESTRO (Foco Actual)
 
 - **Meta:** Construir el primer flujo de valor complejo, validando la arquitectura de agentes federados.
 - **Prerrequisito:** Éxito y validación de la Fase 1.
@@ -189,62 +169,43 @@ make docs
 Antes de escribir una sola línea de código, debes tener un contexto absoluto del estado del proyecto. Este paso no es opcional.
 
 1.  **Contexto Histórico (`¿De dónde venimos?`):**
-
     - **Acción:** Lee el archivo `@history_llm_chat.txt`.
-    - **Objetivo:** Entender las decisiones, errores y correcciones recientes. Presta especial atención a las últimas 500 líneas para comprender el contexto inmediato de la última sesión de trabajo.
+    - **Objetivo:** Entender las decisiones, errores y correcciones recientes.
 
 2.  **Contexto Real (`¿Dónde estamos?`):**
-
-    - **Acción:** Usa `glob` o `list_directory` para inspeccionar la estructura de archivos actual en `AEGEN/`.
-    - **Objetivo:** Verificar la existencia y el estado real de los componentes. No confíes ciegamente en la documentación; contrástala siempre con el código fuente. Este paso previene la creación de duplicados y la desalineación con la realidad.
+    - **Acción:** Usa `glob` o `list_directory` para inspeccionar la estructura de archivos actual.
+    - **Objetivo:** Verificar la existencia y el estado real de los componentes.
 
 3.  **Contexto Estratégico (`¿Para dónde vamos?`):**
-    - **Acción:** Estudia en detalle este documento (`@PROJECT_OVERVIEW.md`), específicamente el "Blueprint" y el "Plan de Batalla".
-    - **Objetivo:** Asegurarte de que la siguiente acción está alineada con la FASE actual del roadmap. Si encuentras una discrepancia entre el código real y este documento, tu primera tarea es corregir el documento.
+    - **Acción:** Estudia en detalle este documento (`@PROJECT_OVERVIEW.md`).
+    - **Objetivo:** Asegurarte de que la siguiente acción está alineada con la FASE actual del roadmap.
+
+4.  **NUEVO - Contexto de Ejecución (`¿Cómo funciona?`):**
+    - **Acción:** Revisa `Dockerfile`, `compose.yml` y `makefile` para entender cómo se construye y ejecuta la aplicación.
+    - **Objetivo:** No asumir que las dependencias o herramientas de sistema (como `ffmpeg`) simplemente existen; verifícalo. Este paso es clave para el debugging.
 
 **Paso 1: Sincronizar y Crear Rama**
-Asegúrate de que tu `develop` local está actualizado con el repositorio remoto y crea una nueva rama descriptiva para tu tarea.
-
 ```bash
-# Vuelve a la rama principal y trae los últimos cambios
 git checkout develop
 git pull origin develop
-
-# Crea y muévete a tu nueva rama de funcionalidad
 git checkout -b feature/nombre-descriptivo-de-la-tarea
 ```
 
 **Paso 2: Desarrollar y Verificar Localmente**
-Realiza los cambios de código en tu rama. Antes de considerar el trabajo terminado, DEBES cumplir el **Checklist Pre-Commit** de forma local.
-
 ```bash
-# Ejecuta los linters y formateadores
 make lint
-
-# Ejecuta la suite de pruebas completa
 make test
 ```
 
-Solo si ambos comandos pasan sin errores, puedes continuar.
-
 **Paso 3: Publicar y Crear Pull Request (PR)**
-Sube tu rama al repositorio remoto y crea un Pull Request (PR) hacia `develop`.
-
 ```bash
-# Sube tu rama al repositorio remoto
 git push origin feature/nombre-descriptivo-de-la-tarea
 ```
 
-- **Acción Manual/UI:** Ve a la interfaz de GitHub.
-- **Crea el PR:** Configura el PR para fusionar tu rama (`feature/...`) en la rama `base: develop`.
-- **Documenta el PR:** Usa la plantilla de commit para el título y la descripción, explicando el QUÉ y el PORQUÉ de tus cambios.
-
 **Paso 4: Fusión y Limpieza**
-
-- **Verificación de CI:** Espera a que todos los chequeos automáticos en el PR (GitHub Actions) se muestren en verde (✅). Si algo falla, vuelve al paso 2.
-- **Fusionar:** Una vez aprobado y verificado, fusiona el PR usando el botón en la interfaz de GitHub.
-- **Limpiar:** Elimina la rama de funcionalidad (`Delete branch`) después de la fusión para mantener el repositorio limpio.
-- **Finalizar:** Vuelve al Paso 1 para la siguiente tarea.
+- Espera a que los chequeos de CI pasen (✅).
+- Fusiona el PR.
+- Elimina la rama.
 
 ---
 
@@ -254,7 +215,6 @@ git push origin feature/nombre-descriptivo-de-la-tarea
   2.  `make test` pasa y la cobertura se mantiene o aumenta.
   3.  `PROJECT_OVERVIEW.md` actualizado si hay cambios de arquitectura.
 - **Ejemplo de "LLM-Hint" en Código:**
-
   ```python
   async def web_search(query: str) -> list[str]:
       """
@@ -273,4 +233,4 @@ git push origin feature/nombre-descriptivo-de-la-tarea
 
 ### VEREDICTO FINAL
 
-Este documento, en su versión 7.0, establece un plan de acción inmediato y enfocado, sin perder de vista la arquitectura definitiva basada en una federación de agentes orquestada por LangGraph. **Se adopta este documento como la constitución para el trabajo a continuación.**
+Este documento, en su versión 8.0, refleja la finalización exitosa de la Fase 1 y establece un plan de acción claro para la Fase 2. **Se adopta este documento como la constitución para el trabajo a continuación.**

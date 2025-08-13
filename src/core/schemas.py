@@ -390,15 +390,52 @@ class GenericMessageEvent(BaseModel):
 # --- Esquemas para Webhooks ---
 
 
-class TelegramAudioPayload(BaseModel):
-    """Payload para el webhook de transcripción de audio de Telegram."""
+class TelegramChat(BaseModel):
+    id: int
 
-    chat_id: int
+
+class TelegramVoice(BaseModel):
     file_id: str
 
 
-class TelegramWebhookRequest(BaseModel):
-    """Modelo para la petición completa al webhook de Telegram."""
+class TelegramMessage(BaseModel):
+    chat: TelegramChat
+    voice: TelegramVoice | None = None
 
-    task_name: Literal["audio_transcription"]
-    payload: TelegramAudioPayload
+
+class TelegramUpdate(BaseModel):
+    """
+    Modela la estructura de una actualización entrante de un webhook de Telegram.
+    Se enfoca específicamente en capturar mensajes de voz.
+    """
+
+    update_id: int
+    message: TelegramMessage | None = None
+
+
+# --- Esquemas para el Grafo de LangChain ---
+
+class CanonicalEvent(BaseModel):
+    """
+    Evento normalizado que sirve como entrada estándar para los grafos de agentes.
+    Traduce un evento de una fuente externa (ej. Telegram, API) a un formato
+    común que el sistema puede procesar de manera agnóstica a la fuente.
+    """
+    event_id: UUID = Field(default_factory=uuid4, description="Identificador único del evento.")
+    source: str = Field(..., description="Fuente del evento (ej. 'telegram', 'api').")
+    chat_id: int | str = Field(..., description="Identificador del chat o sesión de origen.")
+    file_id: str | None = Field(None, description="Identificador del archivo, si aplica.")
+    content: Any | None = Field(None, description="Contenido principal del mensaje (ej. texto, URL).")
+    metadata: dict[str, Any] = Field(default_factory=dict, description="Metadatos adicionales de la fuente.")
+
+
+class TranscriptionState(BaseModel):
+    """
+    Define el objeto de estado que fluye a través del grafo de transcripción.
+    Mantiene toda la información necesaria para el procesamiento de una
+    solicitud de transcripción de principio a fin.
+    """
+    event: CanonicalEvent = Field(..., description="El evento canónico que inició el flujo.")
+    audio_file_path: str | None = Field(None, description="Ruta local del archivo de audio descargado.")
+    transcription: str | None = Field(None, description="El texto transcrito resultante.")
+    error_message: str | None = Field(None, description="Mensaje de error si el proceso falla en algún punto.")

@@ -512,6 +512,8 @@ pymdown-extensions==10.15
     # via
     #   aegen (pyproject.toml)
     #   mkdocs-material
+pyngrok==7.3.0
+    # via aegen (pyproject.toml)
 pyparsing==3.2.3
     # via httplib2
 pypdf==5.9.0
@@ -570,6 +572,7 @@ pyyaml==6.0.2
     #   mkdocs-get-deps
     #   pre-commit
     #   pymdown-extensions
+    #   pyngrok
     #   pyyaml-env-tag
     #   uvicorn
 pyyaml-env-tag==0.1
