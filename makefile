@@ -1,4 +1,4 @@
-.PHONY: help install lint format test run-dev build push clean
+.PHONY: help install lint format test run-dev build push clean verify
 
 # Variable para entorno virtual (uv lo crea por defecto como .venv)
 VENV_DIR := .venv
@@ -40,6 +40,9 @@ lint: ## Ejecuta linters (ruff, black check, mypy, bandit, safety)
 	$(PYTHON) -m mypy src tests
 	$(PYTHON) -m bandit -c pyproject.toml -r src
 
+verify: lint test ## Ejecuta la suite de verificación completa (linting y testing)
+	@echo "✅ All checks passed!"
+
 format: ## Formatea el código usando ruff y black
 	@echo "Formatting code..."
 	$(PYTHON) -m ruff format .
@@ -49,6 +52,10 @@ format: ## Formatea el código usando ruff y black
 test: ## Ejecuta pruebas unitarias y de integración con pytest
 	@echo "Running tests..."
 	$(PYTHON) -m pytest tests/
+
+test-update-snapshots: ## Ejecuta pruebas y actualiza los snapshots
+	@echo "Running tests and updating snapshots..."
+	$(PYTHON) -m pytest tests/ --snapshot-update
 
 coverage: test ## Ejecuta pruebas y muestra el reporte de cobertura
 	@echo "Generating coverage report..."

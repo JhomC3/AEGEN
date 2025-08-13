@@ -1,48 +1,64 @@
+Excelente análisis. Has destilado la esencia de las tres propuestas y has identificado correctamente que una fusión de la rigurosidad con gates de la **Propuesta G** y la estructura de artefactos ejecutables y oleadas de la **Propuesta O** es el camino óptimo.
+
+A continuación, te presento una versión unificada y mejorada del `PROJECT_OVERVIEW.md`. Este documento (v9.0) integra las mejores ideas de todas las propuestas, resuelve las debilidades señaladas y establece un sistema operativo claro y ejecutable para el desarrollo del proyecto AEGEN.
+
+---
+
 # AEGEN: El Playbook Constitucional
 
-> **Versión:** 8.0 (Edición Post-Fase 1)
+> **Versión:** 9.0 (Edición Post-Fase 1, "Gobernanza Ejecutable")
 > **Estado:** Prescriptivo y Vinculante
+> **Qué cambió en v9.0:** Adopción de una gobernanza ejecutable con artefactos normativos externos (`rules.md`, `PRD.md`), gates de CI verificables, y un roadmap por sprints con DoD claros. Se formaliza la seguridad, el control de costos y la gobernanza de prompts como pilares del proyecto.
 
-**Preámbulo:** Este documento es la única fuente de verdad y la constitución del proyecto AEGEN. Tras una re-evaluación estratégica, se adopta una arquitectura nativa de LangChain para construir una plataforma de agentes federados. Su lectura y adhesión son un prerrequisito para escribir una sola línea de código.
+**Preámbulo:** Este documento es la constitución del proyecto AEGEN y su única fuente de verdad. Se ramifica en documentos normativos adjuntos (`PRD.md`, `rules.md`) que detallan los requisitos de producto y las reglas técnicas. Su lectura y adhesión, junto con la de sus documentos adjuntos, son un prerrequisito para escribir una sola línea de código.
 
 ## 📖 1. La Doctrina: Filosofía y Principios de Diseño
 
-La doctrina de AEGEN se basa en la **Arquitectura Evolutiva y Pragmática**.
+La doctrina de AEGEN se basa en la **Arquitectura Evolutiva, Pragmática y Verificable**.
 
-1.  **Simplicidad Pragmática:** La complejidad solo se introduce si su Retorno de Inversión (ROI) es medible. Se empieza simple y se evoluciona hacia la complejidad solo cuando un requisito funcional lo exige explícitamente.
-2.  **Evolución Guiada por Evidencia:** La transición entre fases arquitectónicas (ej. Monolito → Distribuido) es una acción detonada por el incumplimiento de umbrales cuantitativos específicos.
-3.  **Orquestación Basada en LangGraph:** La lógica de los agentes se modela como grafos de estado (`StateGraph`). Esto proporciona una estructura declarativa, observable (vía LangSmith) y extensible para flujos complejos, reemplazando la orquestación personalizada.
-4.  **LLM-First:** Cada componente debe ser fácil de entender y usar por un modelo de lenguaje. La claridad, la modularidad y las interfaces bien definidas son obligatorias.
-5.  **Abstracción de Canales:** El núcleo de los agentes debe ser agnóstico a la fuente de datos (Telegram, Discord, etc.). Esto se logra mediante una capa de **Adaptadores de Entrada** que traducen los eventos específicos de cada canal a un **Evento Canónico Interno**.
+1.  **Gobernanza Ejecutable y Verificable:** Las reglas no son sugerencias, son leyes forzadas por la automatización (CI/CD, hooks). La disciplina se delega al sistema, no a la memoria del desarrollador.
+2.  **Simplicidad Pragmática:** La complejidad solo se introduce si su Retorno de Inversión (ROI) es medible. Se empieza simple y se evoluciona hacia la complejidad solo cuando un requisito funcional lo exige explícitamente.
+3.  **Evolución Guiada por Evidencia:** La transición entre fases arquitectónicas es detonada por el incumplimiento de umbrales cuantitativos. El `MigrationDecisionEngine` expone estas recomendaciones en `/system/status`, basándose en métricas reales (latencia, tasa de error, costo).
+4.  **Seguridad y Costo por Diseño:** La seguridad no es un añadido, es un requisito. El costo no es un resultado, es una restricción. Ambos se consideran en cada decisión de diseño, con métricas y gates para su control.
+5.  **Orquestación Basada en LangGraph:** La lógica de los agentes se modela como grafos de estado (`StateGraph`), proporcionando una estructura declarativa, observable y extensible.
+6.  **LLM-First:** Cada componente debe ser fácil de entender, usar y testear por un modelo de lenguaje. La claridad, modularidad, contratos explícitos (`Pydantic`) y docstrings con `LLM-hints` son obligatorios.
+7.  **Abstracción de Canales:** El núcleo de los agentes es agnóstico a la fuente de datos mediante **Adaptadores de Entrada** y un **Evento Canónico Interno** (`CanonicalEventV1`).
 
-## 📜 2. La Ley: Estándares y Convenciones Ejecutables
+## 📜 2. La Ley: Jerarquía Normativa y Estándares Clave
 
 Estas reglas son mandatorias y forzadas por herramientas automatizadas.
 
-- **Tipado Estricto:** Obligatorio en toda interfaz pública. `Any` solo se permite con un comentario `TODO: [TICKET-ID] Justificar y reemplazar Any`. Forzado por `mypy --strict`.
-- **Formato de Código:** No negociable. Forzado por `black` y `ruff`.
-- **Organización de Imports:** Forzado por `ruff --select I`. Orden: `stdlib → third-party → internal`.
-- **Async I/O Obligatorio:** Toda operación de I/O (HTTP, DB, archivos) DEBE ser `async`. Prohibido el uso de librerías síncronas como `requests`.
-- **Plantilla de Commit (Forzada por Git Hook):**
-  ```
-  feat(scope): resumen imperativo y conciso
+### 2.1. Jerarquía de Autoridad y Documentos Normativos
 
-  • WHY: El user-story o bug que resuelve.
-  • WHAT: La solución técnica a alto nivel.
-  • HOW: Archivos clave modificados, si es relevante.
-  ```
-- **Principio del Código de Referencia (La Regla del "Mejor que Esto")**:
-  - **Directriz:** Antes de escribir una nueva clase o función, DEBES buscar un ejemplo existente de alta calidad en el codebase para usarlo como estándar mínimo.
-  - **Arquetipo para `Tools`:** El archivo `src/tools/speech_processing.py` sigue siendo el estándar de oro para el diseño de herramientas (ahora decoradas con `@tool` de LangChain).
-  - **NUEVO - Principio de Orquestación de Archivos:** Basado en la lección aprendida en la Fase 1:
-    - **Regla:** Las `Tools` deben ser, en la medida de lo posible, sin estado y no deben gestionar la creación o eliminación de archivos en el sistema. La responsabilidad del ciclo de vida de los archivos (creación, lectura, eliminación) recae en el **orquestador** (ej. la tarea de fondo en `webhooks.py`).
-    - **Implementación:** El orquestador debe usar directorios temporales (`tempfile.TemporaryDirectory`) para manejar los archivos necesarios para una tarea. La ruta a estos archivos se pasa explícitamente a las `Tools`. Esto asegura que los archivos no persistan innecesariamente y que las `Tools` sean más puras y reutilizables.
+Los documentos del proyecto siguen una estricta jerarquía de precedencia. En caso de conflicto, el documento de mayor nivel prevalece. La integridad y coherencia entre ellos es validada automáticamente en CI mediante checksums.
+
+1.  **`PROJECT_OVERVIEW.md` (Constitución - Este Documento):** Define la visión, principios, arquitectura y roadmap.
+2.  **`PRD.md` (Product Requirements Document):** Define el QUÉ y el PORQUÉ. Personas, casos de uso, KPIs, requisitos no funcionales y DoD de negocio.
+3.  **`rules.md` (Reglas Técnicas):** Define el CÓMO. Estándares de código, políticas de errores, seguridad, observabilidad y compatibilidad con severidad (Must/Should/May).
+4.  **Código y Docstrings (`LLM-hints`):** La implementación final, que debe adherirse a todo lo anterior.
+5.  **Issues / Pull Requests:** Unidades de trabajo que proponen cambios al código y documentos.
+
+### 2.2. Estándares Fundamentales (Extracto de `rules.md`)
+
+-   **Async I/O Obligatorio:** Toda operación de I/O DEBE ser `async`. Prohibido el uso de librerías síncronas como `requests`.
+-   **Orquestación de Archivos:** Las `Tools` son puras y sin estado. El ciclo de vida de los archivos (creación/eliminación en directorios temporales) es responsabilidad del **orquestador** (ej. `webhooks.py`).
+-   **Plantilla de Commit (Forzada por Git Hook):**
+    ```
+    feat(scope): resumen imperativo y conciso
+
+    [BREAKING] # Opcional
+
+    • WHY: El user-story o bug que resuelve (ref: TICKET-ID).
+    • WHAT: La solución técnica a alto nivel.
+    • HOW: Archivos clave modificados, si es relevante.
+    ```
+-   **Principio del Código de Referencia:** Antes de escribir código, busca un ejemplo en el directorio `playbooks/` como estándar mínimo.
 
 ## 🏗️ 3. El Blueprint: Arquitectura y Diagnóstico de Estado
 
 **Leyenda de Estado:**
 - ✅: Implementado y Validado
-- 🎯: Foco Actual
+- 🎯: Foco Actual del Sprint
 - 🚧: En Progreso
 - ❌: No Implementado
 
@@ -50,90 +66,83 @@ Estas reglas son mandatorias y forzadas por herramientas automatizadas.
 AEGEN/
 ├── Dockerfile                  # ✅ Configuración base robusta.
 ├── compose.yml                 # ✅ Sin cambios.
-├── pyproject.toml              # 🚧 A actualizar con dependencias de LangChain.
+├── makefile                    # 🚧 A expandir con 'make verify' y más.
+├── pyproject.toml              # 🚧 A actualizar con dependencias (LangChain, etc.).
 ├── PROJECT_OVERVIEW.md         # 📍 ESTE DOCUMENTO.
+├── PRD.md                      # 🎯 Documento de requisitos de producto.
+├── rules.md                    # 🎯 Reglas técnicas con severidad (Must/Should/May).
+├── OWNERS.md                   # 🎯 Propietarios de código por directorio.
+├── CHANGELOG.md                # 🚧 Generado automáticamente desde Conventional Commits.
+├── adr/                        # 🚧 Architectural Decision Records (ej: ADR-0001-langgraph).
+│   └── adr_template.md
+├── playbooks/                  # 🎯 Guías ejecutables (ej: añadir_tool.md).
+│   └── ...
+├── prompts/                    # 🎯 Prompts versionados, con snapshots y changelog.
+│   ├── transcription_agent/
+│   │   └── v1.yaml
+│   └── CHANGELOG.md
 └── src/
     ├── main.py                 # ✅ Routers configurados.
     ├── api/
     │   └── routers/
     │       └── webhooks.py     # ✅ Refactorizado para robustez con temp files.
     ├── core/
-    │   ├── schemas.py          # ✅ Schemas de Fase 1 implementados.
+    │   ├── schemas.py          # 🎯 A definir CanonicalEventV1 y GraphStateV1.
     │   └── ...
     ├── agents/                 # 🧠 Lógica de orquestación basada en LangGraph.
     │   └── specialists/
     │       └── transcription_agent.py # ✅ Agente agnóstico implementado.
     └── tools/                  # 🛠️ Funciones atómicas, envueltas con @tool.
         ├── speech_processing.py  # ✅ Adaptado con @tool.
-        ├── telegram_interface.py # ✅ Refactorizado para aceptar path de destino.
-└── tests/                      # 🚧 En progreso (Test de integración clave añadido).
+        └── ...
+└── tests/                      # 🚧 En progreso.
+    ├── prompts/                # 🎯 Snapshot tests para prompts.
+    │   └── test_transcription_snapshot.py
+    ├── rag_eval/               # 🎯 Dataset canónico y script de evaluación para RAG.
+    │   ├── questions.csv
+    │   └── eval.py
+    └── audio_samples/          # ✅ Muestras de audio para tests de transcripción.
 ```
 
-## 🧪 4. La Garantía: Estrategia de Testing No Negociable
+## 🧪 4. La Garantía: Estrategia de Testing Holístico
 
-**Diagnóstico:** La falta de pruebas es la mayor debilidad y el mayor riesgo del proyecto. Esto es una emergencia técnica.
+**Diagnóstico:** La falta de pruebas es una emergencia técnica. La estrategia se expande para cubrir la naturaleza de un sistema LLM-first. La cobertura mínima global es del 85% (branches), forzada por CI.
 
-**Tooling y Cobertura Mínima (forzada por CI):**
+| Capa                                 | Tooling Mínimo                        | Cobertura Mínima                  |
+| :----------------------------------- | :------------------------------------ | :-------------------------------- |
+| **Unit (puro)**                      | `pytest`, `factory-boy`               | 90% (branches)                    |
+| **Integration**                      | `httpx.AsyncClient`, `respx`          | 85% (branches)                    |
+| **Contract (API & Schemas)**         | `schemathesis` (smoke), `pydantic`    | 100% de validez de contratos      |
+| **Prompt (Semántica)**               | `pytest` (Snapshot Testing)           | 100% de prompts críticos cubiertos |
+| **Calidad de Modelo (RAG/Agente)**   | Scripts de evaluación custom         | Superar umbrales en dataset canónico |
+| **Seguridad (Estática)**             | `bandit`, `gitleaks`, `ruff`          | 0 issues de alta severidad        |
+| **Mutation (gating)**                | `mutmut` (en archivos cambiados)      | < 3% de mutantes sobreviven       |
 
-| Capa                   | Tooling Mínimo                        | Cobertura Mínima            |
-| :--------------------- | :------------------------------------ | :-------------------------- |
-| **Unit (puro)**        | `pytest`, `factory-boy`               | 90% (branches)              |
-| **Integration**        | `httpx.AsyncClient`, `respx`          | 85% (branches)              |
-| **Contract (OpenAPI)** | `prance`, `schemathesis` (smoke)      | 100% de validez             |
-| **Mutation (gating)**  | `mutmut` (solo en archivos cambiados) | < 3% de mutantes sobreviven |
+## 🗺️ 5. El Plan de Batalla: Roadmap por Sprints
 
-**Ejemplo de Arranque Rápido (`tests/conftest.py`):**
-
-```python
-# Este código se implementa para desbloquear el desarrollo de pruebas.
-import pytest
-from httpx import AsyncClient
-from unittest.mock import AsyncMock
-
-from src.main import app
-from src.core.interfaces.bus import IEventBus
-
-@pytest.fixture
-async def async_client() -> AsyncClient:
-    """Async test client para la app FastAPI."""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
-        yield ac
-
-@pytest.fixture
-def mock_event_bus() -> AsyncMock:
-    """Mock del IEventBus para tests de integración."""
-    mock = AsyncMock(spec=IEventBus)
-    app.dependency_overrides[IEventBus] = lambda: mock
-    yield mock
-    app.dependency_overrides = {} # Limpiar después del test
-```
-
-## 🗺️ 5. El Plan de Batalla: Roadmap de la Plataforma de Agentes
-
-El roadmap se re-enfoca para priorizar la entrega de un resultado funcional tangible antes de abordar la complejidad futura, sin perder la visión estratégica.
+El roadmap se estructura en Sprints con Entregables (Deliverables) y Definición de Hecho (DoD) verificables.
 
 #### ✅ FASE 1: AGENTE DE TRANSCRIPCIÓN END-TO-END (Completada)
 
-- **Meta:** Lograr una "victoria rápida" que valide la nueva arquitectura. Un usuario envía un audio a Telegram y recibe una transcripción.
-- **Resultado:** **Éxito.** El flujo funciona de manera robusta y limpia.
-- **Acciones Clave Realizadas:**
-    1.  **Configurar y Probar Entorno:** Se validó el entorno local con Docker.
-    2.  **Depurar Test de Integración:** Se corrigió un test E2E (`test_telegram_webhook.py`) que fallaba por un payload incorrecto, desbloqueando la validación del flujo.
-    3.  **Depurar Flujo Real:** Se diagnosticó un `AttributeError` en tiempo de ejecución debido a una configuración faltante (`TELEGRAM_DOWNLOAD_DIR`).
-    4.  **Refactorizar para Robustez:** En lugar de simplemente añadir la configuración, se refactorizó el flujo para usar directorios temporales, eliminando la dependencia de una carpeta fija y asegurando la limpieza automática de archivos. Esto implicó:
-        - Modificar `telegram_interface.py` para que la herramienta de descarga sea más flexible.
-        - Modificar `webhooks.py` para orquestar la creación y eliminación de archivos temporales.
-    5.  **Validación Final:** Se confirmó el éxito del flujo completo con una prueba manual.
+- **Resultado:** **Éxito.** El flujo de transcripción funciona de manera robusta y limpia.
 
-#### 🎯 FASE 2: MVP DEL AGENTE RAG Y EL ENRUTADOR MAESTRO (Foco Actual)
+#### ✅ FASE 2: GOBERNANZA FUNDACIONAL Y ENABLER MVP (Completada)
 
-- **Meta:** Construir el primer flujo de valor complejo, validando la arquitectura de agentes federados.
-- **Prerrequisito:** Éxito y validación de la Fase 1.
-- **Acciones Clave:** Construir el `RAGAgent` y un `MasterRouter` que pueda despachar tareas al agente de RAG o al de transcripción.
+-   **Resultado:** **Éxito.** Se ha construido el "sistema operativo" del proyecto. El desarrollo futuro se regirá por una gobernanza clara, verificable y automatizada.
 
-#### FASE 3: EXPANSIÓN DE LA FEDERACIÓN Y LA PLATAFORMA (Visión a Futuro)
+#### 🎯 FASE 3: CONSOLIDACIÓN DEL MVP DE AGENTES (Sprint 2 - Foco Actual)
 
-- **Meta:** Añadir más agentes (Análisis Financiero, Reportes) y enriquecer la plataforma con memoria a largo plazo y colas de tareas diferenciadas.
+-   **Meta:** Entregar el primer flujo de valor complejo usando el sistema de gobernanza.
+-   **Entregables Clave:**
+    1.  **`MasterRouter`:** Implementado en LangGraph, capaz de enrutar a `TranscriptionAgent` o `RAGAgent`.
+    2.  **`RAGAgent` MVP:** Implementado con funciones de ingesta, recuperación y respuesta con citas.
+    3.  **Evaluación RAG:** El agente supera los umbrales de `recall@k` y `groundedness` definidos en el `PRD.md` contra el dataset de `rag_eval/`.
+    4.  **`MigrationDecisionEngine` Activo:** El endpoint `/system/status` expone recomendaciones basadas en umbrales de latencia, error y costo.
+-   **DoD:** El flujo E2E (Telegram -> Router -> RAG -> Telegram) funciona, y los KPIs de RAG se cumplen en CI.
+
+#### FASE 4: EXPANSIÓN DE LA FEDERACIÓN Y LA PLATAFORMA (Visión a Futuro)
+
+-   **Meta:** Añadir más agentes y enriquecer la plataforma con memoria a largo plazo, colas de tareas y optimización de costos avanzada.
 
 ## 🚀 6. La Cabina: Guía de Operaciones y Desarrollo
 
@@ -143,11 +152,9 @@ Comandos únicos para una experiencia de desarrollo consistente.
 # Iniciar entorno de desarrollo completo con hot-reload
 make dev
 
-# Ejecutar suite completa de tests, cobertura y mutation testing
-make test
-
-# Verificar calidad de código (linting y tipado)
-make lint
+# Ejecutar la suite de verificación completa (lint, tipos, tests, seguridad)
+# Este es el comando que ejecuta CI antes de permitir un merge.
+make verify
 
 # Generar y validar documentación de la API
 make docs
@@ -155,82 +162,93 @@ make docs
 
 **Endpoints Clave (local):**
 
-- **Swagger UI:** `http://localhost:8000/docs`
-- **Métricas:** `http://localhost:8000/metrics`
-- **Estado del Sistema:** `http://localhost:8000/system/status` (incluirá la recomendación del `MigrationDecisionEngine`).
+-   **Swagger UI:** `http://localhost:8000/docs`
+-   **Métricas (Prometheus):** `http://localhost:8000/metrics`
+-   **Estado del Sistema:** `http://localhost:8000/system/status` (incluye versiones de documentos, checksums y recomendación del `MigrationDecisionEngine`).
 
 ## 🔧 7. Guía de Contribución (Humano & LLM-First)
 
 ### **Ciclo de Vida de una Funcionalidad (Flujo de Git Mandatorio)**
 
-**Instrucción para Agente IA:** Antes de iniciar cualquier nueva funcionalidad, corrección o refactorización, DEBES seguir este ciclo. No se permite el `push` directo a `develop`. Cada unidad de trabajo debe ser encapsulada en un Pull Request.
-
 **Paso 0: Sincronización de Contexto (Mandatorio)**
-Antes de escribir una sola línea de código, debes tener un contexto absoluto del estado del proyecto. Este paso no es opcional.
+Antes de cualquier cambio, sincroniza tu contexto con la verdad del proyecto:
+1.  **Contexto Estratégico (`¿Para dónde vamos?`):** Lee este documento (`PROJECT_OVERVIEW.md`).
+2.  **Contexto de Producto (`¿Qué construimos?`):** Lee `PRD.md`.
+3.  **Contexto Técnico (`¿Cómo lo construimos?`):** Lee `rules.md`.
+4.  **Contexto Real (`¿Dónde estamos?`):** Inspecciona la estructura de archivos y los `playbooks/`.
+5.  **Contexto de Ejecución (`¿Cómo funciona?`):** Revisa `Dockerfile`, `compose.yml` y `makefile`.
 
-1.  **Contexto Histórico (`¿De dónde venimos?`):**
-    - **Acción:** Lee el archivo `@history_llm_chat.txt`.
-    - **Objetivo:** Entender las decisiones, errores y correcciones recientes.
+**Pasos 1-4: Ciclo de Git (Sin cambios)**
+Sigue el ciclo estándar: `checkout develop -> pull -> checkout -b feature/... -> develop -> push -> PR`.
 
-2.  **Contexto Real (`¿Dónde estamos?`):**
-    - **Acción:** Usa `glob` o `list_directory` para inspeccionar la estructura de archivos actual.
-    - **Objetivo:** Verificar la existencia y el estado real de los componentes.
+### **Checklist Pre-Merge (Forzada por CI y plantilla de PR)**
 
-3.  **Contexto Estratégico (`¿Para dónde vamos?`):**
-    - **Acción:** Estudia en detalle este documento (`@PROJECT_OVERVIEW.md`).
-    - **Objetivo:** Asegurarte de que la siguiente acción está alineada con la FASE actual del roadmap.
+Un PR no será fusionado a menos que cumpla con TODOS los siguientes puntos:
 
-4.  **NUEVO - Contexto de Ejecución (`¿Cómo funciona?`):**
-    - **Acción:** Revisa `Dockerfile`, `compose.yml` y `makefile` para entender cómo se construye y ejecuta la aplicación.
-    - **Objetivo:** No asumir que las dependencias o herramientas de sistema (como `ffmpeg`) simplemente existen; verifícalo. Este paso es clave para el debugging.
-
-**Paso 1: Sincronizar y Crear Rama**
-```bash
-git checkout develop
-git pull origin develop
-git checkout -b feature/nombre-descriptivo-de-la-tarea
-```
-
-**Paso 2: Desarrollar y Verificar Localmente**
-```bash
-make lint
-make test
-```
-
-**Paso 3: Publicar y Crear Pull Request (PR)**
-```bash
-git push origin feature/nombre-descriptivo-de-la-tarea
-```
-
-**Paso 4: Fusión y Limpieza**
-- Espera a que los chequeos de CI pasen (✅).
-- Fusiona el PR.
-- Elimina la rama.
+1.  ✅ `make verify` pasa sin errores.
+2.  ✅ La plantilla de Pull Request está completamente rellenada.
+3.  ✅ **Cambios de Contrato:** Si se modifica un schema o endpoint, la versión se ha incrementado y se ha añadido una nota de migración.
+4.  ✅ **Cambios en Prompts:** Si se modifica un prompt, su snapshot test se ha actualizado y `prompts/CHANGELOG.md` documenta el cambio.
+5.  ✅ **Decisiones de Arquitectura:** Si se toma una decisión de alto impacto, se ha creado o actualizado un `ADR`.
+6.  ✅ **Dependencia en `OWNERS.md`:** El PR ha sido aprobado por al menos un propietario del código modificado.
+7.  ✅ **Alineamiento con Documentos:** El cambio es consistente con `PROJECT_OVERVIEW.md`, `PRD.md` y `rules.md`. Si no lo es, el PR debe incluir también la actualización de dichos documentos.
 
 ---
 
-- **Prompt de Sistema Interno:** Antes de generar código, lee `PROJECT_OVERVIEW.md`. Prioriza la claridad, sigue los estándares y escribe tests para toda nueva funcionalidad.
-- **Checklist Pre-Commit (forzada por `pre-commit` hook):**
-  1.  `make lint` pasa.
-  2.  `make test` pasa y la cobertura se mantiene o aumenta.
-  3.  `PROJECT_OVERVIEW.md` actualizado si hay cambios de arquitectura.
-- **Ejemplo de "LLM-Hint" en Código:**
-  ```python
-  async def web_search(query: str) -> list[str]:
-      """
-      Realiza una búsqueda web usando un proveedor externo.
+## Anexo A: Artefactos de Gobernanza a Crear (Contenido Mínimo para Sprint 1)
 
-      LLM-hint: Esta es una función pura que encapsula I/O. No debe
-      tener efectos secundarios en el estado del sistema. Su test debe
-      usar 'respx' para mockear la llamada HTTP a la API de búsqueda.
+### `PRD.md` (v0.1)
 
-      Args:
-          query: La consulta de búsqueda.
-      Returns:          Una lista de resultados.
-      """
-      # ...código...
-  ```
+```markdown
+# AEGEN - Product Requirements Document
+> Version: 0.1.0; Estado: Prescriptivo; Owner: Product/Tech
+
+## 1. Visión
+Entregar respuestas precisas y rápidas a los usuarios a través de una plataforma de agentes federados, comenzando con transcripción y consulta de documentos.
+
+## 2. Flujos y KPIs (Fase 2)
+- **Transcripción:** p95 latencia < 2s; Word Error Rate (WER) no debe degradarse respecto a la línea base en `audio_samples/`.
+- **RAG QA:** p95 latencia < 3s; `groundedness` (basado en citas) >= 0.9; `recall@3` >= 0.85 en `rag_eval/`.
+
+## 3. Requisitos No Funcionales (NFRs)
+- **Timeouts:** Timeout global por request de 30s.
+- **Límites:** Tamaño máximo de archivo de audio de 25MB.
+- **Costo:** Monitoreo del costo por 1k requests por flujo.
+
+## 4. Fuera de Alcance (Fase 2)
+- Memoria conversacional a largo plazo.
+- Múltiples fuentes de datos para RAG.
+```
+
+### `rules.md` (v0.1)
+
+```markdown
+# AEGEN - Reglas Técnicas
+> Version: 0.1.0; Estado: Prescriptivo; Owner: Tech
+
+## Severidad: MUST (Obligatorio, Forzado por CI), SHOULD (Recomendado), MAY (Opcional)
+
+## 1. Código y Dependencias
+- **[MUST]** Todo I/O debe ser `async`.
+- **[MUST]** No se permiten secretos hardcodeados. Usar Pydantic Settings para cargar desde el entorno.
+- **[MUST]** Logging debe ser JSON estructurado y contener un `correlation_id`.
+- **[MUST]** No se debe registrar información PII. Usar un redactor para campos sensibles.
+
+## 2. Diseño de Componentes
+- **[MUST]** Las `Tools` deben ser sin estado y no gestionar el ciclo de vida de archivos.
+- **[MUST]** Toda interfaz pública debe tener tipado estricto. `Any` solo con `TODO: [TICKET-ID]`.
+- **[MUST]** Todo método/función pública debe tener un docstring con formato Numpy/Google y `LLM-hints`.
+
+## 3. Testing y Calidad
+- **[MUST]** Todo PR debe incluir tests para la nueva funcionalidad.
+- **[MUST]** La cobertura de pruebas no puede disminuir.
+- **[MUST]** Todo prompt en `prompts/` debe tener un test de snapshot.
+
+## 4. Política de Errores
+- **[SHOULD]** Usar la taxonomía de errores definida (`UserError`, `ToolError`, `TransientError`).
+- **[SHOULD]** Implementar reintentos con backoff exponencial y jitter para errores transitorios.
+```
 
 ### VEREDICTO FINAL
 
-Este documento, en su versión 8.0, refleja la finalización exitosa de la Fase 1 y establece un plan de acción claro para la Fase 2. **Se adopta este documento como la constitución para el trabajo a continuación.**
+Este documento, en su versión 9.0, es el resultado de una síntesis estratégica y establece un sistema operativo ejecutable, verificable y pragmático. **Se adopta este documento y sus artefactos adjuntos como la constitución para todo el trabajo a continuación.**

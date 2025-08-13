@@ -77,7 +77,9 @@ async def test_get_file_path_api_error(telegram_tool: TelegramToolManager):
 
 @respx.mock
 @pytest.mark.asyncio
-async def test_download_file_success(telegram_tool: TelegramToolManager, tmp_path: Path):
+async def test_download_file_success(
+    telegram_tool: TelegramToolManager, tmp_path: Path
+):
     """
     Verifica la descarga exitosa de un archivo.
     """
@@ -97,9 +99,7 @@ async def test_download_file_success(telegram_tool: TelegramToolManager, tmp_pat
         return_value=Response(200, content=file_content)
     )
 
-    destination_path = await telegram_tool.download_file(
-        file_id, tmp_path
-    )
+    destination_path = await telegram_tool.download_file(file_id, tmp_path)
 
     assert destination_path is not None
     assert destination_path.name == "test_document.pdf"

@@ -1,10 +1,13 @@
 # tests/integration/test_telegram_webhook.py
 import asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import ANY, AsyncMock, MagicMock
+from uuid import uuid4
 
 import pytest
 import respx
 from httpx import AsyncClient
+
+from src.core.schemas import CanonicalEventV1, GraphStateV1
 
 
 @pytest.mark.asyncio
@@ -18,20 +21,30 @@ async def test_telegram_webhook_success_flow(
     """
     # 1. Setup de Mocks
     # Mockear el agente de transcripción para aislar el test al adaptador
-    mock_agent = MagicMock()
-    mock_agent.run = AsyncMock(
-        return_value={
-            "transcription": "Este es un texto de prueba.",
-            "error_message": None,
-        }
+    mock_agent_run = AsyncMock(
+        return_value=GraphStateV1(
+            event=CanonicalEventV1(
+                event_id=uuid4(),
+                source="telegram",
+                chat_id=12345,
+                user_id=12345,
+                file_id="file-id",
+                content=None,
+            ),
+            payload={"transcription": "Este es un texto de prueba."},
+            error_message=None,
+        )
     )
-    monkeypatch.setattr("src.api.routers.webhooks.transcription_agent", mock_agent)
+    monkeypatch.setattr(
+        "src.agents.specialists.transcription_agent.transcription_agent.run",
+        mock_agent_run,
+    )
 
     # Mockear la herramienta de descarga de Telegram
     mock_download_tool = MagicMock()
     mock_download_tool.ainvoke = AsyncMock(return_value="/tmp/fake_audio.ogg")
     monkeypatch.setattr(
-        "src.api.routers.webhooks.telegram_interface.download_telegram_audio",
+        "src.tools.telegram_interface.download_telegram_audio",
         mock_download_tool,
     )
 
@@ -39,7 +52,7 @@ async def test_telegram_webhook_success_flow(
     mock_reply_tool = MagicMock()
     mock_reply_tool.ainvoke = AsyncMock(return_value=True)
     monkeypatch.setattr(
-        "src.api.routers.webhooks.telegram_interface.reply_to_telegram_chat",
+        "src.tools.telegram_interface.reply_to_telegram_chat",
         mock_reply_tool,
     )
 
@@ -89,10 +102,18 @@ async def test_telegram_webhook_success_flow(
     await asyncio.sleep(0.1)
 
     # Verificar que la herramienta de descarga fue llamada correctamente
-    mock_download_tool.ainvoke.assert_awaited_once_with({"file_id": test_file_id})
+    mock_download_tool.ainvoke.assert_awaited_once_with(
+        {
+            "file_id": test_file_id,
+            "destination_folder": ANY,
+        }
+    )
 
-    # Verificar que el agente de transcripción fue llamado con la ruta del archivo
-    mock_agent.run.assert_awaited_once_with(audio_file_path="/tmp/fake_audio.ogg")
+    # Verificar que el agente de transcripción fue llamado con el estado correcto
+    mock_agent_run.assert_awaited_once()
+    call_args = mock_agent_run.call_args[0][0]
+    assert isinstance(call_args, GraphStateV1)
+    assert call_args.payload["audio_file_path"] == "/tmp/fake_audio.ogg"
 
     # Verificar que la herramienta de respuesta fue llamada con el texto correcto
     expected_message = "Transcripción:\n\n---\n\nEste es un texto de prueba."

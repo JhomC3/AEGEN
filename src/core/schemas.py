@@ -415,27 +415,55 @@ class TelegramUpdate(BaseModel):
 
 # --- Esquemas para el Grafo de LangChain ---
 
-class CanonicalEvent(BaseModel):
+
+class CanonicalEventV1(BaseModel):
     """
     Evento normalizado que sirve como entrada estándar para los grafos de agentes.
     Traduce un evento de una fuente externa (ej. Telegram, API) a un formato
     común que el sistema puede procesar de manera agnóstica a la fuente.
+    (Versión 1)
     """
-    event_id: UUID = Field(default_factory=uuid4, description="Identificador único del evento.")
+
+    event_id: UUID = Field(
+        default_factory=uuid4, description="Identificador único del evento."
+    )
     source: str = Field(..., description="Fuente del evento (ej. 'telegram', 'api').")
-    chat_id: int | str = Field(..., description="Identificador del chat o sesión de origen.")
-    file_id: str | None = Field(None, description="Identificador del archivo, si aplica.")
-    content: Any | None = Field(None, description="Contenido principal del mensaje (ej. texto, URL).")
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Metadatos adicionales de la fuente.")
+    chat_id: int | str = Field(
+        ..., description="Identificador del chat o sesión de origen."
+    )
+    user_id: int | str | None = Field(
+        None, description="Identificador del usuario de origen."
+    )
+    file_id: str | None = Field(
+        None, description="Identificador del archivo, si aplica."
+    )
+    content: Any | None = Field(
+        None, description="Contenido principal del mensaje (ej. texto, URL)."
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Metadatos adicionales de la fuente."
+    )
 
 
-class TranscriptionState(BaseModel):
+class GraphStateV1(BaseModel):
     """
-    Define el objeto de estado que fluye a través del grafo de transcripción.
-    Mantiene toda la información necesaria para el procesamiento de una
-    solicitud de transcripción de principio a fin.
+    Define el objeto de estado genérico que fluye a través de los grafos de LangGraph.
+    Mantiene toda la información necesaria para el procesamiento de una solicitud.
+    (Versión 1)
     """
-    event: CanonicalEvent = Field(..., description="El evento canónico que inició el flujo.")
-    audio_file_path: str | None = Field(None, description="Ruta local del archivo de audio descargado.")
-    transcription: str | None = Field(None, description="El texto transcrito resultante.")
-    error_message: str | None = Field(None, description="Mensaje de error si el proceso falla en algún punto.")
+
+    event: CanonicalEventV1 = Field(
+        ..., description="El evento canónico que inició el flujo."
+    )
+    payload: dict[str, Any] = Field(
+        default_factory=dict, description="Carga útil de datos para el grafo."
+    )
+    error_message: str | None = Field(
+        None, description="Mensaje de error si el proceso falla en algún punto."
+    )
+
+    # Ejemplo de cómo un agente específico podría usar el payload:
+    # payload = {
+    #   "audio_file_path": "/tmp/...",
+    #   "transcription": "Hola mundo."
+    # }

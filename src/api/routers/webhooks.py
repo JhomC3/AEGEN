@@ -15,7 +15,7 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 
-async def transcription_task(event: schemas.CanonicalEvent):
+async def transcription_task(event: schemas.CanonicalEventV1):
     """
     Tarea de fondo que orquesta el flujo de transcripción para Telegram.
     Utiliza un directorio temporal para gestionar los archivos de forma segura.
@@ -24,7 +24,9 @@ async def transcription_task(event: schemas.CanonicalEvent):
     logger.info(
         f"[TaskID: {task_id}] Iniciando orquestación para chat {event.chat_id}."
     )
-    state = schemas.TranscriptionState(event=event)
+
+    # Inicializa el estado del grafo
+    state = schemas.GraphStateV1(event=event, error_message=None)
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -32,38 +34,39 @@ async def transcription_task(event: schemas.CanonicalEvent):
             logger.info(f"[TaskID: {task_id}] Directorio temporal creado: {temp_dir}")
 
             # 1. Descargar el audio al directorio temporal
-            state.audio_file_path = (
-                await telegram_interface.download_telegram_audio.ainvoke(
-                    {
-                        "file_id": event.file_id,
-                        "destination_folder": str(temp_path),
-                    }
-                )
+            audio_file_path = await telegram_interface.download_telegram_audio.ainvoke(
+                {
+                    "file_id": event.file_id,
+                    "destination_folder": str(temp_path),
+                }
             )
-            logger.info(
-                f"[TaskID: {task_id}] Audio descargado en {state.audio_file_path}"
-            )
+            state.payload["audio_file_path"] = audio_file_path
+            logger.info(f"[TaskID: {task_id}] Audio descargado en {audio_file_path}")
 
             # 2. Invocar al agente agnóstico de transcripción
             logger.info(f"[TaskID: {task_id}] Invocando al agente de transcripción.")
-            agent_result = await transcription_agent.run(
-                audio_file_path=state.audio_file_path
-            )
-            state.transcription = agent_result.get("transcription")
-            state.error_message = agent_result.get("error_message")
+            final_state = await transcription_agent.run(state)
 
     except Exception as e:
         logger.error(
             f"[TaskID: {task_id}] Fallo no controlado en la orquestación: {e}",
             exc_info=True,
         )
-        state.error_message = "Ocurrió un error inesperado al procesar tu audio."
+        # Si la excepción ocurre fuera del agente, final_state no existirá.
+        # Creamos un estado de error para notificar al usuario.
+        final_state = schemas.GraphStateV1(
+            event=event,
+            error_message="Ocurrió un error inesperado al procesar tu audio.",
+        )
 
     # 3. Enviar la respuesta final (éxito o error)
-    if state.error_message:
-        message = state.error_message
+    if final_state.error_message:
+        message = final_state.error_message
     else:
-        transcription = state.transcription or "No se pudo obtener la transcripción."
+        transcription = (
+            final_state.payload.get("transcription")
+            or "No se pudo obtener la transcripción."
+        )
         message = f"Transcripción:\n\n---\n\n{transcription}"
 
     logger.info(f"[TaskID: {task_id}] Enviando respuesta al chat {event.chat_id}.")
@@ -104,10 +107,12 @@ async def telegram_webhook(
             message="Event received but no voice message found to process.",
         )
 
-    event = schemas.CanonicalEvent(
+    event = schemas.CanonicalEventV1(
         source="telegram",
         chat_id=request.message.chat.id,
+        user_id=request.message.chat.id,  # Usando chat.id como user_id para Telegram
         file_id=request.message.voice.file_id,
+        content=None,  # El contenido principal está en el archivo, no en un mensaje de texto
         metadata={"trace_id": trace_id, "update_id": request.update_id},
     )
     logger.info(

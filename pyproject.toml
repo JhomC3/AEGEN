@@ -39,7 +39,6 @@ dependencies = [
     "prometheus-fastapi-instrumentator",
     "python-dotenv",
     "python-json-logger",
-    "python-telegram-bot",
     "yt-dlp",
     "redis[hiredis]",
     "structlog",
@@ -64,6 +63,7 @@ test = [
     "pytest-cov",
     "pytest-asyncio",
     "pytest-mock",
+    "pytest-snapshot",
     "respx",
     "freezegun",
 ]
@@ -78,6 +78,7 @@ lint = [
     # --- Stubs de Tipos ---
     "types-redis",
     "types-aiofiles",
+    "types-PyYAML",
     # "Types-requests",
 ]
 
