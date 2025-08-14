@@ -1,9 +1,3 @@
-Excelente análisis. Has destilado la esencia de las tres propuestas y has identificado correctamente que una fusión de la rigurosidad con gates de la **Propuesta G** y la estructura de artefactos ejecutables y oleadas de la **Propuesta O** es el camino óptimo.
-
-A continuación, te presento una versión unificada y mejorada del `PROJECT_OVERVIEW.md`. Este documento (v9.0) integra las mejores ideas de todas las propuestas, resuelve las debilidades señaladas y establece un sistema operativo claro y ejecutable para el desarrollo del proyecto AEGEN.
-
----
-
 # AEGEN: El Playbook Constitucional
 
 > **Versión:** 9.0 (Edición Post-Fase 1, "Gobernanza Ejecutable")
@@ -90,6 +84,7 @@ AEGEN/
     │   ├── schemas.py          # 🎯 A definir CanonicalEventV1 y GraphStateV1.
     │   └── ...
     ├── agents/                 # 🧠 Lógica de orquestación basada en LangGraph.
+    │   ├── orchestrator.py     # 🎯 El MasterRouter dinámico que descubre especialistas.
     │   └── specialists/
     │       └── transcription_agent.py # ✅ Agente agnóstico implementado.
     └── tools/                  # 🛠️ Funciones atómicas, envueltas con @tool.
@@ -118,7 +113,7 @@ AEGEN/
 | **Seguridad (Estática)**             | `bandit`, `gitleaks`, `ruff`          | 0 issues de alta severidad        |
 | **Mutation (gating)**                | `mutmut` (en archivos cambiados)      | < 3% de mutantes sobreviven       |
 
-## 🗺️ 5. El Plan de Batalla: Roadmap por Sprints
+## 🗺️ 5. Roadmap
 
 El roadmap se estructura en Sprints con Entregables (Deliverables) y Definición de Hecho (DoD) verificables.
 
@@ -130,15 +125,21 @@ El roadmap se estructura en Sprints con Entregables (Deliverables) y Definición
 
 -   **Resultado:** **Éxito.** Se ha construido el "sistema operativo" del proyecto. El desarrollo futuro se regirá por una gobernanza clara, verificable y automatizada.
 
-#### 🎯 FASE 3: CONSOLIDACIÓN DEL MVP DE AGENTES (Sprint 2 - Foco Actual)
+#### 🎯 FASE 3: CONSOLIDACIÓN DEL MVP DE AGENTES (Foco Actual)
 
--   **Meta:** Entregar el primer flujo de valor complejo usando el sistema de gobernanza.
+-   **Meta:** Evolucionar de un servicio de una sola función a una plataforma de agentes conversacionales con estado, capaz de orquestar múltiples especialistas y mantener el contexto de una conversación.
 -   **Entregables Clave:**
-    1.  **`MasterRouter`:** Implementado en LangGraph, capaz de enrutar a `TranscriptionAgent` o `RAGAgent`.
-    2.  **`RAGAgent` MVP:** Implementado con funciones de ingesta, recuperación y respuesta con citas.
-    3.  **Evaluación RAG:** El agente supera los umbrales de `recall@k` y `groundedness` definidos en el `PRD.md` contra el dataset de `rag_eval/`.
-    4.  **`MigrationDecisionEngine` Activo:** El endpoint `/system/status` expone recomendaciones basadas en umbrales de latencia, error y costo.
--   **DoD:** El flujo E2E (Telegram -> Router -> RAG -> Telegram) funciona, y los KPIs de RAG se cumplen en CI.
+    1.  **`MasterRouter` Implementado:**
+        -   **Qué:** Un grafo de LangGraph en `src/agents/orchestrator.py` que actúa como el cerebro central del sistema.
+        -   **Cómo:** Utiliza un LLM para analizar la intención del usuario a partir del `CanonicalEventV1` y enruta la tarea al agente especialista apropiado (`TranscriptionAgent`, `InventoryAgent`, etc.).
+    2.  **Memoria de Sesión con Redis:**
+        -   **Qué:** La capacidad del sistema para recordar el contexto de una conversación a lo largo de múltiples interacciones con un mismo usuario.
+        -   **Cómo:** El `GraphStateV1` de cada `chat_id` se persiste en Redis. Antes de ejecutar el `MasterRouter`, se carga el estado de la sesión; después de la ejecución, se guarda el estado actualizado.
+    3.  **`InventoryAgent` (Primer Especialista con Estado):**
+        -   **Qué:** Un nuevo agente especialista que puede entender instrucciones para modificar un archivo (ej. un Excel de inventario) a lo largo de una conversación.
+        -   **Cómo:** Se crearán nuevas herramientas atómicas para la manipulación de archivos de hojas de cálculo. El `InventoryAgent` utilizará estas herramientas y la memoria de sesión para realizar tareas complejas de varios pasos.
+    4.  **Integración E2E:** El `webhook` de la API se modifica para invocar al `MasterRouter` en lugar de a un agente específico, completando el nuevo flujo de procesamiento.
+-   **DoD (Definition of Done):** Un usuario puede iniciar una conversación, ser enrutado al `InventoryAgent`, subir un archivo Excel, y en una interacción posterior, enviar un audio o texto para actualizar dicho archivo. El sistema debe mantener el contexto del archivo entre interacciones.
 
 #### FASE 4: EXPANSIÓN DE LA FEDERACIÓN Y LA PLATAFORMA (Visión a Futuro)
 
@@ -154,6 +155,7 @@ make dev
 
 # Ejecutar la suite de verificación completa (lint, tipos, tests, seguridad)
 # Este es el comando que ejecuta CI antes de permitir un merge.
+# Nota: Si falla por problemas de formato, ejecuta 'make format' para arreglarlos.
 make verify
 
 # Generar y validar documentación de la API
@@ -170,13 +172,32 @@ make docs
 
 ### **Ciclo de Vida de una Funcionalidad (Flujo de Git Mandatorio)**
 
-**Paso 0: Sincronización de Contexto (Mandatorio)**
-Antes de cualquier cambio, sincroniza tu contexto con la verdad del proyecto:
-1.  **Contexto Estratégico (`¿Para dónde vamos?`):** Lee este documento (`PROJECT_OVERVIEW.md`).
-2.  **Contexto de Producto (`¿Qué construimos?`):** Lee `PRD.md`.
-3.  **Contexto Técnico (`¿Cómo lo construimos?`):** Lee `rules.md`.
-4.  **Contexto Real (`¿Dónde estamos?`):** Inspecciona la estructura de archivos y los `playbooks/`.
-5.  **Contexto de Ejecución (`¿Cómo funciona?`):** Revisa `Dockerfile`, `compose.yml` y `makefile`.
+#### **El Protocolo de Sincronización Obligatoria (PSO)**
+
+**Directiva de Prioridad del Usuario:** La instrucción explícita y actual del usuario tiene la máxima prioridad. Este protocolo puede ser simplificado, modificado o completamente omitido si el usuario así lo indica directamente. El objetivo es la asistencia eficiente, no la adherencia ciega a un proceso. En ausencia de una instrucción contraria, se seguirá el siguiente procedimiento por defecto.
+
+Este protocolo es un **gate de gobernanza** y se activa al inicio de cualquier nueva tarea de desarrollo, corrección o refactorización. Reemplaza al anterior "Paso 0" con un proceso algorítmico estricto.
+
+**Paso 1: Declaración de Intención y Plan Documental**
+- Antes de cualquier otra acción, se debe declarar el entendimiento de la tarea y presentar un **Plan Documental**.
+- Este plan listará explícitamente **todos los archivos de documentación** que necesitan ser creados o modificados para reflejar el cambio propuesto. La revisión debe incluir, como mínimo:
+    1.  **Contexto Estratégico (`¿Para dónde vamos?`):** `PROJECT_OVERVIEW.md`
+    2.  **Contexto de Producto (`¿Qué construimos?`):** `PRD.md`
+    3.  **Contexto Técnico (`¿Cómo lo construimos?`):** `rules.md` y `adr/`
+    4.  **Contexto Real (`¿Dónde estamos?`):** Inspección de la estructura de archivos actual.
+    5.  **Contexto de Ejecución (`¿Cómo funciona?`):** `Dockerfile`, `compose.yml`, `makefile`.
+
+**Paso 2: Ejecución de Cambios Documentales**
+- Se procederá a ejecutar **únicamente** los cambios descritos en el Plan Documental.
+- **No se escribirá ni modificará ningún archivo de código fuente (`.py`) en este paso.**
+
+**Paso 3: Solicitud de Aprobación (El "Gate" de Gobernanza)**
+- Una vez completadas todas las modificaciones documentales, el proceso se detendrá.
+- Se finalizará la respuesta con la pregunta explícita: **"La documentación ha sido actualizada y alineada. ¿Apruebas este plan y me autorizas a proceder con la implementación del código?"**
+
+**Paso 4: Inicio de la Implementación del Código**
+- **Solo y exclusivamente si se recibe una aprobación explícita**, se comenzará a escribir o modificar el código fuente para implementar la tarea.
+- Si no hay aprobación o se solicitan más cambios, el proceso vuelve al Paso 1.
 
 **Pasos 1-4: Ciclo de Git (Sin cambios)**
 Sigue el ciclo estándar: `checkout develop -> pull -> checkout -b feature/... -> develop -> push -> PR`.
@@ -195,7 +216,7 @@ Un PR no será fusionado a menos que cumpla con TODOS los siguientes puntos:
 
 ---
 
-## Anexo A: Artefactos de Gobernanza a Crear (Contenido Mínimo para Sprint 1)
+## Anexo A: Artefactos de Gobernanza a Crear (Contenido Mínimo)
 
 ### `PRD.md` (v0.1)
 

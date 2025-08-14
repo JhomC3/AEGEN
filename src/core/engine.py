@@ -2,11 +2,28 @@
 import logging
 
 import psutil
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 from src.core.config import settings
 from src.core.schemas import SystemState, SystemStatus
 
 logger = logging.getLogger(__name__)
+
+
+# --- INICIO DE LA SOLUCIÓN ---
+
+# Crear una única instancia del LLM para ser usada en toda la aplicación.
+# Se carga la configuración desde el objeto `settings` centralizado.
+# La API key se carga automáticamente desde la variable de entorno GOOGLE_API_KEY.
+llm = ChatGoogleGenerativeAI(
+    model=settings.DEFAULT_LLM_MODEL,
+    temperature=settings.DEFAULT_TEMPERATURE,
+    convert_system_message_to_human=True,  # Necesario para algunos modelos de Google
+)
+
+logger.info(f"LLM Engine initialized with model: {settings.DEFAULT_LLM_MODEL}")
+
+# --- FIN DE LA SOLUCIÓN ---
 
 
 class MigrationDecisionEngine:

@@ -7,6 +7,7 @@ import pytest
 import respx
 from httpx import AsyncClient
 
+from src.api.routers.webhooks import TranscriptionSpecialist
 from src.core.schemas import CanonicalEventV1, GraphStateV1
 
 
@@ -20,8 +21,8 @@ async def test_telegram_webhook_success_flow(
     Simula la recepción de un audio, su procesamiento y la respuesta.
     """
     # 1. Setup de Mocks
-    # Mockear el agente de transcripción para aislar el test al adaptador
-    mock_agent_run = AsyncMock(
+    # Mockear el grafo del especialista para aislar el test al adaptador
+    mock_graph_ainvoke = AsyncMock(
         return_value=GraphStateV1(
             event=CanonicalEventV1(
                 event_id=uuid4(),
@@ -31,13 +32,19 @@ async def test_telegram_webhook_success_flow(
                 file_id="file-id",
                 content=None,
             ),
-            payload={"transcription": "Este es un texto de prueba."},
+            payload={"response": "Este es un texto de prueba."},
             error_message=None,
         )
     )
+
+    # Crear un mock de la instancia del especialista
+    mock_specialist_instance = MagicMock(spec=TranscriptionSpecialist)
+    mock_specialist_instance.graph.ainvoke = mock_graph_ainvoke
+
+    # Reemplazar la clase entera con un mock que devuelve nuestra instancia mockeada
     monkeypatch.setattr(
-        "src.agents.specialists.transcription_agent.transcription_agent.run",
-        mock_agent_run,
+        "src.api.routers.webhooks.TranscriptionSpecialist",
+        lambda: mock_specialist_instance,
     )
 
     # Mockear la herramienta de descarga de Telegram
@@ -109,9 +116,9 @@ async def test_telegram_webhook_success_flow(
         }
     )
 
-    # Verificar que el agente de transcripción fue llamado con el estado correcto
-    mock_agent_run.assert_awaited_once()
-    call_args = mock_agent_run.call_args[0][0]
+    # Verificar que el grafo del especialista fue invocado con el estado correcto
+    mock_graph_ainvoke.assert_awaited_once()
+    call_args = mock_graph_ainvoke.call_args[0][0]
     assert isinstance(call_args, GraphStateV1)
     assert call_args.payload["audio_file_path"] == "/tmp/fake_audio.ogg"
 

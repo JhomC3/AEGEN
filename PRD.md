@@ -6,7 +6,7 @@ Entregar respuestas precisas y rápidas a los usuarios a través de una platafor
 
 ## 2. Flujos y KPIs (Fase 2)
 - **Transcripción:** p95 latencia < 2s; Word Error Rate (WER) no debe degradarse respecto a la línea base en `audio_samples/`.
-- **RAG QA:** p95 latencia < 3s; `groundedness` (basado en citas) >= 0.9; `recall@3` >= 0.85 en `rag_eval/`.
+- **Flujo de Inventario Conversacional:** p95 latencia < 3s por turno; Tasa de Éxito de Tarea (subir archivo, luego añadir 3 items por audio/texto) >= 95%.
 
 ## 3. Requisitos No Funcionales (NFRs)
 - **Timeouts:** Timeout global por request de 30s.

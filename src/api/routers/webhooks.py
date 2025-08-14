@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, status
 
-from src.agents.specialists.transcription_agent import transcription_agent
+from src.agents.specialists.transcription_agent import TranscriptionSpecialist
 from src.core import schemas
 from src.core.middleware import correlation_id
 from src.tools import telegram_interface
@@ -45,7 +45,8 @@ async def transcription_task(event: schemas.CanonicalEventV1):
 
             # 2. Invocar al agente agnóstico de transcripción
             logger.info(f"[TaskID: {task_id}] Invocando al agente de transcripción.")
-            final_state = await transcription_agent.run(state)
+            specialist = TranscriptionSpecialist()
+            final_state = await specialist.graph.ainvoke(state)
 
     except Exception as e:
         logger.error(
@@ -64,7 +65,7 @@ async def transcription_task(event: schemas.CanonicalEventV1):
         message = final_state.error_message
     else:
         transcription = (
-            final_state.payload.get("transcription")
+            final_state.payload.get("response")
             or "No se pudo obtener la transcripción."
         )
         message = f"Transcripción:\n\n---\n\n{transcription}"

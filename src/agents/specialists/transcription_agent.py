@@ -2,27 +2,62 @@
 import logging
 from typing import Any
 
+from langchain_core.tools import BaseTool, tool
 from langgraph.graph import END, StateGraph
 
+from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV1
 from src.tools.speech_processing import transcribe_with_whisper
 
 logger = logging.getLogger(__name__)
 
 
-class TranscriptionAgent:
+@tool
+async def transcription_tool(audio_file_path: str) -> str:
     """
-    Agente especializado y agnóstico a la fuente para la transcripción de audio.
-    Su única responsabilidad es transcribir un archivo de audio local.
-    Utiliza el estado de grafo estandarizado (GraphStateV1).
+    Usa esta herramienta para transcribir un archivo de audio a texto.
+    Recibe la ruta local del archivo de audio y devuelve la transcripción.
+    """
+    logger.info(f"Herramienta de transcripción procesando: {audio_file_path}")
+    try:
+        result = await transcribe_with_whisper.ainvoke({"audio_path": audio_file_path})
+        transcription = result.get("transcript")
+        if not isinstance(transcription, str):
+            raise ValueError("La transcripción no devolvió un string válido.")
+        logger.info(f"Transcripción exitosa para: {audio_file_path}")
+        return transcription
+    except Exception as e:
+        error_message = f"Error durante la transcripción en la herramienta: {e}"
+        logger.error(error_message, exc_info=True)
+        return error_message
+
+
+class TranscriptionSpecialist:
+    """
+    Agente especializado en la transcripción de audio.
     """
 
     def __init__(self):
-        self.graph: Any = self._build_graph()
+        self._name: str = "transcription_specialist"
+        # TODO: Investigar por qué mypy no encuentra CompiledStateGraph
+        self._graph: Any = self._build_graph()
+        self._tool: BaseTool = transcription_tool
 
-    def _build_graph(self) -> Any:  # noqa: ANN401
+    @property
+    def name(self) -> str:
+        return self._name
+
+    @property
+    def graph(self) -> Any:
+        return self._graph
+
+    @property
+    def tool(self) -> BaseTool:
+        return self._tool
+
+    def _build_graph(self) -> Any:
         """
-        Construye un grafo simple con un único nodo para la transcripción.
+        Construye el grafo que simplemente invoca a la herramienta de transcripción.
         """
         graph_builder = StateGraph(GraphStateV1)
         graph_builder.add_node("transcribe", self._transcribe_node)
@@ -32,43 +67,20 @@ class TranscriptionAgent:
 
     async def _transcribe_node(self, state: GraphStateV1) -> dict[str, Any]:
         """
-        Nodo que invoca la herramienta de transcripción de Whisper.
-        Espera la ruta del audio en `state.payload`.
+        Nodo que invoca la herramienta de transcripción y actualiza el estado.
         """
         audio_path = state.payload.get("audio_file_path")
-        if not audio_path:
-            error_message = "No se encontró 'audio_file_path' en el payload del estado."
-            logger.error(error_message)
-            return {"error_message": error_message}
+        if not audio_path or not isinstance(audio_path, str):
+            return {
+                "payload": {
+                    **state.payload,
+                    "response": "Error: No se proporcionó una ruta de archivo de audio válida.",
+                }
+            }
 
-        logger.info(f"Agente de transcripción procesando: {audio_path}")
-        try:
-            result = await transcribe_with_whisper.ainvoke({"audio_path": audio_path})
-            transcription = result.get("transcript")
-            if transcription is None:
-                raise ValueError("La transcripción no devolvió texto.")
-            logger.info(f"Transcripción exitosa para: {audio_path}")
-            # Retorna solo los campos que deben actualizarse en el estado
-            return {"payload": {**state.payload, "transcription": transcription}}
-        except Exception as e:
-            error_message = f"Error durante la transcripción en el agente: {e}"
-            logger.error(error_message, exc_info=True)
-            return {"error_message": error_message}
-
-    async def run(self, initial_state: GraphStateV1) -> GraphStateV1:
-        """
-        Ejecuta el grafo de transcripción.
-
-        Args:
-            initial_state: El estado inicial del grafo, que debe contener
-                           el evento y el payload con 'audio_file_path'.
-
-        Returns:
-            El estado final del grafo como un objeto GraphStateV1 validado.
-        """
-        final_state_dict = await self.graph.ainvoke(initial_state)
-        return GraphStateV1.model_validate(final_state_dict)
+        result = await self.tool.ainvoke({"audio_file_path": audio_path})
+        return {"payload": {**state.payload, "response": result}}
 
 
-# Instancia única del agente para ser reutilizada
-transcription_agent = TranscriptionAgent()
+# Registrar la instancia del especialista
+specialist_registry.register(TranscriptionSpecialist())

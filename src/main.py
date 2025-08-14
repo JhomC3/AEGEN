@@ -11,7 +11,6 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from src.api.routers import analysis, status, webhooks
 from src.core.config import settings
 from src.core.dependencies import (
-    get_workflow_coordinator,
     initialize_global_resources,
     prime_dependencies,
     shutdown_global_resources,
@@ -52,8 +51,9 @@ async def lifespan(app: FastAPI):
 
     # "Calienta" las dependencias singleton y suscribe los workers
     prime_dependencies()
-    coordinator = get_workflow_coordinator()
-    await event_bus.subscribe("workflow_tasks", coordinator.handle_workflow_event)
+    # TODO: Reemplazar la lógica del antiguo WorkflowCoordinator con el nuevo MasterRouter
+    # coordinator = get_workflow_coordinator()
+    # await event_bus.subscribe("workflow_tasks", coordinator.handle_workflow_event)
 
     logger.info("Lifespan: Application startup complete.")
     yield
