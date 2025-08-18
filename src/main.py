@@ -8,6 +8,8 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from prometheus_fastapi_instrumentator import Instrumentator
 
+# Importar los especialistas para asegurar que se registren al inicio
+from src import agents  # noqa: F401
 from src.api.routers import analysis, status, webhooks
 from src.core.config import settings
 from src.core.dependencies import (

@@ -27,9 +27,7 @@ class TelegramToolManager:
 
     def __init__(self):
         bot_token = settings.TELEGRAM_BOT_TOKEN
-        if (
-            not bot_token or bot_token.get_secret_value() == "YOUR_TELEGRAM_BOT_TOKEN"
-        ):  # nosec B105
+        if not bot_token or bot_token.get_secret_value() == "YOUR_TELEGRAM_BOT_TOKEN":  # nosec B105
             raise ValueError(
                 "El token del bot de Telegram no está configurado. "
                 "Por favor, añádelo a tus variables de entorno (TELEGRAM_BOT_TOKEN)."

@@ -34,7 +34,7 @@ class BaseAppSettings(BaseSettings):
     REDIS_URL: str = "redis://redis:6379/0"
 
     # Configs generales
-    DEFAULT_LLM_MODEL: str = "google_genai:gemini-2.5-flash"
+    DEFAULT_LLM_MODEL: str = "gemini-2.5-flash"
     DEFAULT_TEMPERATURE: float = 0.7
     DEFAULT_WHISPER_MODEL: str = "base"
     VECTOR_DB_PATH: str | None = None  # Ej: para ChromaDB local

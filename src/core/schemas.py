@@ -1,6 +1,6 @@
 # src/core/schemas.py
 from enum import Enum
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 from uuid import UUID, uuid4
 
 from pydantic import (
@@ -401,6 +401,7 @@ class TelegramVoice(BaseModel):
 class TelegramMessage(BaseModel):
     chat: TelegramChat
     voice: TelegramVoice | None = None
+    text: str | None = None
 
 
 class TelegramUpdate(BaseModel):
@@ -427,6 +428,9 @@ class CanonicalEventV1(BaseModel):
     event_id: UUID = Field(
         default_factory=uuid4, description="Identificador único del evento."
     )
+    event_type: Literal["text", "audio", "document", "unknown"] = Field(
+        ..., description="Tipo lógico del contenido principal del evento."
+    )
     source: str = Field(..., description="Fuente del evento (ej. 'telegram', 'api').")
     chat_id: int | str = Field(
         ..., description="Identificador del chat o sesión de origen."
@@ -445,25 +449,15 @@ class CanonicalEventV1(BaseModel):
     )
 
 
-class GraphStateV1(BaseModel):
+class GraphStateV1(TypedDict):
     """
     Define el objeto de estado genérico que fluye a través de los grafos de LangGraph.
     Mantiene toda la información necesaria para el procesamiento de una solicitud.
     (Versión 1)
+
+    Utiliza TypedDict para compatibilidad nativa con LangGraph.
     """
 
-    event: CanonicalEventV1 = Field(
-        ..., description="El evento canónico que inició el flujo."
-    )
-    payload: dict[str, Any] = Field(
-        default_factory=dict, description="Carga útil de datos para el grafo."
-    )
-    error_message: str | None = Field(
-        None, description="Mensaje de error si el proceso falla en algún punto."
-    )
-
-    # Ejemplo de cómo un agente específico podría usar el payload:
-    # payload = {
-    #   "audio_file_path": "/tmp/...",
-    #   "transcription": "Hola mundo."
-    # }
+    event: CanonicalEventV1
+    payload: dict[str, Any]
+    error_message: str | None

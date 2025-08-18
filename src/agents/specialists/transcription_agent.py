@@ -5,6 +5,7 @@ from typing import Any
 from langchain_core.tools import BaseTool, tool
 from langgraph.graph import END, StateGraph
 
+from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV1
 from src.tools.speech_processing import transcribe_with_whisper
@@ -32,14 +33,13 @@ async def transcription_tool(audio_file_path: str) -> str:
         return error_message
 
 
-class TranscriptionSpecialist:
+class TranscriptionSpecialist(SpecialistInterface):
     """
     Agente especializado en la transcripción de audio.
     """
 
     def __init__(self):
         self._name: str = "transcription_specialist"
-        # TODO: Investigar por qué mypy no encuentra CompiledStateGraph
         self._graph: Any = self._build_graph()
         self._tool: BaseTool = transcription_tool
 
@@ -55,6 +55,10 @@ class TranscriptionSpecialist:
     def tool(self) -> BaseTool:
         return self._tool
 
+    def get_capabilities(self) -> list[str]:
+        """Este especialista maneja eventos de tipo audio."""
+        return ["audio"]
+
     def _build_graph(self) -> Any:
         """
         Construye el grafo que simplemente invoca a la herramienta de transcripción.
@@ -69,17 +73,18 @@ class TranscriptionSpecialist:
         """
         Nodo que invoca la herramienta de transcripción y actualiza el estado.
         """
-        audio_path = state.payload.get("audio_file_path")
+        payload = state.get("payload", {})
+        audio_path = payload.get("audio_file_path")
+
         if not audio_path or not isinstance(audio_path, str):
-            return {
-                "payload": {
-                    **state.payload,
-                    "response": "Error: No se proporcionó una ruta de archivo de audio válida.",
-                }
-            }
+            payload["response"] = (
+                "Error: No se proporcionó una ruta de archivo de audio válida."
+            )
+            return {"payload": payload}
 
         result = await self.tool.ainvoke({"audio_file_path": audio_path})
-        return {"payload": {**state.payload, "response": result}}
+        payload["response"] = result
+        return {"payload": payload}
 
 
 # Registrar la instancia del especialista

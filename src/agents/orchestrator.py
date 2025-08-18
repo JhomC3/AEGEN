@@ -1,11 +1,11 @@
 # src/agents/orchestrator.py
 import logging
-from typing import Any, Literal
+from typing import Any, cast
 
-from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import END, StateGraph
 
-from src.core.engine import llm
+from src.core.interfaces.specialist import SpecialistInterface
+from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV1
 
 logger = logging.getLogger(__name__)
@@ -14,116 +14,127 @@ logger = logging.getLogger(__name__)
 class MasterOrchestrator:
     """
     El orquestador central (MasterRouter) que dirige el flujo de trabajo
-    basándose en la intención del usuario.
+    de forma dinámica basándose en las capacidades de los especialistas registrados.
+    Implementa un enrutamiento basado en el tipo de evento.
     """
 
     def __init__(self):
-        self.graph: Any = self._build_graph()
-
-    def _decide_next_node(
-        self, state: GraphStateV1
-    ) -> Literal["transcription", "inventory", "chat", "__end__"]:
-        """
-        Determina el siguiente nodo basado en la decisión del enrutador.
-        """
-        route_name = state.payload.get("route_name")
-        if route_name == "transcription":
-            return "transcription"
-        if route_name == "inventory":
-            return "inventory"
-        if route_name == "chat":
-            return "chat"
-        return "__end__"
+        self.graph = self._build_graph()
 
     def _build_graph(self) -> Any:
         """
-        Construye el grafo de enrutamiento principal.
+        Construye dinámicamente el grafo de enrutamiento principal
+        basándose en los especialistas registrados.
         """
         graph_builder = StateGraph(GraphStateV1)
 
-        # --- Definición de Nodos ---
-        graph_builder.add_node("router", self._route_request)
-        # TODO: Reemplazar placeholders con los agentes especialistas reales.
-        graph_builder.add_node("transcription", self._placeholder_node)
-        graph_builder.add_node("inventory", self._placeholder_node)
-        graph_builder.add_node("chat", self._placeholder_node)
+        # 1. Nodo de entrada: Meta-enrutador basado en capacidades.
+        graph_builder.add_node("meta_router", self._meta_route_request)
 
-        # --- Definición de Aristas ---
-        graph_builder.set_entry_point("router")
+        # 2. Nodos de especialistas: un nodo por cada especialista.
+        all_specialists = specialist_registry.get_all_specialists()
+        for specialist in all_specialists:
+            compiled_graph = cast(Any, specialist.graph)
+            graph_builder.add_node(specialist.name, compiled_graph.ainvoke)
+            graph_builder.add_edge(specialist.name, END)
+
+        # 3. Lógica de enrutamiento condicional desde el meta-enrutador.
+        graph_builder.set_entry_point("meta_router")
+
+        def router_function(state: GraphStateV1) -> str:
+            """Función de enrutamiento que devuelve el nombre del siguiente nodo o END."""
+            decision = self._decide_next_node(state)
+            # El valor de retorno debe ser uno de los nodos registrados o END
+            if decision not in {s.name for s in all_specialists}:
+                return "__end__"
+            return decision
+
         graph_builder.add_conditional_edges(
-            "router",
-            self._decide_next_node,
-            {
-                "transcription": "transcription",
-                "inventory": "inventory",
-                "chat": "chat",
-                "__end__": END,
-            },
+            "meta_router",
+            router_function,
         )
-        graph_builder.add_edge("transcription", END)
-        graph_builder.add_edge("inventory", END)
-        graph_builder.add_edge("chat", END)
 
-        # Compilar el grafo
         return graph_builder.compile()
 
-    async def _route_request(self, state: GraphStateV1) -> dict[str, Any]:
+    async def _meta_route_request(self, state: GraphStateV1) -> GraphStateV1:
         """
-        Clasifica la solicitud del usuario para enrutarla al especialista adecuado.
+        Primera capa de enrutamiento. Determina el especialista o grupo de especialistas
+        basándose en el `event_type` del evento canónico.
         """
-        user_message = state.event.content or ""
-        logger.info(f"Enrutando mensaje del usuario: '{user_message}'")
+        event = state["event"]
+        event_type = event.event_type
+        logger.info(f"Meta-enrutador: procesando evento de tipo '{event_type}'.")
 
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                (
-                    "system",
-                    "Eres un experto en enrutar solicitudes de usuario al especialista correcto. "
-                    "Las opciones son: 'transcription', 'inventory', 'chat'. "
-                    "Si el usuario pide transcribir algo, responde 'transcription'. "
-                    "Si el usuario habla de inventario, stock, o excel, responde 'inventory'. "
-                    "Para cualquier otra conversación, responde 'chat'. "
-                    "Responde únicamente con una de esas tres palabras.",
-                ),
-                ("human", "Mensaje del usuario: '{user_message}'"),
-            ]
-        )
+        # Encontrar especialistas que puedan manejar este tipo de evento.
+        capable_specialists = [
+            s
+            for s in specialist_registry.get_all_specialists()
+            if event_type in cast(SpecialistInterface, s).get_capabilities()
+        ]
 
-        router_chain = prompt | llm
-        try:
-            route = await router_chain.ainvoke({"user_message": user_message})
-            content = route.content
-            if not isinstance(content, str):
-                raise ValueError("La respuesta del enrutador no es un string.")
-            route_name = content.strip().lower()
-            logger.info(f"Decisión de enrutamiento: {route_name}")
-            return {"payload": {**state.payload, "route_name": route_name}}
-        except Exception as e:
-            logger.error(f"Error en el enrutamiento: {e}", exc_info=True)
-            return {"payload": {**state.payload, "route_name": "error"}}
+        if not capable_specialists:
+            logger.warning(
+                f"No se encontraron especialistas para el tipo de evento '{event_type}'."
+            )
+            state["error_message"] = (
+                f"No hay especialistas para manejar '{event_type}'."
+            )
+            return state
 
-    async def _placeholder_node(self, state: GraphStateV1) -> dict[str, Any]:
-        """Nodo placeholder para especialistas no implementados."""
-        route_name = state.payload.get("route_name", "desconocido")
-        logger.info(f"Ejecutando nodo placeholder para el especialista: {route_name}")
-        return {
-            "payload": {
-                **state.payload,
-                "response": f"Respuesta desde el placeholder del especialista '{route_name}'.",
-            }
-        }
+        if len(capable_specialists) == 1:
+            # Si solo hay un especialista, la decisión es directa.
+            specialist = capable_specialists[0]
+            logger.info(
+                f"Enrutamiento directo al único especialista capaz: '{specialist.name}'."
+            )
+            state["payload"]["next_node"] = specialist.name
+            return state
+        else:
+            # Si hay múltiples especialistas, usar un LLM para desambiguar.
+            logger.info(
+                f"Múltiples especialistas encontrados para '{event_type}'. Usando LLM para desambiguar."
+            )
+            # Esta lógica se puede expandir como se describió en el plan.
+            # Por ahora, para mantenerlo simple, tomaremos el primero.
+            # TODO: Implementar desambiguación por LLM cuando sea necesario.
+            specialist = capable_specialists[0]
+            logger.info(
+                f"Tomando el primer especialista por defecto: '{specialist.name}'."
+            )
+            state["payload"]["next_node"] = specialist.name
+            return state
 
-    async def run(self, initial_state: GraphStateV1) -> GraphStateV1:
+    def _decide_next_node(self, state: GraphStateV1) -> str:
+        """
+        Lee la decisión del meta-enrutador y devuelve el nombre del siguiente nodo.
+        """
+        if state.get("error_message"):
+            logger.error(
+                f"Error de enrutamiento, finalizando: {state['error_message']}"
+            )
+            return "__end__"
+
+        next_node = state.get("payload", {}).get("next_node")
+        if not next_node:
+            logger.warning("No se pudo determinar el siguiente nodo. Finalizando.")
+            return "__end__"
+
+        logger.info(f"Decisión de enrutamiento: dirigir a '{next_node}'.")
+        return cast(str, next_node)
+
+    async def run(self, initial_state: GraphStateV1) -> dict:
         """
         Ejecuta el grafo del orquestador principal.
         """
         if not self.graph:
-            logger.error("El grafo del MasterOrchestrator no está implementado.")
-            initial_state.error_message = "El orquestador principal no está disponible."
-            return initial_state
+            logger.error("El grafo del MasterOrchestrator no está disponible.")
+            initial_state["error_message"] = (
+                "El orquestador principal no está disponible."
+            )
+            return dict(initial_state)
 
         final_state_dict = await self.graph.ainvoke(initial_state)
-        return GraphStateV1.model_validate(final_state_dict)
+        return cast(dict, final_state_dict)
 
 
 # Instancia única del orquestador para ser reutilizada

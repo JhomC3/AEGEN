@@ -6,11 +6,10 @@ import tempfile
 from typing import Any
 
 import yt_dlp
+from core.config import settings
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 from langchain_core.tools import tool
-
-from core.config import settings
 
 
 @tool
@@ -47,13 +46,11 @@ def youtube_search_tool(query: str, max_results: int = 3) -> list[dict[str, Any]
         for item in items:
             video_id = item["id"]["videoId"]
             video_title = item["snippet"]["title"]
-            video_list.append(
-                {
-                    "video_id": video_id,
-                    "title": video_title,
-                    "url": f"https://www.youtube.com/watch?v={video_id}",
-                }
-            )
+            video_list.append({
+                "video_id": video_id,
+                "title": video_title,
+                "url": f"https://www.youtube.com/watch?v={video_id}",
+            })
 
         print(f"Herramienta de Búsqueda: Se encontraron {len(video_list)} videos.")
         return video_list
