@@ -43,11 +43,10 @@ lint: ## Ejecuta linters (ruff, black check, mypy, bandit, safety)
 verify: lint test ## Ejecuta la suite de verificación completa (linting y testing)
 	@echo "✅ All checks passed!"
 
-format: ## Formatea el código usando ruff y black
+format: ## Formatea el código usando ruff
 	@echo "Formatting code..."
 	$(PYTHON) -m ruff format .
 	$(PYTHON) -m ruff check . --fix
-	$(PYTHON) -m black .
 
 test: ## Ejecuta pruebas unitarias y de integración con pytest
 	@echo "Running tests..."

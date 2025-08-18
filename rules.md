@@ -4,6 +4,7 @@
 ## Severidad: MUST (Obligatorio, Forzado por CI), SHOULD (Recomendado), MAY (Opcional)
 
 ## 1. Código y Dependencias
+- **[MUST]** Se utilizará `ruff` como única herramienta para formateo y linting. El uso de `black` u otros formateadores está prohibido para mantener la consistencia.
 - **[MUST]** Todo I/O debe ser `async`.
 - **[MUST]** No se permiten secretos hardcodeados. Usar Pydantic Settings para cargar desde el entorno.
 - **[MUST]** Logging debe ser JSON estructurado y contener un `correlation_id`.
@@ -11,10 +12,8 @@
 
 ## 2. Diseño de Componentes
 - **[MUST]** Las `Tools` deben ser sin estado y no gestionar el ciclo de vida de archivos.
-- **[MUST]** La gestión del estado de la sesión (memoria conversacional) debe realizarse a través de un `SessionManager` y persistirse en Redis para garantizar la escalabilidad y baja latencia.
 - **[MUST]** Toda interfaz pública debe tener tipado estricto. `Any` solo con `TODO: [TICKET-ID]`.
 - **[MUST]** Todo método/función pública debe tener un docstring con formato Numpy/Google y `LLM-hints`.
-- **[MUST]** Todo nuevo agente especialista debe registrarse en el `SpecialistRegistry` para ser descubierto dinámicamente por el orquestador.
 
 ## 3. Testing y Calidad
 - **[MUST]** Todo PR debe incluir tests para la nueva funcionalidad.

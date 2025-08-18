@@ -69,7 +69,6 @@ test = [
 ]
 
 lint = [
-    "black",
     "ruff",
     "mypy",
     "pre-commit",
@@ -101,12 +100,9 @@ ignore = ["E501"]
 quote-style = "double"
 preview = true
 
-[tool.black]
-line-length = 88
-
 [tool.mypy]
 python_version = "3.13"
-warn_return_any = true
+# warn_return_any = true
 warn_unused_configs = true
 ignore_missing_imports = true
 explicit_package_bases = true

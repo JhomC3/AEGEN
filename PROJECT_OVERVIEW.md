@@ -17,6 +17,7 @@ La doctrina de AEGEN se basa en la **Arquitectura Evolutiva, Pragmática y Verif
 5.  **Orquestación Basada en LangGraph:** La lógica de los agentes se modela como grafos de estado (`StateGraph`), proporcionando una estructura declarativa, observable y extensible.
 6.  **LLM-First:** Cada componente debe ser fácil de entender, usar y testear por un modelo de lenguaje. La claridad, modularidad, contratos explícitos (`Pydantic`) y docstrings con `LLM-hints` son obligatorios.
 7.  **Abstracción de Canales:** El núcleo de los agentes es agnóstico a la fuente de datos mediante **Adaptadores de Entrada** y un **Evento Canónico Interno** (`CanonicalEventV1`).
+8.  **Diseño Generalista sobre Específico:** Las soluciones no deben codificarse para un único caso de uso o tipo de contenido. Se deben favorecer los patrones de diseño extensibles (como registros, estrategias o plugins) que permitan añadir nueva funcionalidad sin modificar el núcleo lógico. Una solución que requiere un nuevo `if/else` en el código central para cada nuevo tipo es, por definición, incorrecta.
 
 ## 📜 2. La Ley: Jerarquía Normativa y Estándares Clave
 
@@ -183,9 +184,10 @@ Este protocolo es un **gate de gobernanza** y se activa al inicio de cualquier n
 - Este plan listará explícitamente **todos los archivos de documentación** que necesitan ser creados o modificados para reflejar el cambio propuesto. La revisión debe incluir, como mínimo:
     1.  **Contexto Estratégico (`¿Para dónde vamos?`):** `PROJECT_OVERVIEW.md`
     2.  **Contexto de Producto (`¿Qué construimos?`):** `PRD.md`
-    3.  **Contexto Técnico (`¿Cómo lo construimos?`):** `rules.md` y `adr/`
-    4.  **Contexto Real (`¿Dónde estamos?`):** Inspección de la estructura de archivos actual.
+    3.  **Contexto Técnico (`¿Cómo lo construimos?`):** `rules.md` y la totalidad de los `ADR` en `adr/`.
+    4.  **Contexto Real (`¿Dónde estamos?`):** Inspección del estado actual del repositorio con `git status` y `git diff HEAD`.
     5.  **Contexto de Ejecución (`¿Cómo funciona?`):** `Dockerfile`, `compose.yml`, `makefile`.
+- El plan resultante debe ser verificado contra los `ADR` y el estado de Git para asegurar que no hay contradicciones.
 
 **Paso 2: Ejecución de Cambios Documentales**
 - Se procederá a ejecutar **únicamente** los cambios descritos en el Plan Documental.
@@ -201,6 +203,26 @@ Este protocolo es un **gate de gobernanza** y se activa al inicio de cualquier n
 
 **Pasos 1-4: Ciclo de Git (Sin cambios)**
 Sigue el ciclo estándar: `checkout develop -> pull -> checkout -b feature/... -> develop -> push -> PR`.
+
+#### **Protocolo de Ejecución Técnica (PET) para Deuda Técnica**
+
+Este protocolo se activa cuando una tarea implica resolver un problema técnico complejo, especialmente cuando las causas no son inmediatamente obvias (ej. conflictos de herramientas, errores persistentes de CI, bugs de dependencias). Complementa al PSO.
+
+**Paso 1: Diagnóstico Holístico y Formulación de Hipótesis**
+- **No asumir que el código es el culpable.** El primer paso es analizar la interacción entre el código, la configuración (`pyproject.toml`, `.pre-commit-config.yaml`), los scripts (`makefile`) y el entorno de CI.
+- Formular una hipótesis clara sobre la **causa raíz** del problema. Por ejemplo: "Hipótesis: El hook de `pre-commit` falla porque `mypy` se ejecuta en un entorno aislado que carece de los stubs de tipos definidos en `pyproject.toml`."
+
+**Paso 2: Propuesta de Solución Estratégica**
+- Basado en la hipótesis, proponer la solución que resuelva la causa raíz de la forma más limpia y sostenible.
+- Priorizar soluciones de configuración sobre modificaciones de código complejas si el problema parece ser de herramientas. Por ejemplo: "Propuesta: En lugar de añadir `# type: ignore` por todo el código, modificaremos `.pre-commit-config.yaml` para que `mypy` instale las dependencias necesarias."
+
+**Paso 3: Ejecución y Verificación Aislada**
+- Implementar el cambio propuesto.
+- Ejecutar el comando de verificación exacto que fallaba (ej. `pre-commit run mypy`) para confirmar que la hipótesis era correcta.
+
+**Paso 4: Escalada Táctica si la Hipótesis Falla**
+- Si la solución no funciona, **no caer en un bucle de prueba y error a nivel de código.**
+- Volver al Paso 1, formular una nueva hipótesis (ej. "Nueva hipótesis: El problema no son las dependencias, sino una regla de `mypy` en `pyproject.toml` que es incompatible con la librería X.") y repetir el ciclo. Este enfoque disciplinado evita la ineficiencia y conduce a una solución robusta.
 
 ### **Checklist Pre-Merge (Forzada por CI y plantilla de PR)**
 
