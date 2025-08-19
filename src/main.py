@@ -8,10 +8,11 @@ from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 from prometheus_fastapi_instrumentator import Instrumentator
 
+# Importar los especialistas para asegurar que se registren al inicio
+from src import agents  # noqa: F401
 from src.api.routers import analysis, status, webhooks
 from src.core.config import settings
 from src.core.dependencies import (
-    get_workflow_coordinator,
     initialize_global_resources,
     prime_dependencies,
     shutdown_global_resources,
@@ -20,9 +21,9 @@ from src.core.error_handling import register_exception_handlers
 from src.core.logging_config import setup_logging
 from src.core.middleware import CorrelationIdMiddleware
 
-setup_logging()  # ¡Llamar aquí, muy al principio!
+setup_logging()
 
-logger = logging.getLogger(settings.APP_NAME)  # Obtener logger principal de la app
+logger = logging.getLogger(settings.APP_NAME)
 
 
 # --- Ciclo de vida de la aplicación ---
@@ -50,10 +51,8 @@ async def lifespan(app: FastAPI):
             "Lifespan: Redis client not available. FastAPI Cache NOT initialized."
         )
 
-    # "Calienta" las dependencias singleton y suscribe los workers
+    # "Calienta" las dependencias singleton
     prime_dependencies()
-    coordinator = get_workflow_coordinator()
-    await event_bus.subscribe("workflow_tasks", coordinator.handle_workflow_event)
 
     logger.info("Lifespan: Application startup complete.")
     yield
@@ -111,7 +110,6 @@ register_exception_handlers(app)
 # --- Routers ---
 app.include_router(status.router, prefix="/system", tags=["System"])
 app.include_router(analysis.router, prefix="/api/v1/analysis", tags=["Analysis"])
-app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
 
 logger.info(f"FastAPI application '{settings.APP_NAME}' configured and ready.")

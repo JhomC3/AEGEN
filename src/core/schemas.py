@@ -1,6 +1,6 @@
 # src/core/schemas.py
 from enum import Enum
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 from uuid import UUID, uuid4
 
 from pydantic import (
@@ -390,15 +390,74 @@ class GenericMessageEvent(BaseModel):
 # --- Esquemas para Webhooks ---
 
 
-class TelegramAudioPayload(BaseModel):
-    """Payload para el webhook de transcripción de audio de Telegram."""
+class TelegramChat(BaseModel):
+    id: int
 
-    chat_id: int
+
+class TelegramVoice(BaseModel):
     file_id: str
 
 
-class TelegramWebhookRequest(BaseModel):
-    """Modelo para la petición completa al webhook de Telegram."""
+class TelegramMessage(BaseModel):
+    chat: TelegramChat
+    voice: TelegramVoice | None = None
+    text: str | None = None
 
-    task_name: Literal["audio_transcription"]
-    payload: TelegramAudioPayload
+
+class TelegramUpdate(BaseModel):
+    """
+    Modela la estructura de una actualización entrante de un webhook de Telegram.
+    Se enfoca específicamente en capturar mensajes de voz.
+    """
+
+    update_id: int
+    message: TelegramMessage | None = None
+
+
+# --- Esquemas para el Grafo de LangChain ---
+
+
+class CanonicalEventV1(BaseModel):
+    """
+    Evento normalizado que sirve como entrada estándar para los grafos de agentes.
+    Traduce un evento de una fuente externa (ej. Telegram, API) a un formato
+    común que el sistema puede procesar de manera agnóstica a la fuente.
+    (Versión 1)
+    """
+
+    event_id: UUID = Field(
+        default_factory=uuid4, description="Identificador único del evento."
+    )
+    event_type: Literal["text", "audio", "document", "unknown"] = Field(
+        ..., description="Tipo lógico del contenido principal del evento."
+    )
+    source: str = Field(..., description="Fuente del evento (ej. 'telegram', 'api').")
+    chat_id: int | str = Field(
+        ..., description="Identificador del chat o sesión de origen."
+    )
+    user_id: int | str | None = Field(
+        None, description="Identificador del usuario de origen."
+    )
+    file_id: str | None = Field(
+        None, description="Identificador del archivo, si aplica."
+    )
+    content: Any | None = Field(
+        None, description="Contenido principal del mensaje (ej. texto, URL)."
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Metadatos adicionales de la fuente."
+    )
+
+
+class GraphStateV1(TypedDict):
+    """
+    Define el objeto de estado genérico que fluye a través de los grafos de LangGraph.
+    Mantiene toda la información necesaria para el procesamiento de una solicitud.
+    (Versión 1)
+
+    Utiliza TypedDict para compatibilidad nativa con LangGraph.
+    """
+
+    event: CanonicalEventV1
+    payload: dict[str, Any]
+    error_message: str | None

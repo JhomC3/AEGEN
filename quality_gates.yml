@@ -1,0 +1,166 @@
+# AEGEN - Quality Gates por Fase
+# Archivo de configuración que define los checks de calidad requeridos para cada fase del proyecto
+# Este archivo es consumido por el CI/CD para ejecutar solo los checks apropiados para la fase actual
+
+# Versión del schema para compatibilidad futura
+version: "1.0"
+
+# Definición de fases y sus quality gates
+phases:
+
+  # Fase 3A: MasterRouter Básico
+  # Enfoque: Establecer base funcional con testing mínimo
+  Fase_3A:
+    description: "MasterRouter Básico - Enrutamiento funcional sin LLM"
+    required_checks:
+      - name: "lint"
+        command: "make lint"
+        description: "Linting con ruff y mypy"
+        timeout: 120
+
+      - name: "unit_tests"
+        command: "make test"
+        description: "Tests unitarios básicos"
+        timeout: 300
+
+      - name: "integration_tests"
+        command: "pytest tests/integration/ -v"
+        description: "Tests de integración para webhooks y orchestrator"
+        timeout: 180
+
+      - name: "manual_e2e"
+        command: "echo 'Manual E2E test required'"
+        description: "Test E2E manual: Telegram → Transcription"
+        manual: true
+
+    coverage_requirements:
+      unit: 60
+      integration: 40
+
+    allowed_failures:
+      - "manual_e2e"  # Se permite fallar en esta fase
+
+  # Fase 3B: Memoria de Sesión
+  # Enfoque: Añadir persistencia y testing de estado
+  Fase_3B:
+    description: "Memoria de Sesión - Estado conversacional persistente"
+    required_checks:
+      - name: "lint"
+        command: "make lint"
+        description: "Linting con ruff y mypy"
+        timeout: 120
+
+      - name: "unit_tests"
+        command: "make test"
+        description: "Tests unitarios"
+        timeout: 300
+
+      - name: "integration_tests"
+        command: "pytest tests/integration/ -v"
+        description: "Tests de integración"
+        timeout: 180
+
+      - name: "redis_persistence_tests"
+        command: "pytest tests/integration/test_redis_persistence.py -v"
+        description: "Tests específicos de persistencia en Redis"
+        timeout: 120
+
+      - name: "load_test_basic"
+        command: "pytest tests/load/test_basic_load.py -v"
+        description: "Test de carga básico (10 usuarios concurrentes)"
+        timeout: 300
+
+    coverage_requirements:
+      unit: 75
+      integration: 60
+
+    # Checks adicionales que se pueden añadir opcionalmente
+    optional_checks:
+      - name: "memory_leak_check"
+        command: "python scripts/check_memory_leaks.py"
+        description: "Verificación básica de memory leaks"
+
+  # Fase 3C: InventoryAgent
+  # Enfoque: Sistema completo con automation
+  Fase_3C:
+    description: "InventoryAgent - Primer especialista con estado"
+    required_checks:
+      - name: "lint"
+        command: "make lint"
+        description: "Linting con ruff y mypy"
+        timeout: 120
+
+      - name: "unit_tests"
+        command: "make test"
+        description: "Tests unitarios completos"
+        timeout: 400
+
+      - name: "integration_tests"
+        command: "pytest tests/integration/ -v"
+        description: "Tests de integración"
+        timeout: 240
+
+      - name: "e2e_automation"
+        command: "pytest tests/e2e/ -v"
+        description: "Tests E2E automatizados"
+        timeout: 600
+
+      - name: "performance_test"
+        command: "pytest tests/performance/ -v"
+        description: "Tests de performance y latencia"
+        timeout: 300
+
+    coverage_requirements:
+      unit: 85
+      integration: 75
+      e2e: 90
+
+  # Producción: Todas las verificaciones
+  Produccion:
+    description: "Producción - Máximo rigor y verificaciones completas"
+    required_checks:
+      - name: "full_ci_cd"
+        command: "make verify-production"
+        description: "Suite completa de CI/CD"
+        timeout: 900
+
+      - name: "security_scan"
+        command: "bandit -r src/ && safety check"
+        description: "Scan de seguridad completo"
+        timeout: 180
+
+      - name: "chaos_engineering"
+        command: "python scripts/chaos_tests.py"
+        description: "Tests de chaos engineering"
+        timeout: 600
+
+      - name: "performance_benchmark"
+        command: "pytest tests/benchmark/ -v"
+        description: "Benchmarks de performance"
+        timeout: 900
+
+    coverage_requirements:
+      unit: 90
+      integration: 85
+      e2e: 95
+      mutation: 97  # Mutation testing para código crítico
+
+# Configuración global
+global:
+  # Timeout por defecto para cualquier check
+  default_timeout: 300
+
+  # Archivos que siempre deben pasar lint independiente de la fase
+  always_lint:
+    - "src/"
+    - "tests/"
+    - "scripts/"
+
+  # Comandos que se ejecutan antes de cualquier gate
+  pre_checks:
+    - "git status --porcelain || echo 'Git working directory not clean'"
+    - "python --version"
+
+  # Comandos que se ejecutan después de todos los gates
+  post_checks:
+    - "make sync-docs"  # Actualizar documentación después de tests

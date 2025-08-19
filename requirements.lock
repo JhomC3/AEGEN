@@ -16,6 +16,8 @@ anyio==4.9.0
     #   httpx
     #   starlette
     #   watchfiles
+apscheduler==3.11.0
+    # via python-telegram-bot
 attrs==25.3.0
     # via
     #   aiohttp
@@ -377,7 +379,7 @@ python-json-logger==3.3.0
     # via aegen (pyproject.toml)
 python-pptx==1.0.2
     # via aegen (pyproject.toml)
-python-telegram-bot==22.2
+python-telegram-bot==21.11.1
     # via aegen (pyproject.toml)
 pytz==2025.2
     # via pandas
@@ -500,13 +502,15 @@ tzdata==2025.2
     # via
     #   pandas
     #   pendulum
+tzlocal==5.3.1
+    # via apscheduler
 uritemplate==4.1.1
     # via google-api-python-client
 urllib3==2.4.0
     # via
     #   kubernetes
     #   requests
-uvicorn==0.34.2
+uvicorn==0.29.0
     # via
     #   aegen (pyproject.toml)
     #   chromadb

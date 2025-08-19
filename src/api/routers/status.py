@@ -123,17 +123,17 @@ async def health_check(
 
 
 @router.get(
-    "/migration-check",
+    "/status",
     response_model=SystemStatus,
     tags=["Status"],
-    summary="Evalúa si el sistema debe migrar a una arquitectura distribuida.",
+    summary="Evalúa el estado del sistema y si debe migrar a una arquitectura distribuida.",
 )
-def migration_check() -> SystemStatus:
+def get_system_status() -> SystemStatus:
     """
     Ejecuta el motor de decisión de migración para determinar si los recursos
     del sistema han superado los umbrales predefinidos.
     """
-    logger.info("Migration check requested.")
+    logger.info("System status check requested.")
     engine = MigrationDecisionEngine()
     status = engine.get_system_status()
     return status

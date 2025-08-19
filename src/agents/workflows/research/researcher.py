@@ -75,9 +75,9 @@ class ResearchAgent:
         return graph_builder.compile()
 
     def run(self, user_input: str):
-        for event in self.graph.stream(
-            {"messages": [{"role": "user", "content": user_input}]}
-        ):
+        for event in self.graph.stream({
+            "messages": [{"role": "user", "content": user_input}]
+        }):
             for value in event.values():
                 if "messages" in value and value["messages"]:
                     print("Assistant:", value["messages"][-1].pretty_print())

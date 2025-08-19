@@ -1,12 +1,11 @@
 # src/core/dependencies.py
 import logging
-from functools import lru_cache
 
 from fastapi import HTTPException, status
 from redis import asyncio as aioredis
 
 # Importar clases de Agentes (¡Asegúrate de que los archivos existan!)
-from src.agents.orchestrator import WorkflowCoordinator
+# from src.agents.orchestrator import WorkflowCoordinator
 from src.core.bus.in_memory import InMemoryEventBus
 from src.core.bus.redis import RedisEventBus
 from src.core.config import settings
@@ -59,14 +58,14 @@ async def shutdown_global_resources():
 # --- Inyección de Dependencias ---
 
 
-@lru_cache
-def get_workflow_coordinator() -> WorkflowCoordinator:
-    """
-    Proporciona una instancia singleton del coordinador de workflows.
-    Este coordinador es el principal consumidor de eventos del bus.
-    """
-    logger.debug("Creating/providing WorkflowCoordinator instance.")
-    return WorkflowCoordinator()
+# @lru_cache
+# def get_workflow_coordinator() -> WorkflowCoordinator:
+#     """
+#     Proporciona una instancia singleton del coordinador de workflows.
+#     Este coordinador es el principal consumidor de eventos del bus.
+#     """
+#     logger.debug("Creating/providing WorkflowCoordinator instance.")
+#     return WorkflowCoordinator()
 
 
 def get_event_bus() -> IEventBus:
@@ -93,5 +92,5 @@ def prime_dependencies():
     """
     "Calienta" las dependencias singleton al arranque de la aplicación.
     """
-    get_workflow_coordinator()
+    # get_workflow_coordinator()
     logger.info("Primed singleton dependencies.")

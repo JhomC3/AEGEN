@@ -1,5 +1,5 @@
 # ---- Base Stage ----
-FROM python:3.13-slim as base
+FROM python:3.13-slim AS base
 ARG APP_DIR=/app
 WORKDIR ${APP_DIR}
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -26,14 +26,14 @@ ENV PATH="/root/.local/bin:$PATH"
 ENV PATH="/root/.cargo/bin:$PATH"
 
 # ---- Builder Stage ----
-FROM base as builder
+FROM base AS builder
 COPY pyproject.toml requirements.lock* ./
 
 # Instala dependencias de producción desde el lockfile
 RUN uv pip sync --system requirements.lock
 
 # ---- Final Stage ----
-FROM base as final
+FROM base AS final
 ARG APP_DIR
 
 # Copia dependencias instaladas

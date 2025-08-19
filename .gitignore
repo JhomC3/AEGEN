@@ -252,4 +252,5 @@ pip-selfcheck.json
 
 # End of https://www.toptal.com/developers/gitignore/api/python,database,macos,visualstudiocode,dotenv,virtualenv
 
-history_llm_chat.txt
+GEMINI.md
+.mcp.json

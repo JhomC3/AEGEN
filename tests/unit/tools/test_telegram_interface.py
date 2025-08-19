@@ -14,7 +14,7 @@ import respx
 from httpx import Response
 from pydantic import SecretStr
 
-from src.tools.telegram_interface import TelegramTool
+from src.tools.telegram_interface import TelegramToolManager
 
 # Constantes para los tests
 BOT_TOKEN = "123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
@@ -23,21 +23,21 @@ FILE_BASE_URL = f"https://api.telegram.org/file/bot{BOT_TOKEN}"
 
 
 @pytest.fixture
-def telegram_tool(monkeypatch) -> TelegramTool:
+def telegram_tool(monkeypatch) -> TelegramToolManager:
     """
-    Fixture que proporciona una instancia de la TelegramTool, mockeando
+    Fixture que proporciona una instancia de la TelegramToolManager, mockeando
     el token de Telegram en la configuración para el entorno de prueba.
     """
     # Mockea la configuración para que la herramienta use el token de prueba
     monkeypatch.setattr(
         "src.core.config.settings.TELEGRAM_BOT_TOKEN", SecretStr(BOT_TOKEN)
     )
-    return TelegramTool()
+    return TelegramToolManager()
 
 
 @respx.mock
 @pytest.mark.asyncio
-async def test_get_file_path_success(telegram_tool: TelegramTool):
+async def test_get_file_path_success(telegram_tool: TelegramToolManager):
     """
     Verifica que get_file_path maneja una respuesta exitosa de la API.
     """
@@ -59,7 +59,7 @@ async def test_get_file_path_success(telegram_tool: TelegramTool):
 
 @respx.mock
 @pytest.mark.asyncio
-async def test_get_file_path_api_error(telegram_tool: TelegramTool):
+async def test_get_file_path_api_error(telegram_tool: TelegramToolManager):
     """
     Verifica que get_file_path maneja una respuesta de error de la API.
     """
@@ -77,7 +77,9 @@ async def test_get_file_path_api_error(telegram_tool: TelegramTool):
 
 @respx.mock
 @pytest.mark.asyncio
-async def test_download_file_success(telegram_tool: TelegramTool, tmp_path: Path):
+async def test_download_file_success(
+    telegram_tool: TelegramToolManager, tmp_path: Path
+):
     """
     Verifica la descarga exitosa de un archivo.
     """
@@ -97,9 +99,7 @@ async def test_download_file_success(telegram_tool: TelegramTool, tmp_path: Path
         return_value=Response(200, content=file_content)
     )
 
-    destination_path = await telegram_tool.download_file_from_telegram(
-        file_id, tmp_path
-    )
+    destination_path = await telegram_tool.download_file(file_id, tmp_path)
 
     assert destination_path is not None
     assert destination_path.name == "test_document.pdf"
@@ -109,7 +109,7 @@ async def test_download_file_success(telegram_tool: TelegramTool, tmp_path: Path
 
 @respx.mock
 @pytest.mark.asyncio
-async def test_send_message_success(telegram_tool: TelegramTool):
+async def test_send_message_success(telegram_tool: TelegramToolManager):
     """
     Verifica el envío exitoso de un mensaje.
     """
@@ -120,7 +120,7 @@ async def test_send_message_success(telegram_tool: TelegramTool):
         return_value=Response(200, json={"ok": True, "result": {"message_id": 999}})
     )
 
-    success = await telegram_tool.send_telegram_message(chat_id, text)
+    success = await telegram_tool.send_message(chat_id, text)
 
     assert success is True
     assert send_message_route.called
@@ -132,7 +132,7 @@ async def test_send_message_success(telegram_tool: TelegramTool):
 
 @respx.mock
 @pytest.mark.asyncio
-async def test_send_message_failure(telegram_tool: TelegramTool):
+async def test_send_message_failure(telegram_tool: TelegramToolManager):
     """
     Verifica el manejo de un fallo al enviar un mensaje.
     """
@@ -143,7 +143,7 @@ async def test_send_message_failure(telegram_tool: TelegramTool):
         return_value=Response(400, json={"ok": False, "description": "Chat not found"})
     )
 
-    success = await telegram_tool.send_telegram_message(chat_id, text)
+    success = await telegram_tool.send_message(chat_id, text)
 
     assert success is False
     assert send_message_route.called

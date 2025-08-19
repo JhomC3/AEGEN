@@ -27,14 +27,15 @@ class BaseAppSettings(BaseSettings):
     CHROMA_API_KEY: SecretStr | None = None
     YOUTUBE_API_KEY: SecretStr | None = None
     TELEGRAM_BOT_TOKEN: SecretStr | None = None
+    NGROK_AUTHTOKEN: SecretStr | None = None
     # ... otros secretos
 
     # Conexiones
-    REDIS_URL: str = "redis://localhost:6379/0"
+    REDIS_URL: str = "redis://redis:6379/0"
 
     # Configs generales
-    DEFAULT_LLM_MODEL: str = "google_genai:gemini-2.5-flash"
-    DEFAULT_TEMPERATURE: float = 0.7
+    DEFAULT_LLM_MODEL: str = "gemini-2.5-flash"
+    DEFAULT_TEMPERATURE: float = 0.3
     DEFAULT_WHISPER_MODEL: str = "base"
     VECTOR_DB_PATH: str | None = None  # Ej: para ChromaDB local
     VECTOR_DB_URL: str | None = None  # Ej: para instancia remota
