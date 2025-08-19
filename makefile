@@ -40,8 +40,24 @@ lint: ## Ejecuta linters (ruff, black check, mypy, bandit, safety)
 	$(PYTHON) -m mypy src tests
 	$(PYTHON) -m bandit -c pyproject.toml -r src
 
-verify: lint test ## Ejecuta la suite de verificación completa (linting y testing)
-	@echo "✅ All checks passed!"
+verify: ## Ejecuta quality gates baseline (Fase 3A mínimo)
+	@echo "🎯 Running baseline quality gates (Fase_3A)..."
+	$(PYTHON) scripts/quality_gates.py --phase Fase_3A
+
+verify-next: ## Ejecuta quality gates para la siguiente fase (Fase 3B)
+	@echo "🎯 Running next-phase quality gates (Fase_3B)..."
+	$(PYTHON) scripts/quality_gates.py --phase Fase_3B
+
+verify-phase: ## Ejecuta quality gates para una fase específica (uso: make verify-phase PHASE=Fase_3A)
+	@echo "🎯 Running quality gates for phase: $(PHASE)"
+	$(PYTHON) scripts/quality_gates.py --phase $(PHASE)
+
+verify-verbose: ## Ejecuta quality gates con output detallado
+	@echo "🎯 Running quality gates (verbose)..."
+	$(PYTHON) scripts/quality_gates.py --phase Fase_3A -v
+
+verify-legacy: lint test ## Suite de verificación legacy (linting y testing básico)
+	@echo "✅ Legacy checks passed!"
 
 format: ## Formatea el código usando ruff
 	@echo "Formatting code..."
@@ -78,6 +94,39 @@ logs-dev: ## Muestra los logs de los contenedores de desarrollo
 build: ## Construye la imagen Docker de producción
 	@echo "Building production Docker image..."
 	docker-compose -f docker-compose.yml build app
+
+sync-docs: ## Sincroniza documentación con estado real del proyecto
+	@echo "Synchronizing documentation with project state..."
+	$(PYTHON) scripts/sync_docs.py
+
+doctor: ## Diagnóstico completo de consistencia docs vs código
+	@echo "Running project health check..."
+	@echo "1. Checking git status..."
+	@git status --porcelain || echo "Git issues detected"
+	@echo "2. Verifying documentation sync..."
+	$(PYTHON) scripts/sync_docs.py
+	@echo "3. Running verification suite..."
+	$(MAKE) verify
+	@echo "✅ Project health check complete"
+
+status: ## Estado completo del proyecto (git + testing + métricas)
+	@echo "📊 AEGEN Project Status"
+	@echo "======================"
+	@echo "Git Branch: $$(git rev-parse --abbrev-ref HEAD)"
+	@echo "Last Commit: $$(git log -1 --pretty=format:'%h - %s (%cr)')"
+	@echo "Modified Files: $$(git diff --name-only | wc -l | tr -d ' ')"
+	@echo ""
+	@echo "📋 Testing Status:"
+	@find tests -name "test_*.py" | wc -l | xargs echo "Test Files:"
+	@echo ""
+	@echo "📚 Documentation Status:"
+	$(PYTHON) scripts/sync_docs.py
+	@echo ""
+	@echo "🎯 Quality Gates:"
+	$(PYTHON) scripts/quality_gates.py --list-phases
+
+list-phases: ## Lista las fases disponibles en quality gates
+	$(PYTHON) scripts/quality_gates.py --list-phases
 
 clean: ## Elimina archivos generados (cache, venv, etc.)
 	@echo "Cleaning up project..."

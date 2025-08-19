@@ -51,11 +51,8 @@ async def lifespan(app: FastAPI):
             "Lifespan: Redis client not available. FastAPI Cache NOT initialized."
         )
 
-    # "Calienta" las dependencias singleton y suscribe los workers
+    # "Calienta" las dependencias singleton
     prime_dependencies()
-    # TODO: Reemplazar la lógica del antiguo WorkflowCoordinator con el nuevo MasterRouter
-    # coordinator = get_workflow_coordinator()
-    # await event_bus.subscribe("workflow_tasks", coordinator.handle_workflow_event)
 
     logger.info("Lifespan: Application startup complete.")
     yield
