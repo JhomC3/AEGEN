@@ -10,6 +10,7 @@ services:
       # Montar código fuente para live reload
       - ./src:/app/src
       - ./config:/app/config
+      - ./prompts:/app/prompts
     # Sobrescribir comando para incluir reload
     command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
     # Usar el .env local que tendrá APP_ENV=dev

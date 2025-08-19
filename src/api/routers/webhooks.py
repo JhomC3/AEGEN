@@ -26,10 +26,11 @@ async def process_event_task(event: schemas.CanonicalEventV1):
         f"[TaskID: {task_id}] Iniciando orquestación para chat {event.chat_id}."
     )
 
-    initial_state: schemas.GraphStateV1 = {
+    initial_state: schemas.GraphStateV2 = {
         "event": event,
         "payload": {},
         "error_message": None,
+        "conversation_history": [],  # Nuevo campo para memoria conversacional
     }
     final_state: dict
 

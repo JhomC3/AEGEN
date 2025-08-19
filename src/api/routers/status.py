@@ -7,6 +7,7 @@ from src.core.config import settings
 from src.core.dependencies import get_event_bus
 from src.core.engine import MigrationDecisionEngine
 from src.core.interfaces.bus import IEventBus
+from src.core.registry import specialist_registry
 from src.core.schemas import (
     AppEnvironment,
     HealthCheckResponse,
@@ -137,3 +138,24 @@ def get_system_status() -> SystemStatus:
     engine = MigrationDecisionEngine()
     status = engine.get_system_status()
     return status
+
+
+@router.get(
+    "/specialists",
+    tags=["Debug"],
+    summary="Debug: Lista especialistas registrados",
+)
+def get_specialists():
+    """Debug endpoint para verificar especialistas registrados."""
+    specialists = specialist_registry.get_all_specialists()
+    return {
+        "count": len(specialists),
+        "specialists": [
+            {
+                "name": s.name,
+                "type": type(s).__name__,
+                "capabilities": s.get_capabilities(),
+            }
+            for s in specialists
+        ],
+    }

@@ -461,3 +461,32 @@ class GraphStateV1(TypedDict):
     event: CanonicalEventV1
     payload: dict[str, Any]
     error_message: str | None
+
+
+# --- Esquemas para Fase 3B: Memoria Conversacional ---
+
+
+class V2ChatMessage(TypedDict):
+    """
+    Mensaje de chat Redis-safe, JSON-serializable para historial conversacional.
+    Evita la complejidad de serialización de objetos LangChain BaseMessage.
+    """
+
+    role: Literal["user", "assistant", "system", "tool"]
+    content: str
+
+
+class GraphStateV2(TypedDict):
+    """
+    Versión evolucionada del estado del grafo para flujos conversacionales.
+    Incluye historial de conversación persistente para memoria entre turnos.
+    (Versión 2 - Breaking change desde V1)
+
+    Utiliza TypedDict para compatibilidad nativa con LangGraph.
+    """
+
+    event: CanonicalEventV1
+    payload: dict[str, Any]
+    error_message: str | None
+    # Nuevo campo para memoria conversacional
+    conversation_history: list[V2ChatMessage]
