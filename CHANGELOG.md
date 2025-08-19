@@ -7,7 +7,7 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ### Added
 - Implementación de la gobernanza ejecutable (v9.0 del `PROJECT_OVERVIEW.md`).
-- Creación de los artefactos normativos: `PRD.md`, `rules.md`, `OWNERS.md`.
+- Creación de los artefactos normativos: `rules.md`, `adr/`.
 - Estructura de directorios para `adr`, `playbooks`, `prompts` y `tests` de evaluación.
 
 ## [1.0.0] - 2025-08-13

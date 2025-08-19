@@ -21,8 +21,8 @@ Funcionalidades_Activas:
   - ✅ Schemas CanonicalEventV1/GraphStateV1
   - 🚧 Sistema de testing (40% cobertura)
 Branch_Trabajo: "feature/telegram-transcription-workflow"
-Cambios_Pendientes: ['tests/integration/test_telegram_webhook.py', 'PROJECT_OVERVIEW.md', 'src/api/routers/webhooks.py', 'tests/conftest.py', 'src/tools/documents/process_documents.py']
-Última_Sincronización: "2025-08-18 20:06"
+Cambios_Pendientes: []
+Última_Sincronización: "2025-08-18 20:11"
 ```
 
 ### ¿Dónde Estamos Hoy?
@@ -57,8 +57,8 @@ Estas reglas son mandatorias y forzadas por herramientas automatizadas.
 Los documentos del proyecto siguen una estricta jerarquía de precedencia. En caso de conflicto, el documento de mayor nivel prevalece. La integridad y coherencia entre ellos es validada automáticamente en CI mediante checksums.
 
 1.  **`PROJECT_OVERVIEW.md` (Constitución - Este Documento):** Define la visión, principios, arquitectura y roadmap.
-2.  **`PRD.md` (Product Requirements Document):** Define el QUÉ y el PORQUÉ. Personas, casos de uso, KPIs, requisitos no funcionales y DoD de negocio.
-3.  **`rules.md` (Reglas Técnicas):** Define el CÓMO. Estándares de código, políticas de errores, seguridad, observabilidad y compatibilidad con severidad (Must/Should/May).
+2.  **`rules.md` (Reglas Técnicas):** Define el CÓMO. Estándares de código, políticas de errores, seguridad, observabilidad y compatibilidad con severidad (Must/Should/May).
+3.  **`adr/` (Architecture Decision Records):** Decisiones arquitectónicas con contexto y justificación histórica.
 4.  **Código y Docstrings (`LLM-hints`):** La implementación final, que debe adherirse a todo lo anterior.
 5.  **Issues / Pull Requests:** Unidades de trabajo que proponen cambios al código y documentos.
 
@@ -263,10 +263,9 @@ make doctor          # Verifica consistencia docs vs código
 
 ### Documentos Normativos (Por Orden de Precedencia)
 1. **Este documento** - Visión y roadmap
-2. **`PRD.md`** - Requisitos de producto y KPIs
-3. **`rules.md`** - Estándares técnicos obligatorios
-4. **`adr/`** - Decisiones arquitectónicas
-5. **Código + tests** - Implementación actual
+2. **`rules.md`** - Estándares técnicos obligatorios
+3. **`adr/`** - Decisiones arquitectónicas
+4. **Código + tests** - Implementación actual
 
 ### Enlaces Útiles (Desarrollo Local)
 - **API Docs:** http://localhost:8000/docs
@@ -276,8 +275,8 @@ make doctor          # Verifica consistencia docs vs código
 
 ### Contactos y Escalación
 - **Tech Lead:** `@jhomc` (Arquitectura, decisiones técnicas)
-- **Product:** `PRD.md` (Requisitos, priorización)
-- **Emergencias:** Canal `#aegen-alerts` + `make doctor`
+- **Documentación:** `PROJECT_OVERVIEW.md` + `rules.md`
+- **Emergencias:** `make doctor` + revisión de logs
 
 ---
 
