@@ -28,10 +28,18 @@ class BaseAppSettings(BaseSettings):
     YOUTUBE_API_KEY: SecretStr | None = None
     TELEGRAM_BOT_TOKEN: SecretStr | None = None
     NGROK_AUTHTOKEN: SecretStr | None = None
+
+    # LangSmith Configuration
+    LANGCHAIN_API_KEY: SecretStr | None = None
+    LANGCHAIN_TRACING_V2: bool = False
+    LANGCHAIN_PROJECT: str = "AEGEN-Phase3B"
+
     # ... otros secretos
 
     # Conexiones
     REDIS_URL: str = "redis://redis:6379/0"
+    REDIS_SESSION_URL: str = "redis://redis:6379/1"
+    REDIS_SESSION_TTL: int = 3600  # 1 hour session timeout
 
     # Configs generales
     DEFAULT_LLM_MODEL: str = "gemini-2.5-flash"

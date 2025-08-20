@@ -8,7 +8,6 @@ from langgraph.graph import END, StateGraph
 
 from src.core.engine import llm
 from src.core.interfaces.specialist import SpecialistInterface
-from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV1
 
 logger = logging.getLogger(__name__)
@@ -84,5 +83,5 @@ class ChatSpecialist(SpecialistInterface):
         return {"payload": {**current_payload, "response": result}}
 
 
-# Registrar la instancia del especialista
-specialist_registry.register(ChatSpecialist())
+# ChatAgent desactivado - reemplazado por PlannerAgent en Phase 3B
+# specialist_registry.register(ChatSpecialist())

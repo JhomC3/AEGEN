@@ -227,6 +227,7 @@ pyrightconfig.json
 [Ll]ib64
 [Ll]ocal
 [Ss]cripts
+!scripts/
 pyvenv.cfg
 pip-selfcheck.json
 
@@ -254,3 +255,4 @@ pip-selfcheck.json
 
 GEMINI.md
 .mcp.json
+uv.lock
