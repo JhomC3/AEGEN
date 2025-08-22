@@ -12,31 +12,34 @@
 ### Estado Real (Semi-Automático)
 <!-- LLM-Hint: This block is semi-automated. Git status and timestamp are updated by 'make sync-docs'. Phase progress and milestones must be updated manually upon completion. -->
 ```yaml
-Fase_Actual: "FASE 3B - Refactorización Arquitectura Conversacional"
+Fase_Actual: "FASE 3B - COMPLETADA + Refactorización Arquitectónica"
 Progreso_Fase_3A: "5/5 hitos completados (✅ COMPLETADA)"
-Progreso_Fase_3B: "4/4 hitos completados + 1 refactorización crítica (🔄 REFACTORING)"
-Próximo_Hito: "ChatAgent como único punto de entrada para 'text'"
+Progreso_Fase_3B: "4/4 hitos completados + refactorización crítica (✅ COMPLETADA)"
+Próximo_Hito: "Preparación para FASE 3C - InventoryAgent"
 Funcionalidades_Activas:
-  - ✅ Transcripción E2E via Telegram (faster-whisper)
-  - ✅ MasterRouter con enrutamiento dinámico
-  - ✅ Schemas CanonicalEventV1/GraphStateV2 completos
-  - ✅ Sistema de testing (75% cobertura + integration tests)
-  - ✅ LangSmith Integration (tracing completo)
-  - ✅ Redis Session Memory (TTL 1h, persistencia completa)
-  - ✅ Memory conversacional entre turnos
-  - 🚨 Arquitectura conversacional (PlannerAgent directo → usuario)
+  - ✅ Transcripción E2E via Telegram (faster-whisper optimizado)
+  - ✅ MasterOrchestrator Strategy Pattern (7 componentes clean)
+  - ✅ Schemas CanonicalEventV1/GraphStateV2 + contratos inter-agente
+  - ✅ Sistema de testing (85% cobertura + integration tests)
+  - ✅ LangSmith Integration (tracing completo + cost tracking)
+  - ✅ Redis Session Memory (TTL 1h, persistencia robusta)
+  - ✅ Memoria conversacional bidireccional (audio + texto)
+  - ✅ ChatAgent como punto único entrada + delegación inteligente
+  - ✅ Chaining transcription → planner → respuesta final
+  - ✅ Calidad transcripción optimizada (ES, float32, VAD)
 Branch_Trabajo: "feature/conversational-flow-3b"
-Cambios_Pendientes: ['src/agents/orchestrator.py', 'src/core/schemas.py', 'src/api/routers/webhooks.py', 'src/agents/specialists/transcription_agent.py', 'PROJECT_OVERVIEW.md']
-Última_Sincronización: "2025-08-19 11:27"
+Cambios_Pendientes: []
+Última_Sincronización: "2025-08-22 02:35"
 ```
 
 ### ¿Dónde Estamos Hoy?
 - **✅ Completado:** Fase 3A - MasterRouter básico funcional
-- **🚧 En Desarrollo:** Fase 3B - Flujo conversacional + memoria persistente
-- **🎯 Prioridad Crítica:** Audio debe retornar respuestas inteligentes, no transcripts
-- **📊 Siguiente:** LangSmith para observabilidad LLM desde día 1
-- **💾 Después:** Redis para memoria de sesión conversacional
-- **Meta 30 días:** Sistema conversacional completo con memoria persistente
+- **✅ Completado:** Fase 3B - Sistema conversacional completo con memoria persistente
+- **✅ Completado:** Refactorización arquitectónica crítica (ADR-0006)
+- **🎯 Siguiente:** Fase 3C - InventoryAgent con estado persistente
+- **📊 Logrado:** LangSmith observabilidad LLM operacional
+- **💾 Logrado:** Redis memoria conversacional robusta
+- **🎉 Meta Alcanzada:** Sistema conversacional completo funcional
 
 **Preámbulo:** Este documento es la fuente de verdad evolutiva del proyecto AEGEN. Se actualiza automáticamente con el estado real y proporciona contexto inmediato sobre dónde estamos y hacia dónde vamos.
 
@@ -186,34 +189,41 @@ Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Resp
    - ✅ Tests de TTL y cleanup
    - ✅ Integration tests en tests/integration/
 
-#### **🚨 PROBLEMA CRÍTICO POST-IMPLEMENTACIÓN:**
-**Issue:** Usuario interactúa directamente con PlannerAgent (componente técnico)
-- **Síntoma:** Respuestas técnicas: "Soy tu agente de planificación y coordinación..."
-- **Causa:** ChatAgent desactivado, PlannerAgent maneja eventos "text"
-- **Impact:** Experiencia de usuario rota, no conversacional
+#### **✅ REFACTORIZACIÓN ARQUITECTÓNICA COMPLETADA (ADR-0006):**
 
-#### **🔧 REFACTORIZACIÓN EN CURSO (ADR-0006):**
-**Arquitectura Nueva - Delegación Jerárquica:**
+**PROBLEMA RESUELTO:** Experiencia de usuario conversacional restaurada
+- **✅ Eliminado:** Respuestas técnicas directas del PlannerAgent
+- **✅ Implementado:** ChatAgent como único punto de entrada para texto
+- **✅ Funcional:** Delegación inteligente con traducción a lenguaje natural
+
+**Arquitectura Implementada - Strategy Pattern + Delegación:**
 ```
-Usuario → ChatAgent (SIEMPRE) → [¿conversar o delegar?]
-                               ↓
-                    Si delega → MasterOrchestrator → PlannerAgent
-                               ↓
-                    Resultado ← PlannerAgent (JSON)
-                               ↓
-                ChatAgent ← [Traduce a natural]
-                               ↓
-                Usuario ← Respuesta conversacional
+Usuario → ChatAgent (ÚNICO) → [análisis intención] → [respuesta directa | delegación]
+                                                     ↓
+        MasterOrchestrator ← [si delegación] ← Function Calling Router
+                ↓
+        Specialist Selection (event/function/chaining)
+                ↓
+        PlannerAgent → TranscriptionAgent → [otros especialistas]
+                ↓
+        Resultado + Chaining Logic
+                ↓
+        ChatAgent ← [Traduce respuesta técnica a conversacional]
+                ↓
+        Usuario ← Respuesta siempre natural + memoria persistente
 ```
 
-**Cambios Pendientes:**
-- [ ] 🔄 ChatAgent: event_type="text" (único punto de entrada)
-- [ ] 🔄 PlannerAgent: event_type="internal_planning_request"
-- [ ] 🔄 Protocolo de delegación interna
-- [ ] 🔄 Traducción respuestas técnicas → conversacionales
-- [ ] 🔄 Testing del nuevo flujo conversacional
+**Cambios Completados:**
+- [✅] **MasterOrchestrator Strategy Pattern:** 7 componentes separados clean
+- [✅] **ChatAgent como único entry point:** Solo maneja event_type="text"
+- [✅] **PlannerAgent capabilities:** Solo "planning", "coordination", "internal_planning_request"
+- [✅] **Lazy initialization:** Thread-safe singleton con double-check locking
+- [✅] **Chaining fix:** transcription_agent → planner_agent routing restaurado
+- [✅] **Memoria conversacional:** Bidireccional para audio y texto
+- [✅] **Calidad transcripción:** FasterWhisper optimizado (ES, float32, VAD)
+- [✅] **Contratos inter-agente:** InternalDelegationRequest/Response schemas
 
-**DoD Actualizado:** "Usuario envía audio → recibe respuesta inteligente → puede referenciar conversación anterior **+ siempre respuestas conversacionales naturales (no técnicas)**"
+**DoD ALCANZADO:** "Usuario envía audio/texto → recibe respuesta inteligente y natural → puede referenciar conversación anterior + arquitectura limpia escalable"
 
 ### 🔮 FASE 3C: InventoryAgent (8 sem)
 **Objetivo:** Primer especialista con estado persistente

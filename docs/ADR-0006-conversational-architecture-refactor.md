@@ -1,8 +1,8 @@
 # ADR-0006: Refactorización de Arquitectura Conversacional
 
-**Fecha:** 2025-01-21
-**Estado:** En Implementación
-**Decisores:** Equipo AEGEN
+**Fecha:** 2025-01-21 → 2025-08-22
+**Estado:** ✅ COMPLETADO - Implementación Exitosa
+**Decisores:** Equipo AEGEN + Validación Expert (Gemini)
 
 ## Contexto y Problema
 
