@@ -2,7 +2,7 @@ import asyncio
 import logging
 from typing import Any
 
-import whisper
+from faster_whisper import WhisperModel
 from langchain_core.tools import tool
 
 from src.core.config import settings
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class WhisperModelManager:
     """
-    Gestiona la carga y el acceso al modelo Whisper.
+    Gestiona la carga y el acceso al modelo FasterWhisper.
     Asegura que el modelo se cargue una sola vez (patrón singleton).
     """
 
@@ -21,7 +21,7 @@ class WhisperModelManager:
     # Declarar atributos de instancia para que mypy los reconozca
     model_name: str
     logger: logging.Logger
-    _whisper_model: Any = None
+    _whisper_model: WhisperModel | None = None
 
     def __new__(cls, model_name: str = settings.DEFAULT_WHISPER_MODEL):
         if cls._instance is None:
@@ -29,21 +29,23 @@ class WhisperModelManager:
             cls._instance.model_name = model_name
             cls._instance.logger = logging.getLogger(cls.__name__)
             cls._instance.logger.info(
-                f"WhisperModelManager inicializado con el modelo: {model_name}"
+                f"FasterWhisperModelManager inicializado con el modelo: {model_name}"
             )
         return cls._instance
 
-    async def get_model(self):
+    async def get_model(self) -> WhisperModel:
         """
-        Carga el modelo Whisper si aún no está cargado y lo devuelve.
+        Carga el modelo FasterWhisper si aún no está cargado y lo devuelve.
         La carga se realiza en un hilo separado para no bloquear el bucle de eventos.
         """
         if self._whisper_model is None:
-            self.logger.info(f"Cargando el modelo Whisper: {self.model_name}...")
+            self.logger.info(f"Cargando el modelo FasterWhisper: {self.model_name}...")
             self._whisper_model = await asyncio.to_thread(
-                whisper.load_model, self.model_name
+                WhisperModel, self.model_name, device="cpu", compute_type="float32"
             )
-            self.logger.info(f"Modelo Whisper '{self.model_name}' cargado con éxito.")
+            self.logger.info(
+                f"Modelo FasterWhisper '{self.model_name}' cargado con éxito."
+            )
         return self._whisper_model
 
 
@@ -57,20 +59,33 @@ transcription_stats = {"transcriptions": 0, "errors": 0}
 @tool
 async def transcribe_with_whisper(audio_path: str) -> dict[str, Any]:
     """
-    Toma un archivo de audio, lo transcribe usando Whisper y devuelve el texto.
+    Toma un archivo de audio, lo transcribe usando FasterWhisper y devuelve el texto.
     """
     try:
         logger.info(f"Iniciando transcripción para el archivo: {audio_path}")
+        logger.info(
+            f"Usando modelo optimizado: {whisper_manager.model_name} (float32, español, VAD optimizado)"
+        )
         model = await whisper_manager.get_model()
 
         # Ejecutar la transcripción (que es bloqueante) en un hilo separado
-        result = await asyncio.to_thread(model.transcribe, audio_path, fp16=False)
+        # FasterWhisper devuelve (segments, info) tupla
+        def _transcribe():
+            segments, info = model.transcribe(
+                audio_path,
+                beam_size=5,
+                language="es",  # Forzar español para mayor precisión
+                vad_filter=True,  # Activa Voice Activity Detection para conversaciones
+                vad_parameters={"min_silence_duration_ms": 700},  # VAD menos agresivo
+            )
+            # Combinar todos los segmentos en texto completo
+            transcript = "".join([segment.text for segment in segments])
+            return transcript, info.language
 
-        transcript = result.get("text", "")
-        language = result.get("language", "unknown")
+        transcript, language = await asyncio.to_thread(_transcribe)
 
         audio_info = {
-            "transcript": transcript,
+            "transcript": transcript.strip(),
             "language": language,
         }
 

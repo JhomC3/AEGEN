@@ -10,6 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, status
 from src.agents.orchestrator import master_orchestrator
 from src.core import schemas
 from src.core.middleware import correlation_id
+from src.core.session_manager import session_manager
 from src.tools import telegram_interface
 
 router = APIRouter()
@@ -20,16 +21,28 @@ async def process_event_task(event: schemas.CanonicalEventV1):
     """
     Tarea de fondo que orquesta el flujo de procesamiento para un evento canónico.
     Utiliza un directorio temporal para gestionar los archivos de forma segura.
+    Integra memoria conversacional via SessionManager.
     """
     task_id = event.event_id
-    logger.info(
-        f"[TaskID: {task_id}] Iniciando orquestación para chat {event.chat_id}."
-    )
+    chat_id = str(event.chat_id)
+    logger.info(f"[TaskID: {task_id}] Iniciando orquestación para chat {chat_id}.")
 
-    initial_state: schemas.GraphStateV1 = {
+    # Load existing session or create new state
+    existing_session = await session_manager.get_session(chat_id)
+    if existing_session:
+        logger.info(
+            f"[TaskID: {task_id}] Memoria cargada: {len(existing_session['conversation_history'])} mensajes"
+        )
+        conversation_history = existing_session["conversation_history"]
+    else:
+        logger.info(f"[TaskID: {task_id}] Nueva sesión conversacional")
+        conversation_history = []
+
+    initial_state: schemas.GraphStateV2 = {
         "event": event,
         "payload": {},
         "error_message": None,
+        "conversation_history": conversation_history,
     }
     final_state: dict
 
@@ -73,11 +86,20 @@ async def process_event_task(event: schemas.CanonicalEventV1):
             else "La tarea se completó, pero no se generó una respuesta."
         )
 
-    logger.info(f"[TaskID: {task_id}] Enviando respuesta al chat {event.chat_id}.")
+    logger.info(f"[TaskID: {task_id}] Enviando respuesta al chat {chat_id}.")
     await telegram_interface.reply_to_telegram_chat.ainvoke({
-        "chat_id": str(event.chat_id),
+        "chat_id": chat_id,
         "message": message,
     })
+
+    # Save updated session state to Redis
+    session_saved = await session_manager.save_session(chat_id, final_state)
+    if session_saved:
+        history_len = len(final_state.get("conversation_history", []))
+        logger.info(f"[TaskID: {task_id}] Memoria guardada: {history_len} mensajes")
+    else:
+        logger.warning(f"[TaskID: {task_id}] Fallo al guardar memoria conversacional")
+
     logger.info(f"[TaskID: {task_id}] Orquestación finalizada.")
 
 

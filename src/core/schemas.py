@@ -461,3 +461,102 @@ class GraphStateV1(TypedDict):
     event: CanonicalEventV1
     payload: dict[str, Any]
     error_message: str | None
+
+
+# --- Esquemas para Fase 3B: Memoria Conversacional ---
+
+
+class V2ChatMessage(TypedDict):
+    """
+    Mensaje de chat Redis-safe, JSON-serializable para historial conversacional.
+    Evita la complejidad de serialización de objetos LangChain BaseMessage.
+    """
+
+    role: Literal["user", "assistant", "system", "tool"]
+    content: str
+
+
+class GraphStateV2(TypedDict):
+    """
+    Versión evolucionada del estado del grafo para flujos conversacionales.
+    Incluye historial de conversación persistente para memoria entre turnos.
+    (Versión 2 - Breaking change desde V1)
+
+    Utiliza TypedDict para compatibilidad nativa con LangGraph.
+    """
+
+    event: CanonicalEventV1
+    payload: dict[str, Any]
+    error_message: str | None
+    # Nuevo campo para memoria conversacional
+    conversation_history: list[V2ChatMessage]
+
+
+# --- Contratos JSON para Comunicación Inter-Componente (ADR-0006) ---
+
+
+class InternalDelegationRequest(BaseModel):
+    """
+    Contrato para delegación interna de ChatAgent a especialistas.
+    Define el formato estándar para comunicación inter-agente.
+    """
+
+    task_type: Literal[
+        "planning", "analysis", "transcription", "document_processing"
+    ] = Field(..., description="Tipo de tarea a delegar al especialista")
+    user_message: str = Field(..., description="Mensaje original del usuario")
+    context: dict[str, Any] = Field(
+        default_factory=dict, description="Contexto adicional para la tarea"
+    )
+    conversation_history: list[V2ChatMessage] = Field(
+        default_factory=list, description="Historial conversacional relevante"
+    )
+    priority: Literal["low", "medium", "high", "urgent"] = Field(
+        default="medium", description="Prioridad de la tarea"
+    )
+
+
+class InternalDelegationResponse(BaseModel):
+    """
+    Contrato para respuesta de especialistas a ChatAgent.
+    Formato estándar para resultados que deben traducirse a lenguaje natural.
+    """
+
+    status: Literal["success", "error", "partial"] = Field(
+        ..., description="Estado de la ejecución de la tarea"
+    )
+    result: dict[str, Any] = Field(
+        default_factory=dict, description="Resultado estructurado de la tarea"
+    )
+    summary: str = Field(..., description="Resumen legible del resultado")
+    suggestions: list[str] = Field(
+        default_factory=list, description="Sugerencias para el usuario"
+    )
+    error_details: str | None = Field(
+        None, description="Detalles del error si status=error"
+    )
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Metadatos adicionales del procesamiento"
+    )
+
+
+class TaskContext(BaseModel):
+    """
+    Contexto compartido para flujo de datos entre componentes.
+    Facilita el paso de información entre especialistas en chains complejos.
+    """
+
+    session_id: str = Field(..., description="ID de sesión para tracking del flujo")
+    user_id: str = Field(..., description="ID del usuario para personalización")
+    current_step: str = Field(
+        ..., description="Paso actual en el flujo de procesamiento"
+    )
+    previous_results: dict[str, Any] = Field(
+        default_factory=dict, description="Resultados de pasos anteriores"
+    )
+    shared_state: dict[str, Any] = Field(
+        default_factory=dict, description="Estado compartido entre componentes"
+    )
+    preferences: dict[str, Any] = Field(
+        default_factory=dict, description="Preferencias del usuario"
+    )

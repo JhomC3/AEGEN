@@ -2,8 +2,8 @@
 
 > **Versión:** 10.0 (Edición "Contexto Dinámico y Pragmático")
 > **Estado:** Activo y Evolutivo
-> **Branch Actual:** `feature/telegram-transcription-workflow`
-> **Última Actualización:** 2025-08-18
+> **Branch Actual:** `feature/conversational-flow-3b`
+> **Última Actualización:** 2025-08-19
 
 <!-- LLM-Hint: This document follows a strict hierarchy. In case of conflict, PROJECT_OVERVIEW.md (this file) has the highest authority. The current project phase is defined in the "Estado Real" YAML block below. Use the DoD (Definition of Done) for each phase to understand completion criteria. All sections marked with 🎯 are current focus areas. -->
 
@@ -12,24 +12,34 @@
 ### Estado Real (Semi-Automático)
 <!-- LLM-Hint: This block is semi-automated. Git status and timestamp are updated by 'make sync-docs'. Phase progress and milestones must be updated manually upon completion. -->
 ```yaml
-Fase_Actual: "FASE 3A - MasterRouter Básico"
-Progreso_Fase_3: "5/5 hitos completados (Fase 3A ✅)"
-Próximo_Hito: "Memoria de Sesión (Fase 3B)"
+Fase_Actual: "FASE 3B - COMPLETADA + Refactorización Arquitectónica"
+Progreso_Fase_3A: "5/5 hitos completados (✅ COMPLETADA)"
+Progreso_Fase_3B: "4/4 hitos completados + refactorización crítica (✅ COMPLETADA)"
+Próximo_Hito: "Preparación para FASE 3C - InventoryAgent"
 Funcionalidades_Activas:
-  - ✅ Transcripción E2E via Telegram
-  - ✅ MasterRouter con enrutamiento básico
-  - ✅ Schemas CanonicalEventV1/GraphStateV1
-  - 🚧 Sistema de testing (40% cobertura)
-Branch_Trabajo: "feature/telegram-transcription-workflow"
+  - ✅ Transcripción E2E via Telegram (faster-whisper optimizado)
+  - ✅ MasterOrchestrator Strategy Pattern (7 componentes clean)
+  - ✅ Schemas CanonicalEventV1/GraphStateV2 + contratos inter-agente
+  - ✅ Sistema de testing (85% cobertura + integration tests)
+  - ✅ LangSmith Integration (tracing completo + cost tracking)
+  - ✅ Redis Session Memory (TTL 1h, persistencia robusta)
+  - ✅ Memoria conversacional bidireccional (audio + texto)
+  - ✅ ChatAgent como punto único entrada + delegación inteligente
+  - ✅ Chaining transcription → planner → respuesta final
+  - ✅ Calidad transcripción optimizada (ES, float32, VAD)
+Branch_Trabajo: "feature/conversational-flow-3b"
 Cambios_Pendientes: []
-Última_Sincronización: "2025-08-18 20:26"
+Última_Sincronización: "2025-08-22 02:35"
 ```
 
 ### ¿Dónde Estamos Hoy?
-- **Funciona:** Sistema completo de transcripción desde Telegram
-- **En Desarrollo:** Enrutamiento dinámico y memoria de sesión
-- **Siguiente:** InventoryAgent para manejo de archivos Excel
-- **Meta 30 días:** Conversaciones multi-turno con contexto
+- **✅ Completado:** Fase 3A - MasterRouter básico funcional
+- **✅ Completado:** Fase 3B - Sistema conversacional completo con memoria persistente
+- **✅ Completado:** Refactorización arquitectónica crítica (ADR-0006)
+- **🎯 Siguiente:** Fase 3C - InventoryAgent con estado persistente
+- **📊 Logrado:** LangSmith observabilidad LLM operacional
+- **💾 Logrado:** Redis memoria conversacional robusta
+- **🎉 Meta Alcanzada:** Sistema conversacional completo funcional
 
 **Preámbulo:** Este documento es la fuente de verdad evolutiva del proyecto AEGEN. Se actualiza automáticamente con el estado real y proporciona contexto inmediato sobre dónde estamos y hacia dónde vamos.
 
@@ -77,6 +87,8 @@ Los documentos del proyecto siguen una estricta jerarquía de precedencia. En ca
     • HOW: Archivos clave modificados, si es relevante.
     ```
 -   **Principio del Código de Referencia:** Antes de escribir código, busca un ejemplo en el directorio `playbooks/` como estándar mínimo.
+-   **🚨 REVISAR CONTEXTO PRIMERO:** Antes de escribir código, crear archivos o carpetas, SIEMPRE revisar primero qué ya existe usando herramientas de búsqueda (Read, LS, Grep, Glob). Esto previene duplicación, conflictos y trabajo innecesario.
+-   **🏗️ ARCHITECTURE FIRST:** MANDATORIO usar `.architecture/pre-code-checklist.md` antes de cualquier código. Seguir `.architecture/development-workflow.md` para todo desarrollo. Clean Architecture es el estándar, no una opción.
 
 ## 🏗️ 2. Arquitectura Actual
 
@@ -136,8 +148,8 @@ Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Resp
 
 ## 🗺️ 4. Roadmap Ejecutivo
 
-### 🎯 FASE 3A: MasterRouter Básico (Actual - 4 sem)
-<!-- LLM-Hint: Phase 3A progress is tracked by the completion of the checklist below. The sync-docs script automatically counts completed items. Each ✅ represents a completed milestone, 🚧 is in progress, ❌ is not started. -->
+### ✅ FASE 3A: MasterRouter Básico (COMPLETADA - 4 sem)
+<!-- LLM-Hint: Phase 3A completed successfully. All milestones achieved. -->
 **Objetivo:** Enrutamiento funcional sin LLM
 **Estado:** ✅ COMPLETADA (5/5 hitos)
 - ✅ Registry pattern implementado
@@ -146,31 +158,87 @@ Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Resp
 - ✅ Documentación de especialistas
 - ✅ Cleanup de TODOs en código
 
-**DoD:** Webhook → MasterRouter → TranscriptionAgent (100% funcional)
+**DoD Alcanzado:** Webhook → MasterRouter → TranscriptionAgent (100% funcional)
 
-### 🔜 FASE 3B: Memoria de Sesión (6 sem)
-**Objetivo:** Estado conversacional persistente
-- Redis como store de sesiones
-- GraphStateV1 serializable
-- TTL y cleanup automático
-- Tests de persistencia
+### 🔄 FASE 3B: Flujo Conversacional + Memoria (COMPLETADA + REFACTORING)
+**Objetivo:** Sistema conversacional completo con memoria persistente
 
-**DoD:** Usuario puede referenciar conversación anterior
+#### **Hitos Críticos Completados:**
+1. **✅ Fix UX Crítico:** Audio → Transcript → ChatBot → Respuesta inteligente
+   - ✅ Eliminar retorno directo de transcript al usuario
+   - ✅ Enrutar transcript al ChatAgent para generar respuesta
+   - ✅ Respuesta contextual basada en el audio transcrito
+   - ✅ Migración a faster-whisper para Python 3.13
+
+2. **✅ LangSmith Integration:** Observabilidad LLM nativa
+   - ✅ Configuración LangSmith desde inicio (LANGCHAIN_TRACING_V2=true)
+   - ✅ Tracing de prompts y respuestas
+   - ✅ Proyecto AEGEN-Phase3B configurado
+   - ✅ Debug de chains LLM
+
+3. **✅ Memoria de Sesión Redis:** Estado conversacional persistente
+   - ✅ Redis como store de sesiones por chat_id
+   - ✅ GraphStateV2 serializable con historial conversacional
+   - ✅ TTL automático y cleanup de sesiones (1 hora)
+   - ✅ SessionManager con persistencia completa
+   - ✅ Tests de persistencia conversacional
+
+4. **✅ Testing Conversacional:** E2E con memoria
+   - ✅ Tests de flujo completo: Audio → Respuesta → Memoria
+   - ✅ Validación de persistencia entre mensajes
+   - ✅ Tests de TTL y cleanup
+   - ✅ Integration tests en tests/integration/
+
+#### **✅ REFACTORIZACIÓN ARQUITECTÓNICA COMPLETADA (ADR-0006):**
+
+**PROBLEMA RESUELTO:** Experiencia de usuario conversacional restaurada
+- **✅ Eliminado:** Respuestas técnicas directas del PlannerAgent
+- **✅ Implementado:** ChatAgent como único punto de entrada para texto
+- **✅ Funcional:** Delegación inteligente con traducción a lenguaje natural
+
+**Arquitectura Implementada - Strategy Pattern + Delegación:**
+```
+Usuario → ChatAgent (ÚNICO) → [análisis intención] → [respuesta directa | delegación]
+                                                     ↓
+        MasterOrchestrator ← [si delegación] ← Function Calling Router
+                ↓
+        Specialist Selection (event/function/chaining)
+                ↓
+        PlannerAgent → TranscriptionAgent → [otros especialistas]
+                ↓
+        Resultado + Chaining Logic
+                ↓
+        ChatAgent ← [Traduce respuesta técnica a conversacional]
+                ↓
+        Usuario ← Respuesta siempre natural + memoria persistente
+```
+
+**Cambios Completados:**
+- [✅] **MasterOrchestrator Strategy Pattern:** 7 componentes separados clean
+- [✅] **ChatAgent como único entry point:** Solo maneja event_type="text"
+- [✅] **PlannerAgent capabilities:** Solo "planning", "coordination", "internal_planning_request"
+- [✅] **Lazy initialization:** Thread-safe singleton con double-check locking
+- [✅] **Chaining fix:** transcription_agent → planner_agent routing restaurado
+- [✅] **Memoria conversacional:** Bidireccional para audio y texto
+- [✅] **Calidad transcripción:** FasterWhisper optimizado (ES, float32, VAD)
+- [✅] **Contratos inter-agente:** InternalDelegationRequest/Response schemas
+
+**DoD ALCANZADO:** "Usuario envía audio/texto → recibe respuesta inteligente y natural → puede referenciar conversación anterior + arquitectura limpia escalable"
 
 ### 🔮 FASE 3C: InventoryAgent (8 sem)
-**Objetivo:** Primer especialista con estado
-- Manipulación de archivos Excel
-- Herramientas de spreadsheet
-- Estado de archivo en sesión
-- Flujo multi-turno E2E
+**Objetivo:** Primer especialista con estado persistente
+- Manipulación de archivos Excel vía conversación
+- Herramientas de spreadsheet con memoria
+- Estado de archivo persistente en sesión Redis
+- Flujo multi-turno E2E con contexto conversacional
 
-**DoD:** "Sube Excel → modificalo por voz → descarga resultado"
+**DoD:** "Sube Excel → conversación para modificarlo → descarga resultado con memoria del contexto"
 
 ### 🌟 FASE 4: Federación Completa (Q2)
-- Múltiples especialistas
-- Enrutamiento inteligente por LLM
-- Memoria a largo plazo
-- Optimización de costos
+- Múltiples especialistas con LangSmith observability
+- Enrutamiento inteligente por LLM con métricas de costos
+- Memoria a largo plazo distribuida en Redis
+- Optimización de costos basada en datos LangSmith
 
 ## 🚀 5. Guía de Desarrollo
 
@@ -186,23 +254,127 @@ curl localhost:8000/system/status  # Métricas en vivo
 curl localhost:8000/metrics        # Prometheus
 ```
 
-### Flujo de Desarrollo Simplificado
+### Flujo Git/GitHub Completo
+
+#### **Branching Strategy**
+```
+main         ← Releases estables (Production)
+  ↑
+develop      ← Integration branch (Pre-production)
+  ↑
+feature/*    ← Feature branches (Development)
+```
+
+#### **Workflow Detallado por Tipo de Trabajo**
+
+##### **Para Fases Completas (ej. Fase 3A → 3B):**
+```bash
+# 1. Trabajar en feature branch
+git checkout -b feature/nombre-descriptivo
+# ... desarrollo ...
+make verify && git commit
+
+# 2. Mergear a develop
+git checkout develop
+git merge feature/nombre-descriptivo
+
+# 3. PR develop → main (GitHub UI)
+# - Usar notificación "develop had recent pushes"
+# - Título: "feat: Complete Phase X - Description"
+# - Merge via GitHub interface
+
+# 4. Limpieza post-merge
+git branch -d feature/nombre-descriptivo  # Local
+# Eliminar también en GitHub UI
+git remote prune origin  # Limpiar referencias
+```
+
+##### **Para Features Menores:**
+```bash
+# 1. Feature branch desde develop
+git checkout develop && git pull origin develop
+git checkout -b feature/small-feature
+
+# 2. Desarrollo
+make verify && git commit
+
+# 3. PR directo feature → develop
+git push origin feature/small-feature
+# PR via GitHub UI → develop
+```
+
+##### **Manejo de Conflictos/Desfases:**
+```bash
+# Si remote tiene cambios
+git fetch origin
+git log develop..origin/develop  # Ver diferencias
+
+# Opción A: Pull + merge
+git pull origin develop
+
+# Opción B: Force push (solo si estás seguro)
+git push --force-with-lease origin develop
+```
+
+#### **Pull Request Guidelines**
+
+##### **Títulos Estándar:**
+```
+feat(scope): Complete Phase X - Description
+fix(scope): Corrige issue específico
+docs(scope): Actualiza documentación
+chore(scope): Limpieza o mantenimiento
+```
+
+##### **Descripción Template:**
+```markdown
+## 🎯 Objetivo
+[Qué se logra con este PR]
+
+## ✅ Cambios Principales
+- [Lista de cambios importantes]
+- [Funcionalidades nuevas]
+
+## 🧪 Testing
+- [Cómo se validó]
+- [Quality gates que pasan]
+
+## 📋 DoD Alcanzado
+[Definition of Done específico]
+```
+
+#### **Limpieza Post-Merge (Mandatoria)**
+```bash
+# Después de cada merge exitoso
+git branch -d feature/branch-name     # Eliminar local
+# GitHub UI: Delete branch button     # Eliminar remoto
+git remote prune origin              # Limpiar referencias
+```
+
+### Flujo de Desarrollo por Tipo
 
 #### Para Cambios Mayores (APIs, Arquitectura)
-1. **Planificar:** Crear/actualizar ADR relevante
-2. **Documentar:** Actualizar este archivo si cambia roadmap
-3. **Implementar:** Código + tests mínimos
-4. **Validar:** `make verify` + PR review
+1. **🚨 REVISAR CONTEXTO:** Read, LS, Grep, Glob para entender qué existe
+2. **Planificar:** Crear/actualizar ADR relevante
+3. **Branch:** `feature/major-change` desde develop
+4. **Documentar:** Actualizar PROJECT_OVERVIEW.md si cambia roadmap
+5. **Implementar:** Código + tests mínimos
+6. **Validar:** `make verify` + PR review
+7. **Merge:** develop → main para milestones
 
 #### Para Cambios Menores (Features, Bugs)
-1. **Implementar:** Directo a código + tests
-2. **Validar:** `make verify`
-3. **Mergear:** PR + approval
+1. **🚨 REVISAR CONTEXTO:** Read, LS, Grep para entender código existente
+2. **Branch:** `feature/small-feature` desde develop
+3. **Implementar:** Directo a código + tests
+4. **Validar:** `make verify`
+5. **PR:** feature → develop
+6. **Limpieza:** Delete branch
 
 #### Protocolo de Emergencia (Bugs Críticos)
 1. **Hotfix:** Branch directo desde main
 2. **Fix mínimo:** Solo lo necesario para restaurar servicio
-3. **Post-mortem:** ADR documentando causa y prevención
+3. **PR:** hotfix → main Y develop
+4. **Post-mortem:** ADR documentando causa y prevención
 
 ### Gates de Calidad por Fase
 ```yaml
@@ -282,17 +454,25 @@ make doctor          # Verifica consistencia docs vs código
 
 ## 🎯 Próximos 30 Días
 
-### Semana 1-2: Completar Fase 3A
-- [ ] Tests de integración para MasterRouter
-- [ ] Documentación de especialistas
-- [ ] Cleanup de TODOs en código
-- [ ] Performance baseline
+### ✅ Semana 1-2: Fase 3A Completada
+- ✅ Tests de integración para MasterRouter
+- ✅ Documentación de especialistas
+- ✅ Cleanup de TODOs en código
+- ✅ Performance baseline establecido
 
-### Semana 3-4: Iniciar Fase 3B
+### 🚧 Semana 3-4: Iniciar Fase 3B
+- [ ] **CRÍTICO:** Fix UX - Audio → ChatBot → Respuesta inteligente
+- [ ] LangSmith setup y configuración inicial
 - [ ] Diseño de schema de sesión en Redis
-- [ ] POC de persistencia de GraphStateV1
+- [ ] POC de persistencia de GraphStateV2
 - [ ] Herramientas de debug para sesiones
 - [ ] Tests de TTL y cleanup
+
+### 🔜 Semana 5-6: Consolidar Fase 3B
+- [ ] E2E testing con memoria conversacional
+- [ ] Métricas LangSmith para costos por conversación
+- [ ] Optimización de performance con Redis
+- [ ] Documentación de arquitectura conversacional
 
 ### Hitos Semanales
 - **Viernes:** Demo del progreso semanal

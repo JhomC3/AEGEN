@@ -227,6 +227,7 @@ pyrightconfig.json
 [Ll]ib64
 [Ll]ocal
 [Ss]cripts
+!scripts/
 pyvenv.cfg
 pip-selfcheck.json
 
@@ -253,4 +254,6 @@ pip-selfcheck.json
 # End of https://www.toptal.com/developers/gitignore/api/python,database,macos,visualstudiocode,dotenv,virtualenv
 
 GEMINI.md
+CLAUDE.md
 .mcp.json
+uv.lock

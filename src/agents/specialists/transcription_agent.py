@@ -3,11 +3,11 @@ import logging
 from typing import Any
 
 from langchain_core.tools import BaseTool, tool
-from langgraph.graph import END, StateGraph
+from langgraph.graph import StateGraph
 
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
-from src.core.schemas import GraphStateV1
+from src.core.schemas import GraphStateV2
 from src.tools.speech_processing import transcribe_with_whisper
 
 logger = logging.getLogger(__name__)
@@ -61,29 +61,44 @@ class TranscriptionSpecialist(SpecialistInterface):
 
     def _build_graph(self) -> Any:
         """
-        Construye el grafo que simplemente invoca a la herramienta de transcripción.
+        Construye el grafo que invoca la herramienta de transcripción.
+        Chaining: Ahora retorna estado para que MasterOrchestrator continúe la cadena.
         """
-        graph_builder = StateGraph(GraphStateV1)
+        graph_builder = StateGraph(GraphStateV2)
         graph_builder.add_node("transcribe", self._transcribe_node)
         graph_builder.set_entry_point("transcribe")
-        graph_builder.add_edge("transcribe", END)
+        # REMOVED: graph_builder.add_edge("transcribe", END)
+        # Now: MasterOrchestrator handles chaining
         return graph_builder.compile()
 
-    async def _transcribe_node(self, state: GraphStateV1) -> dict[str, Any]:
+    async def _transcribe_node(self, state: GraphStateV2) -> dict[str, Any]:
         """
         Nodo que invoca la herramienta de transcripción y actualiza el estado.
+        Marks last_specialist for chaining in MasterOrchestrator.
         """
         payload = state.get("payload", {})
         audio_path = payload.get("audio_file_path")
 
         if not audio_path or not isinstance(audio_path, str):
-            payload["response"] = (
-                "Error: No se proporcionó una ruta de archivo de audio válida."
-            )
+            error_msg = "Error: No se proporcionó una ruta de archivo de audio válida."
+            logger.error(error_msg)
+            payload["response"] = error_msg
+            payload["last_specialist"] = "transcription_agent"
+            payload["next_action"] = "error"
             return {"payload": payload}
 
+        logger.info(f"TranscriptionAgent: Procesando audio {audio_path}")
         result = await self.tool.ainvoke({"audio_file_path": audio_path})
-        payload["response"] = result
+
+        # Marcar para chaining: transcription → planner (Phase 3B UX fix)
+        payload["transcript"] = result  # Para que PlannerAgent use el texto
+        payload["response"] = result  # Mantener compatibilidad
+        payload["last_specialist"] = "transcription_agent"
+        payload["next_action"] = "chain_to_planner"  # Indica que debe encadenar
+
+        logger.info(
+            "TranscriptionAgent: Transcripción completada, marcando para chain a PlannerAgent"
+        )
         return {"payload": payload}
 
 
