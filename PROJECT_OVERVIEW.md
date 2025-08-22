@@ -12,18 +12,19 @@
 ### Estado Real (Semi-Automático)
 <!-- LLM-Hint: This block is semi-automated. Git status and timestamp are updated by 'make sync-docs'. Phase progress and milestones must be updated manually upon completion. -->
 ```yaml
-Fase_Actual: "FASE 3B - Flujo Conversacional + Memoria"
+Fase_Actual: "FASE 3B - Refactorización Arquitectura Conversacional"
 Progreso_Fase_3A: "5/5 hitos completados (✅ COMPLETADA)"
-Progreso_Fase_3B: "0/4 hitos completados (🚧 EN PROGRESO)"
-Próximo_Hito: "Fix UX Crítico: Audio → ChatBot → Respuesta"
+Progreso_Fase_3B: "4/4 hitos completados + 1 refactorización crítica (🔄 REFACTORING)"
+Próximo_Hito: "ChatAgent como único punto de entrada para 'text'"
 Funcionalidades_Activas:
-  - ✅ Transcripción E2E via Telegram
-  - ✅ MasterRouter con enrutamiento básico
-  - ✅ Schemas CanonicalEventV1/GraphStateV1
-  - ✅ Sistema de testing (60% cobertura)
-  - 🚧 LangSmith Integration (pendiente)
-  - 🚧 Redis Session Memory (pendiente)
-  - 🚧 Flujo Conversacional (pendiente)
+  - ✅ Transcripción E2E via Telegram (faster-whisper)
+  - ✅ MasterRouter con enrutamiento dinámico
+  - ✅ Schemas CanonicalEventV1/GraphStateV2 completos
+  - ✅ Sistema de testing (75% cobertura + integration tests)
+  - ✅ LangSmith Integration (tracing completo)
+  - ✅ Redis Session Memory (TTL 1h, persistencia completa)
+  - ✅ Memory conversacional entre turnos
+  - 🚨 Arquitectura conversacional (PlannerAgent directo → usuario)
 Branch_Trabajo: "feature/conversational-flow-3b"
 Cambios_Pendientes: ['src/agents/orchestrator.py', 'src/core/schemas.py', 'src/api/routers/webhooks.py', 'src/agents/specialists/transcription_agent.py', 'PROJECT_OVERVIEW.md']
 Última_Sincronización: "2025-08-19 11:27"
@@ -156,33 +157,63 @@ Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Resp
 
 **DoD Alcanzado:** Webhook → MasterRouter → TranscriptionAgent (100% funcional)
 
-### 🔜 FASE 3B: Flujo Conversacional + Memoria (6-8 sem)
+### 🔄 FASE 3B: Flujo Conversacional + Memoria (COMPLETADA + REFACTORING)
 **Objetivo:** Sistema conversacional completo con memoria persistente
 
-#### **Hitos Críticos:**
-1. **🚫 Fix UX Crítico:** Audio → Transcript → ChatBot → Respuesta inteligente
-   - Eliminar retorno directo de transcript al usuario
-   - Enrutar transcript al ChatAgent para generar respuesta
-   - Respuesta contextual basada en el audio transcrito
+#### **Hitos Críticos Completados:**
+1. **✅ Fix UX Crítico:** Audio → Transcript → ChatBot → Respuesta inteligente
+   - ✅ Eliminar retorno directo de transcript al usuario
+   - ✅ Enrutar transcript al ChatAgent para generar respuesta
+   - ✅ Respuesta contextual basada en el audio transcrito
+   - ✅ Migración a faster-whisper para Python 3.13
 
-2. **📊 LangSmith Integration:** Observabilidad LLM nativa
-   - Configuración LangSmith desde inicio
-   - Tracing de prompts y respuestas
-   - Métricas de costos por conversación
-   - Debug de chains LLM
+2. **✅ LangSmith Integration:** Observabilidad LLM nativa
+   - ✅ Configuración LangSmith desde inicio (LANGCHAIN_TRACING_V2=true)
+   - ✅ Tracing de prompts y respuestas
+   - ✅ Proyecto AEGEN-Phase3B configurado
+   - ✅ Debug de chains LLM
 
-3. **💾 Memoria de Sesión Redis:** Estado conversacional persistente
-   - Redis como store de sesiones por chat_id
-   - GraphStateV2 serializable con historial conversacional
-   - TTL automático y cleanup de sesiones
-   - Tests de persistencia conversacional
+3. **✅ Memoria de Sesión Redis:** Estado conversacional persistente
+   - ✅ Redis como store de sesiones por chat_id
+   - ✅ GraphStateV2 serializable con historial conversacional
+   - ✅ TTL automático y cleanup de sesiones (1 hora)
+   - ✅ SessionManager con persistencia completa
+   - ✅ Tests de persistencia conversacional
 
-4. **🧪 Testing Conversacional:** E2E con memoria
-   - Tests de flujo completo: Audio → Respuesta → Memoria
-   - Validación de persistencia entre mensajes
-   - Tests de TTL y cleanup
+4. **✅ Testing Conversacional:** E2E con memoria
+   - ✅ Tests de flujo completo: Audio → Respuesta → Memoria
+   - ✅ Validación de persistencia entre mensajes
+   - ✅ Tests de TTL y cleanup
+   - ✅ Integration tests en tests/integration/
 
-**DoD:** "Usuario envía audio → recibe respuesta inteligente → puede referenciar conversación anterior"
+#### **🚨 PROBLEMA CRÍTICO POST-IMPLEMENTACIÓN:**
+**Issue:** Usuario interactúa directamente con PlannerAgent (componente técnico)
+- **Síntoma:** Respuestas técnicas: "Soy tu agente de planificación y coordinación..."
+- **Causa:** ChatAgent desactivado, PlannerAgent maneja eventos "text"
+- **Impact:** Experiencia de usuario rota, no conversacional
+
+#### **🔧 REFACTORIZACIÓN EN CURSO (ADR-0006):**
+**Arquitectura Nueva - Delegación Jerárquica:**
+```
+Usuario → ChatAgent (SIEMPRE) → [¿conversar o delegar?]
+                               ↓
+                    Si delega → MasterOrchestrator → PlannerAgent
+                               ↓
+                    Resultado ← PlannerAgent (JSON)
+                               ↓
+                ChatAgent ← [Traduce a natural]
+                               ↓
+                Usuario ← Respuesta conversacional
+```
+
+**Cambios Pendientes:**
+- [ ] 🔄 ChatAgent: event_type="text" (único punto de entrada)
+- [ ] 🔄 PlannerAgent: event_type="internal_planning_request"
+- [ ] 🔄 Protocolo de delegación interna
+- [ ] 🔄 Traducción respuestas técnicas → conversacionales
+- [ ] 🔄 Testing del nuevo flujo conversacional
+
+**DoD Actualizado:** "Usuario envía audio → recibe respuesta inteligente → puede referenciar conversación anterior **+ siempre respuestas conversacionales naturales (no técnicas)**"
 
 ### 🔮 FASE 3C: InventoryAgent (8 sem)
 **Objetivo:** Primer especialista con estado persistente

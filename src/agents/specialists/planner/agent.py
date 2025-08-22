@@ -68,9 +68,10 @@ class PlannerAgent(SpecialistInterface):
     def get_capabilities(self) -> list[str]:
         """
         Planning agent capabilities.
-        Handles: planning, coordination, text responses.
+        Nueva arquitectura (ADR-0006): Solo maneja eventos internos de planificación.
+        Los eventos "text" del usuario ahora van directamente a ChatAgent.
         """
-        return ["planning", "coordination", "text"]
+        return ["planning", "coordination", "internal_planning_request"]
 
     async def _planning_node(self, state: GraphStateV2) -> dict[str, Any]:
         """
@@ -87,6 +88,7 @@ class PlannerAgent(SpecialistInterface):
         - LLM engine: Para generation
         """
         logger.info("PlannerAgent: Ejecutando lógica de planificación...")
+        logger.info(f"PlannerAgent: Estado recibido keys: {list(state.keys())}")
 
         try:
             # 1. Build context using pure function and transcript from chaining
@@ -99,9 +101,17 @@ class PlannerAgent(SpecialistInterface):
 
             # 2. Get conversation summary using pure function
             conversation_history = state.get("conversation_history", [])
+            logger.info(
+                f"PlannerAgent: Historial conversacional recibido: {len(conversation_history)} mensajes"
+            )
+            logger.info(
+                f"PlannerAgent: Historial preview: {conversation_history[-2:] if len(conversation_history) >= 2 else conversation_history}"
+            )
+
             history_summary = state_utils.build_conversation_summary(
                 conversation_history
             )
+            logger.info(f"PlannerAgent: Resumen generado: {history_summary}")
 
             # 3. Build prompt using managed prompts
             planning_prompt = ChatPromptTemplate.from_messages([

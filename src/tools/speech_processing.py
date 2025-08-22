@@ -41,7 +41,7 @@ class WhisperModelManager:
         if self._whisper_model is None:
             self.logger.info(f"Cargando el modelo FasterWhisper: {self.model_name}...")
             self._whisper_model = await asyncio.to_thread(
-                WhisperModel, self.model_name, device="cpu", compute_type="int8"
+                WhisperModel, self.model_name, device="cpu", compute_type="float32"
             )
             self.logger.info(
                 f"Modelo FasterWhisper '{self.model_name}' cargado con éxito."
@@ -63,12 +63,21 @@ async def transcribe_with_whisper(audio_path: str) -> dict[str, Any]:
     """
     try:
         logger.info(f"Iniciando transcripción para el archivo: {audio_path}")
+        logger.info(
+            f"Usando modelo optimizado: {whisper_manager.model_name} (float32, español, VAD optimizado)"
+        )
         model = await whisper_manager.get_model()
 
         # Ejecutar la transcripción (que es bloqueante) en un hilo separado
         # FasterWhisper devuelve (segments, info) tupla
         def _transcribe():
-            segments, info = model.transcribe(audio_path, beam_size=5)
+            segments, info = model.transcribe(
+                audio_path,
+                beam_size=5,
+                language="es",  # Forzar español para mayor precisión
+                vad_filter=True,  # Activa Voice Activity Detection para conversaciones
+                vad_parameters={"min_silence_duration_ms": 700},  # VAD menos agresivo
+            )
             # Combinar todos los segmentos en texto completo
             transcript = "".join([segment.text for segment in segments])
             return transcript, info.language

@@ -44,7 +44,7 @@ class BaseAppSettings(BaseSettings):
     # Configs generales
     DEFAULT_LLM_MODEL: str = "gemini-2.5-flash"
     DEFAULT_TEMPERATURE: float = 0.3
-    DEFAULT_WHISPER_MODEL: str = "base"
+    DEFAULT_WHISPER_MODEL: str = "small"
     VECTOR_DB_PATH: str | None = None  # Ej: para ChromaDB local
     VECTOR_DB_URL: str | None = None  # Ej: para instancia remota
     DEBUG_MODE: bool = False
