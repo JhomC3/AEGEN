@@ -15,7 +15,7 @@
 Fase_Actual: "FASE 3B - COMPLETADA + Refactorización Arquitectónica"
 Progreso_Fase_3A: "5/5 hitos completados (✅ COMPLETADA)"
 Progreso_Fase_3B: "4/4 hitos completados + refactorización crítica (✅ COMPLETADA)"
-Próximo_Hito: "Preparación para FASE 3C - InventoryAgent"
+Próximo_Hito: "FASE 3C - Vector DB + Sistema Multi-Agente Modular"
 Funcionalidades_Activas:
   - ✅ Transcripción E2E via Telegram (faster-whisper optimizado)
   - ✅ MasterOrchestrator Strategy Pattern (7 componentes clean)
@@ -27,9 +27,9 @@ Funcionalidades_Activas:
   - ✅ ChatAgent como punto único entrada + delegación inteligente
   - ✅ Chaining transcription → planner → respuesta final
   - ✅ Calidad transcripción optimizada (ES, float32, VAD)
-Branch_Trabajo: "feature/conversational-flow-3b"
-Cambios_Pendientes: []
-Última_Sincronización: "2025-08-22 02:35"
+Branch_Trabajo: "feature/phase3c-vector-multiagent"
+Cambios_Pendientes: ['rules.md', '.architecture/review-prompts.md', '.architecture/pre-code-checklist.md', 'makefile', '.architecture/templates/specialist-template.md']
+Última_Sincronización: "2025-08-25 13:17"
 ```
 
 ### ¿Dónde Estamos Hoy?
@@ -160,79 +160,28 @@ Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Resp
 
 **DoD Alcanzado:** Webhook → MasterRouter → TranscriptionAgent (100% funcional)
 
-### 🔄 FASE 3B: Flujo Conversacional + Memoria (COMPLETADA + REFACTORING)
-**Objetivo:** Sistema conversacional completo con memoria persistente
+### ✅ FASE 3B: Sistema Conversacional + Memoria (COMPLETADA)
+**Objetivo:** Sistema conversacional completo con memoria persistente  
+**Estado:** ✅ COMPLETADA (4/4 hitos + refactorización ADR-0006)
 
-#### **Hitos Críticos Completados:**
-1. **✅ Fix UX Crítico:** Audio → Transcript → ChatBot → Respuesta inteligente
-   - ✅ Eliminar retorno directo de transcript al usuario
-   - ✅ Enrutar transcript al ChatAgent para generar respuesta
-   - ✅ Respuesta contextual basada en el audio transcrito
-   - ✅ Migración a faster-whisper para Python 3.13
-
-2. **✅ LangSmith Integration:** Observabilidad LLM nativa
-   - ✅ Configuración LangSmith desde inicio (LANGCHAIN_TRACING_V2=true)
-   - ✅ Tracing de prompts y respuestas
-   - ✅ Proyecto AEGEN-Phase3B configurado
-   - ✅ Debug de chains LLM
-
-3. **✅ Memoria de Sesión Redis:** Estado conversacional persistente
-   - ✅ Redis como store de sesiones por chat_id
-   - ✅ GraphStateV2 serializable con historial conversacional
-   - ✅ TTL automático y cleanup de sesiones (1 hora)
-   - ✅ SessionManager con persistencia completa
-   - ✅ Tests de persistencia conversacional
-
-4. **✅ Testing Conversacional:** E2E con memoria
-   - ✅ Tests de flujo completo: Audio → Respuesta → Memoria
-   - ✅ Validación de persistencia entre mensajes
-   - ✅ Tests de TTL y cleanup
-   - ✅ Integration tests en tests/integration/
-
-#### **✅ REFACTORIZACIÓN ARQUITECTÓNICA COMPLETADA (ADR-0006):**
-
-**PROBLEMA RESUELTO:** Experiencia de usuario conversacional restaurada
-- **✅ Eliminado:** Respuestas técnicas directas del PlannerAgent
-- **✅ Implementado:** ChatAgent como único punto de entrada para texto
-- **✅ Funcional:** Delegación inteligente con traducción a lenguaje natural
-
-**Arquitectura Implementada - Strategy Pattern + Delegación:**
-```
-Usuario → ChatAgent (ÚNICO) → [análisis intención] → [respuesta directa | delegación]
-                                                     ↓
-        MasterOrchestrator ← [si delegación] ← Function Calling Router
-                ↓
-        Specialist Selection (event/function/chaining)
-                ↓
-        PlannerAgent → TranscriptionAgent → [otros especialistas]
-                ↓
-        Resultado + Chaining Logic
-                ↓
-        ChatAgent ← [Traduce respuesta técnica a conversacional]
-                ↓
-        Usuario ← Respuesta siempre natural + memoria persistente
-```
-
-**Cambios Completados:**
-- [✅] **MasterOrchestrator Strategy Pattern:** 7 componentes separados clean
-- [✅] **ChatAgent como único entry point:** Solo maneja event_type="text"
-- [✅] **PlannerAgent capabilities:** Solo "planning", "coordination", "internal_planning_request"
-- [✅] **Lazy initialization:** Thread-safe singleton con double-check locking
-- [✅] **Chaining fix:** transcription_agent → planner_agent routing restaurado
-- [✅] **Memoria conversacional:** Bidireccional para audio y texto
-- [✅] **Calidad transcripción:** FasterWhisper optimizado (ES, float32, VAD)
-- [✅] **Contratos inter-agente:** InternalDelegationRequest/Response schemas
+**Logros Clave:**
+- ✅ **UX Conversacional:** Audio/Texto → ChatAgent → Respuesta inteligente natural
+- ✅ **Arquitectura Clean:** MasterOrchestrator Strategy Pattern (7 componentes)
+- ✅ **Memoria Persistente:** Redis SessionManager con TTL 1h + cleanup automático
+- ✅ **Observabilidad:** LangSmith integration completa (tracing + cost tracking)
+- ✅ **Testing:** 85% coverage + integration tests + E2E flow validation
 
 **DoD ALCANZADO:** "Usuario envía audio/texto → recibe respuesta inteligente y natural → puede referenciar conversación anterior + arquitectura limpia escalable"
 
-### 🔮 FASE 3C: InventoryAgent (8 sem)
-**Objetivo:** Primer especialista con estado persistente
-- Manipulación de archivos Excel vía conversación
-- Herramientas de spreadsheet con memoria
-- Estado de archivo persistente en sesión Redis
-- Flujo multi-turno E2E con contexto conversacional
+### 🔮 FASE 3C: Vector DB + Sistema Multi-Agente Modular (8 sem)
+**Objetivo:** Base vectorial multi-tenant + agentes modulares componibles
+- ChromaDB multi-tenant para aislamiento de datos por usuario
+- Agentes modulares: FileHandlerAgent, DataProcessorAgent, NLPParserAgent, MemoryManagerAgent
+- Composición dinámica de agentes según caso de uso
+- Memoria vectorial persistente con embeddings
+- Flujo conversacional multi-turno con contexto expandido
 
-**DoD:** "Sube Excel → conversación para modificarlo → descarga resultado con memoria del contexto"
+**DoD:** "Usuario interactúa con agentes modulares → Vector DB mantiene contexto → agentes se combinan dinámicamente según necesidad"
 
 ### 🌟 FASE 4: Federación Completa (Q2)
 - Múltiples especialistas con LangSmith observability
@@ -460,19 +409,25 @@ make doctor          # Verifica consistencia docs vs código
 - ✅ Cleanup de TODOs en código
 - ✅ Performance baseline establecido
 
-### 🚧 Semana 3-4: Iniciar Fase 3B
-- [ ] **CRÍTICO:** Fix UX - Audio → ChatBot → Respuesta inteligente
-- [ ] LangSmith setup y configuración inicial
-- [ ] Diseño de schema de sesión en Redis
-- [ ] POC de persistencia de GraphStateV2
-- [ ] Herramientas de debug para sesiones
-- [ ] Tests de TTL y cleanup
+### 🎯 Semana 3-4: Fase 3C-1 - Multi-Tenant Foundation (ADR-0007)
+- [ ] **MANDATORIO:** Aplicar DEVELOPMENT.md checklist antes de código
+- [ ] ChromaManager per-user collections + metadata filtering (start simple)
+- [ ] BaseModularAgent interface (CRÍTICO: debe ser estable desde inicio)
+- [ ] VectorMemoryManager básico per-user
+- [ ] Migration script data existente + validation tests
 
-### 🔜 Semana 5-6: Consolidar Fase 3B
-- [ ] E2E testing con memoria conversacional
-- [ ] Métricas LangSmith para costos por conversación
-- [ ] Optimización de performance con Redis
-- [ ] Documentación de arquitectura conversacional
+### 🚀 Semana 5-6: Fase 3C-2 - Core Agents (2 agents bien hechos > 4 half-working)  
+- [ ] FileHandlerAgent completo (validación + parsing + security)
+- [ ] NLPParserAgent básico (intent recognition + entity extraction)
+- [ ] Sequential execution workflows (NO composition engine yet)
+- [ ] Integration tests FileHandler → NLP pipeline
+- [ ] Performance testing collections per-user
+
+### 📊 Semana 7-8: Fase 3C-3 - Simple Composition + Memory Integration
+- [ ] SimpleComposer configuration-driven (NO dynamic orchestration)
+- [ ] Hybrid memory Redis + ChromaDB integration  
+- [ ] Context retrieval optimization + E2E testing
+- [ ] **Decision Point**: Collections granulares needed based on performance data?
 
 ### Hitos Semanales
 - **Viernes:** Demo del progreso semanal
