@@ -41,6 +41,11 @@ class BaseAppSettings(BaseSettings):
     REDIS_SESSION_URL: str = "redis://redis:6379/1"
     REDIS_SESSION_TTL: int = 3600  # 1 hour session timeout
 
+    # ChromaDB Configuration
+    CHROMA_HOST: str = "localhost"
+    CHROMA_PORT: int = 8000
+    CHROMA_HTTP_CLIENT: bool = True  # Use HttpClient for async support
+
     # Configs generales
     DEFAULT_LLM_MODEL: str = "gemini-2.5-flash"
     DEFAULT_TEMPERATURE: float = 0.3

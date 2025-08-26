@@ -173,15 +173,16 @@ Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Resp
 
 **DoD ALCANZADO:** "Usuario envía audio/texto → recibe respuesta inteligente y natural → puede referenciar conversación anterior + arquitectura limpia escalable"
 
-### 🔮 FASE 3C: Vector DB + Sistema Multi-Agente Modular (8 sem)
-**Objetivo:** Base vectorial multi-tenant + agentes modulares componibles
-- ChromaDB multi-tenant para aislamiento de datos por usuario
-- Agentes modulares: FileHandlerAgent, DataProcessorAgent, NLPParserAgent, MemoryManagerAgent
+### 🔮 FASE 3C: Vector DB Multi-Tenant + Características Avanzadas (10 sem)
+**Objetivo:** Base vectorial multi-tenant + agentes modulares + características avanzadas
+- ✅ ChromaDB multi-tenant para aislamiento de datos por usuario (Task #1 COMPLETADO)
+- 🎯 **Características Avanzadas**: Collections globales, sistema de roles, análisis semántico, memoria híbrida, acceso cross-tenant
+- Agentes modulares: FileHandlerAgent, DataProcessorAgent, NLPParserAgent, MemoryManagerAgent  
 - Composición dinámica de agentes según caso de uso
-- Memoria vectorial persistente con embeddings
-- Flujo conversacional multi-turno con contexto expandido
+- Memoria vectorial persistente con embeddings + estrategia híbrida local/cloud
+- Flujo conversacional multi-turno con contexto expandido y filtrado inteligente
 
-**DoD:** "Usuario interactúa con agentes modulares → Vector DB mantiene contexto → agentes se combinan dinámicamente según necesidad"
+**DoD:** "Usuario interactúa con sistema multi-tenant avanzado → Collections globales + roles + análisis semántico → Memoria híbrida optimizada → Agentes modulares componibles dinámicamente"
 
 ### 🌟 FASE 4: Federación Completa (Q2)
 - Múltiples especialistas con LangSmith observability

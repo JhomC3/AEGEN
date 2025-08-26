@@ -1,4 +1,5 @@
 import logging
+from typing import Any, Dict, List, Literal, Optional
 
 import chromadb
 from chromadb.utils import embedding_functions
@@ -7,55 +8,96 @@ logger = logging.getLogger(__name__)
 
 
 class ChromaManager:
-    """
-    Gestiona la conexión y las operaciones con la base de datos vectorial ChromaDB.
-    """
+    """Manages ChromaDB with user isolation via separate collections."""
 
-    def __init__(self, collection_name: str = "telegram_data"):
+    def __init__(self, client: chromadb.HttpClient, embedding_function: Any):
+        """
+        Initialize ChromaManager with dependency injection.
+        
+        Args:
+            client: Async ChromaDB HttpClient
+            embedding_function: Embedding function for collections
+        """
         self.logger = logging.getLogger(__name__)
+        self.client = client
+        self.embedding_function = embedding_function
+        self.logger.info("ChromaManager initialized with injected dependencies")
+
+    async def _get_user_collection(self, user_id: str):
+        """Gets or creates isolated collection for user."""
+        safe_user_id = str(user_id).replace("-", "_").replace(".", "_")
+        collection_name = f"user_{safe_user_id}"
+        
         try:
-            self.logger.info("Initializing connection to ChromaDB...")
-            # Aquí puedes configurar para usar ChromaDB en la nube o local
-            self.client = chromadb.Client()  # O chromadb.CloudClient(...)
-
-            # Usar una función de embedding por defecto o una más avanzada
-            embedding_function = embedding_functions.DefaultEmbeddingFunction()
-
-            self.collection = self.client.get_or_create_collection(
+            collection = await self.client.get_or_create_collection(
                 name=collection_name,
-                embedding_function=embedding_function,  # type: ignore[arg-type]
+                embedding_function=self.embedding_function,  # type: ignore[arg-type]
             )
-            self.logger.info(
-                f"ChromaDB connection established. Collection '{collection_name}' is ready."
-            )
+            self.logger.debug(f"User collection '{collection_name}' ready")
+            return collection
         except Exception as e:
-            self.logger.critical(f"Failed to connect to ChromaDB: {e}", exc_info=True)
+            self.logger.error(f"Failed to get user collection '{collection_name}': {e}")
             raise
 
-    async def save(self, data: dict):
-        """
-        Guarda un documento en la colección de ChromaDB.
-        El 'id' del documento será su 'message_id' o un hash del contenido.
-        El 'document' será el texto a indexar.
-        El 'metadata' será el resto de la información.
-        """
+    async def save_user_data(
+        self, 
+        user_id: str, 
+        data: Dict[str, Any], 
+        data_type: Literal["conversation", "document", "preference"] = "conversation"
+    ) -> None:
+        """Saves data to user-specific collection."""
         try:
+            user_collection = await self._get_user_collection(user_id)
+            
             doc_id = str(data.get("message_id") or hash(data.get("content", "")))
             document_text = data.get("content") or data.get("transcript", "")
 
             if not document_text:
-                self.logger.warning(
-                    f"No content to save for doc_id: {doc_id}. Skipping."
-                )
+                self.logger.warning(f"No content for user {user_id}, doc_id: {doc_id}")
                 return
 
-            self.logger.info(f"Saving document to ChromaDB with id: {doc_id}")
-            self.collection.add(
+            metadata = {**data, "data_type": data_type}
+
+            await user_collection.add(
                 ids=[doc_id],
                 documents=[document_text],
-                metadatas=[data],
+                metadatas=[metadata],
             )
+            self.logger.info(f"Saved to user_{user_id} collection")
         except Exception as e:
-            self.logger.error(f"Error saving document to ChromaDB: {e}", exc_info=True)
+            self.logger.error(f"Failed to save user data for {user_id}: {e}")
+            raise
 
-    # Aquí podrías añadir más métodos como query, delete, etc.
+    async def query_user_data(
+        self, 
+        user_id: str, 
+        query_text: str, 
+        data_type: Optional[str] = None,
+        n_results: int = 5
+    ) -> List[Dict[str, Any]]:
+        """Queries data from user-specific collection only."""
+        try:
+            user_collection = await self._get_user_collection(user_id)
+            
+            where_clause = {"data_type": data_type} if data_type else None
+
+            results = await user_collection.query(
+                query_texts=[query_text],
+                n_results=n_results,
+                where=where_clause,
+            )
+            
+            processed_results = []
+            if results["documents"] and results["documents"][0]:
+                for i, doc in enumerate(results["documents"][0]):
+                    processed_results.append({
+                        "document": doc,
+                        "metadata": results["metadatas"][0][i] if results["metadatas"] else {},
+                        "distance": results["distances"][0][i] if results.get("distances") else 0,
+                        "id": results["ids"][0][i] if results["ids"] else "",
+                    })
+            
+            return processed_results
+        except Exception as e:
+            self.logger.error(f"Failed to query user data for {user_id}: {e}")
+            raise
