@@ -1,6 +1,9 @@
 # src/core/dependencies.py
 import logging
+from functools import lru_cache
 
+import chromadb
+from chromadb.utils import embedding_functions
 from fastapi import HTTPException, status
 from redis import asyncio as aioredis
 
@@ -10,6 +13,11 @@ from src.core.bus.in_memory import InMemoryEventBus
 from src.core.bus.redis import RedisEventBus
 from src.core.config import settings
 from src.core.interfaces.bus import IEventBus
+from src.vector_db.chroma_manager import ChromaManager
+from src.core.vector_memory_manager import VectorMemoryManager
+from src.core.conversation_memory import ConversationMemory
+from src.core.user_preferences import UserPreferences
+from src.core.session_manager import session_manager
 
 # from .planner import PlannerAgent
 # from .analyst import AnalystAgent
@@ -88,9 +96,91 @@ async def get_redis_dependency():
     return redis_connection
 
 
+# --- ChromaDB Dependencies ---
+
+
+@lru_cache()
+def get_chroma_client() -> chromadb.HttpClient:
+    """
+    Provides ChromaDB HttpClient instance with async support.
+    Uses configuration from settings for different environments.
+    """
+    try:
+        client = chromadb.HttpClient(
+            host=settings.CHROMA_HOST, 
+            port=settings.CHROMA_PORT
+        )
+        logger.info(f"ChromaDB HttpClient initialized: {settings.CHROMA_HOST}:{settings.CHROMA_PORT}")
+        return client
+    except Exception as e:
+        logger.error(f"Failed to initialize ChromaDB client: {e}")
+        raise
+
+
+@lru_cache()
+def get_embedding_function():
+    """Provides consistent embedding function for all ChromaDB collections."""
+    return embedding_functions.DefaultEmbeddingFunction()
+
+
+def get_chroma_manager(
+    client: chromadb.HttpClient = None,
+    embedding_function = None
+) -> ChromaManager:
+    """
+    FastAPI dependency to provide ChromaManager with injected dependencies.
+    
+    Args:
+        client: ChromaDB HttpClient (will be injected by FastAPI)
+        embedding_function: Embedding function (will be injected by FastAPI)
+    """
+    if client is None:
+        client = get_chroma_client()
+    if embedding_function is None:
+        embedding_function = get_embedding_function()
+        
+    return ChromaManager(client=client, embedding_function=embedding_function)
+
+
+def get_vector_memory_manager(
+    chroma_manager: ChromaManager = None
+) -> VectorMemoryManager:
+    """FastAPI dependency para VectorMemoryManager."""
+    if chroma_manager is None:
+        chroma_manager = get_chroma_manager()
+        
+    return VectorMemoryManager(
+        chroma_manager=chroma_manager,
+        session_manager=session_manager
+    )
+
+
+def get_conversation_memory(
+    vector_memory_manager: VectorMemoryManager = None
+) -> ConversationMemory:
+    """FastAPI dependency para ConversationMemory."""
+    if vector_memory_manager is None:
+        vector_memory_manager = get_vector_memory_manager()
+        
+    return ConversationMemory(vector_memory_manager)
+
+
+def get_user_preferences(
+    vector_memory_manager: VectorMemoryManager = None
+) -> UserPreferences:
+    """FastAPI dependency para UserPreferences."""
+    if vector_memory_manager is None:
+        vector_memory_manager = get_vector_memory_manager()
+        
+    return UserPreferences(vector_memory_manager)
+
+
 def prime_dependencies():
     """
     "Calienta" las dependencias singleton al arranque de la aplicación.
     """
     # get_workflow_coordinator()
-    logger.info("Primed singleton dependencies.")
+    get_chroma_client()
+    get_embedding_function()
+    get_vector_memory_manager()
+    logger.info("Primed singleton dependencies including VectorMemoryManager.")
