@@ -17,6 +17,8 @@ from src.vector_db.chroma_manager import ChromaManager
 from src.core.vector_memory_manager import VectorMemoryManager
 from src.core.conversation_memory import ConversationMemory
 from src.core.user_preferences import UserPreferences
+from src.core.role_manager import RoleManager
+from src.core.secure_chroma_manager import SecureChromaManager
 from src.core.session_manager import session_manager
 
 # from .planner import PlannerAgent
@@ -175,6 +177,37 @@ def get_user_preferences(
     return UserPreferences(vector_memory_manager)
 
 
+def get_role_manager(
+    vector_memory_manager: VectorMemoryManager = None
+) -> RoleManager:
+    """FastAPI dependency para RoleManager."""
+    if vector_memory_manager is None:
+        vector_memory_manager = get_vector_memory_manager()
+        
+    return RoleManager(vector_memory_manager)
+
+
+def get_secure_chroma_manager(
+    chroma_manager: ChromaManager = None,
+    role_manager: RoleManager = None
+) -> SecureChromaManager:
+    """FastAPI dependency para SecureChromaManager."""
+    if chroma_manager is None:
+        chroma_manager = get_chroma_manager()
+    if role_manager is None:
+        role_manager = get_role_manager()
+        
+    return SecureChromaManager(chroma_manager, role_manager)
+
+
+@lru_cache
+def get_file_handler_agent() -> "FileHandlerAgent":
+    """FastAPI dependency para FileHandlerAgent."""
+    from src.agents.file_handler_agent import FileHandlerAgent
+    logger.debug("Creating/providing FileHandlerAgent instance.")
+    return FileHandlerAgent()
+
+
 def prime_dependencies():
     """
     "Calienta" las dependencias singleton al arranque de la aplicación.
@@ -183,4 +216,6 @@ def prime_dependencies():
     get_chroma_client()
     get_embedding_function()
     get_vector_memory_manager()
-    logger.info("Primed singleton dependencies including VectorMemoryManager.")
+    get_role_manager()
+    get_file_handler_agent()
+    logger.info("Primed singleton dependencies including VectorMemoryManager, RoleManager, and FileHandlerAgent.")

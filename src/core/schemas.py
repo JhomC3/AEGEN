@@ -562,6 +562,25 @@ class TaskContext(BaseModel):
     )
 
 
+# --- Sistema de Roles y Permisos (Fase 3C) ---
+
+
+class UserRole(str, Enum):
+    """Roles disponibles en el sistema multi-tenant."""
+    USER = "user"
+    ADMIN = "admin"
+    SUPER_ADMIN = "super_admin"
+
+
+class Permission(str, Enum):
+    """Permisos específicos para control de acceso."""
+    READ_OWN = "read_own"
+    WRITE_OWN = "write_own"
+    READ_GLOBAL = "read_global"
+    WRITE_GLOBAL = "write_global"
+    MANAGE_USERS = "manage_users"
+
+
 # --- Contratos para Agentes Modulares (Fase 3C) ---
 
 
