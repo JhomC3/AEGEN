@@ -12,11 +12,13 @@
 ### Estado Real (Semi-Automático)
 <!-- LLM-Hint: This block is semi-automated. Git status and timestamp are updated by 'make sync-docs'. Phase progress and milestones must be updated manually upon completion. -->
 ```yaml
-Fase_Actual: "FASE 3B - COMPLETADA + Refactorización Arquitectónica"
+Fase_Actual: "FASE 3C - EN PROGRESO AVANZADO (Foundation Completada)"
 Progreso_Fase_3A: "5/5 hitos completados (✅ COMPLETADA)"
 Progreso_Fase_3B: "4/4 hitos completados + refactorización crítica (✅ COMPLETADA)"
-Próximo_Hito: "FASE 3C - Vector DB + Sistema Multi-Agente Modular"
+Progreso_Fase_3C: "5/17 tasks completados (29% - Foundation sólida + características avanzadas iniciadas)"
+Próximo_Hito: "FASE 3C Completion - Core Agents + Advanced Features"
 Funcionalidades_Activas:
+  # Fase 3B (Mantenidas)
   - ✅ Transcripción E2E via Telegram (faster-whisper optimizado)
   - ✅ MasterOrchestrator Strategy Pattern (7 componentes clean)
   - ✅ Schemas CanonicalEventV1/GraphStateV2 + contratos inter-agente
@@ -27,19 +29,29 @@ Funcionalidades_Activas:
   - ✅ ChatAgent como punto único entrada + delegación inteligente
   - ✅ Chaining transcription → planner → respuesta final
   - ✅ Calidad transcripción optimizada (ES, float32, VAD)
+  # Fase 3C (Nuevas - Tasks completados)
+  - ✅ Multi-tenant ChromaDB con aislamiento per-user (Task #1)
+  - ✅ BaseModularAgent interface estable para composición (Task #2)
+  - ✅ VectorMemoryManager persistente por usuario (Task #3)
+  - ✅ FileHandlerAgent con validación segura y parsing (Task #5)
+  - ✅ Sistema de roles USER/ADMIN/SUPER_ADMIN (Task #13)
+  - ✅ SecureChromaManager con control de permisos
 Branch_Trabajo: "feature/phase3c-vector-multiagent"
-Cambios_Pendientes: ['rules.md', '.architecture/review-prompts.md', '.architecture/pre-code-checklist.md', 'makefile', '.architecture/templates/specialist-template.md']
-Última_Sincronización: "2025-08-25 13:17"
+ADRs_Recientes: ["ADR-0007-fase3c-vector-multiagent (ACEPTADO)", "ADR-0008-advanced-multitenant-features (PROPUESTO)"]
+Task_Master_Progress: "5/17 tasks done (Tasks #1,#2,#3,#5,#13 completed)"
+Cambios_Pendientes: ['data migration script', 'NLP parser agent', 'global collections manager']
+Última_Sincronización: "2025-08-26 (Claude Code sync)"
 ```
 
 ### ¿Dónde Estamos Hoy?
 - **✅ Completado:** Fase 3A - MasterRouter básico funcional
 - **✅ Completado:** Fase 3B - Sistema conversacional completo con memoria persistente
 - **✅ Completado:** Refactorización arquitectónica crítica (ADR-0006)
-- **🎯 Siguiente:** Fase 3C - InventoryAgent con estado persistente
+- **🎯 EN PROGRESO:** Fase 3C - Multi-tenant vector DB + agentes modulares (29% completado)
 - **📊 Logrado:** LangSmith observabilidad LLM operacional
-- **💾 Logrado:** Redis memoria conversacional robusta
-- **🎉 Meta Alcanzada:** Sistema conversacional completo funcional
+- **💾 Logrado:** Redis memoria conversacional robusta + ChromaDB multi-tenant
+- **🎉 Meta Alcanzada:** Foundation sólida multi-tenant + agentes modulares base
+- **🔧 Arquitectura:** ADR-0007 (vector multi-tenant) + ADR-0008 (características avanzadas)
 
 **Preámbulo:** Este documento es la fuente de verdad evolutiva del proyecto AEGEN. Se actualiza automáticamente con el estado real y proporciona contexto inmediato sobre dónde estamos y hacia dónde vamos.
 
@@ -173,14 +185,28 @@ Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Resp
 
 **DoD ALCANZADO:** "Usuario envía audio/texto → recibe respuesta inteligente y natural → puede referenciar conversación anterior + arquitectura limpia escalable"
 
-### 🔮 FASE 3C: Vector DB Multi-Tenant + Características Avanzadas (10 sem)
+### 🔮 FASE 3C: Vector DB Multi-Tenant + Características Avanzadas (10 sem) - **29% COMPLETADO**
+
 **Objetivo:** Base vectorial multi-tenant + agentes modulares + características avanzadas
-- ✅ ChromaDB multi-tenant para aislamiento de datos por usuario (Task #1 COMPLETADO)
-- 🎯 **Características Avanzadas**: Collections globales, sistema de roles, análisis semántico, memoria híbrida, acceso cross-tenant
-- Agentes modulares: FileHandlerAgent, DataProcessorAgent, NLPParserAgent, MemoryManagerAgent  
-- Composición dinámica de agentes según caso de uso
-- Memoria vectorial persistente con embeddings + estrategia híbrida local/cloud
-- Flujo conversacional multi-turno con contexto expandido y filtrado inteligente
+
+**✅ COMPLETADO (Foundation):**
+- ✅ ChromaDB multi-tenant para aislamiento de datos por usuario (Task #1)
+- ✅ BaseModularAgent interface estable para composición (Task #2)
+- ✅ VectorMemoryManager persistente por usuario (Task #3)  
+- ✅ FileHandlerAgent con validación segura y parsing (Task #5)
+- ✅ Sistema de roles USER/ADMIN/SUPER_ADMIN (Task #13)
+
+**🎯 EN PROGRESO (Características Avanzadas - ADR-0008):**
+- 📋 GlobalCollectionManager para collections compartidas (Task #14)
+- 📋 SmartContentAnalyzer para filtrado inteligente (Task #15)
+- 📋 HybridMemoryManager con estrategias local/cloud (Task #16)
+- 📋 CrossTenantAccess para permisos entre usuarios (Task #17)
+
+**🔄 PENDIENTE (Core Agents):**
+- 📋 Data Migration Script (Task #4)
+- 📋 NLPParserAgent con intent recognition (Task #6)
+- 📋 Sequential Execution Workflows (Task #7)
+- 📋 Performance Testing & Simple Composition (Tasks #8-#12)
 
 **DoD:** "Usuario interactúa con sistema multi-tenant avanzado → Collections globales + roles + análisis semántico → Memoria híbrida optimizada → Agentes modulares componibles dinámicamente"
 
@@ -386,8 +412,9 @@ make doctor          # Verifica consistencia docs vs código
 ### Documentos Normativos (Por Orden de Precedencia)
 1. **Este documento** - Visión y roadmap
 2. **`rules.md`** - Estándares técnicos obligatorios
-3. **`adr/`** - Decisiones arquitectónicas
-4. **Código + tests** - Implementación actual
+3. **`adr/`** - Decisiones arquitectónicas (ADR-0007, ADR-0008 active)
+4. **`.taskmaster/tasks/tasks.json`** - Task Master definiciones y progreso
+5. **Código + tests** - Implementación actual
 
 ### Enlaces Útiles (Desarrollo Local)
 - **API Docs:** http://localhost:8000/docs
@@ -410,25 +437,31 @@ make doctor          # Verifica consistencia docs vs código
 - ✅ Cleanup de TODOs en código
 - ✅ Performance baseline establecido
 
-### 🎯 Semana 3-4: Fase 3C-1 - Multi-Tenant Foundation (ADR-0007)
-- [ ] **MANDATORIO:** Aplicar DEVELOPMENT.md checklist antes de código
-- [ ] ChromaManager per-user collections + metadata filtering (start simple)
-- [ ] BaseModularAgent interface (CRÍTICO: debe ser estable desde inicio)
-- [ ] VectorMemoryManager básico per-user
-- [ ] Migration script data existente + validation tests
+### ✅ Semana 3-4: Fase 3C Foundation COMPLETADA (ADR-0007)
+- ✅ **COMPLETADO:** ChromaManager per-user collections + metadata filtering (Task #1)
+- ✅ **COMPLETADO:** BaseModularAgent interface estable (Task #2) 
+- ✅ **COMPLETADO:** VectorMemoryManager básico per-user (Task #3)
+- ✅ **COMPLETADO:** FileHandlerAgent con validación + parsing + security (Task #5)
+- ✅ **COMPLETADO:** Sistema de roles y permisos (Task #13)
 
-### 🚀 Semana 5-6: Fase 3C-2 - Core Agents (2 agents bien hechos > 4 half-working)  
-- [ ] FileHandlerAgent completo (validación + parsing + security)
-- [ ] NLPParserAgent básico (intent recognition + entity extraction)
-- [ ] Sequential execution workflows (NO composition engine yet)
+### 🎯 Semana 5-6: Fase 3C Advanced Features (ADR-0008)
+- [ ] **EN PROGRESO:** Data Migration Script para collections existentes (Task #4)
+- [ ] **PENDIENTE:** NLPParserAgent básico (intent recognition + entity extraction) (Task #6) 
+- [ ] **PENDIENTE:** GlobalCollectionManager para collections compartidas (Task #14)
+- [ ] **PENDIENTE:** SmartContentAnalyzer para filtrado inteligente (Task #15)
 - [ ] Integration tests FileHandler → NLP pipeline
-- [ ] Performance testing collections per-user
 
-### 📊 Semana 7-8: Fase 3C-3 - Simple Composition + Memory Integration
-- [ ] SimpleComposer configuration-driven (NO dynamic orchestration)
-- [ ] Hybrid memory Redis + ChromaDB integration  
-- [ ] Context retrieval optimization + E2E testing
-- [ ] **Decision Point**: Collections granulares needed based on performance data?
+### 🚀 Semana 7-8: Fase 3C Completion
+- [ ] Sequential execution workflows (Task #7)
+- [ ] HybridMemoryManager con estrategias local/cloud (Task #16)
+- [ ] CrossTenantAccess para permisos entre usuarios (Task #17)
+- [ ] Performance testing collections per-user (Task #8)
+- [ ] SimpleComposer configuration-driven (Task #9)
+
+### 📊 Semana 9-10: Fase 3C Final Integration  
+- [ ] Hybrid memory Redis + ChromaDB integration (Task #10)
+- [ ] E2E Testing & Validation completa (Task #11)
+- [ ] **Decision Point**: Collections granulares needed based on performance data (Task #12)?
 
 ### Hitos Semanales
 - **Viernes:** Demo del progreso semanal
