@@ -47,7 +47,7 @@ Cambios_Pendientes: ['data migration script', 'NLP parser agent', 'global collec
 - **✅ Completado:** Fase 3A - MasterRouter básico funcional
 - **✅ Completado:** Fase 3B - Sistema conversacional completo con memoria persistente
 - **✅ Completado:** Refactorización arquitectónica crítica (ADR-0006)
-- **🎯 EN PROGRESO:** Fase 3C - Multi-tenant vector DB + agentes modulares (29% completado)
+- **🎯 EN PROGRESO:** Fase 3C - Multi-tenant vector DB + agentes modulares (41% completado)
 - **📊 Logrado:** LangSmith observabilidad LLM operacional
 - **💾 Logrado:** Redis memoria conversacional robusta + ChromaDB multi-tenant
 - **🎉 Meta Alcanzada:** Foundation sólida multi-tenant + agentes modulares base
@@ -185,7 +185,7 @@ Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Resp
 
 **DoD ALCANZADO:** "Usuario envía audio/texto → recibe respuesta inteligente y natural → puede referenciar conversación anterior + arquitectura limpia escalable"
 
-### 🔮 FASE 3C: Vector DB Multi-Tenant + Características Avanzadas (10 sem) - **29% COMPLETADO**
+### 🔮 FASE 3C: Vector DB Multi-Tenant + Características Avanzadas (10 sem) - **41% COMPLETADO**
 
 **Objetivo:** Base vectorial multi-tenant + agentes modulares + características avanzadas
 
@@ -195,6 +195,9 @@ Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Resp
 - ✅ VectorMemoryManager persistente por usuario (Task #3)  
 - ✅ FileHandlerAgent con validación segura y parsing (Task #5)
 - ✅ Sistema de roles USER/ADMIN/SUPER_ADMIN (Task #13)
+- ✅ **Procesamiento de Archivos Multimodales** - ChatAgent → MasterOrchestrator → FileHandlerAgent (Task #7)
+- ✅ **Herramientas Multimodales** - src/tools/multimodal_processor.py con registry pattern
+- ✅ **Delegación Inteligente** - ChatAgent con real MasterOrchestrator integration
 
 **🎯 EN PROGRESO (Características Avanzadas - ADR-0008):**
 - 📋 GlobalCollectionManager para collections compartidas (Task #14)
@@ -204,8 +207,7 @@ Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Resp
 
 **🔄 PENDIENTE (Core Agents):**
 - 📋 Data Migration Script (Task #4)
-- 📋 NLPParserAgent con intent recognition (Task #6)
-- 📋 Sequential Execution Workflows (Task #7)
+- ❌ ~~NLPParserAgent con intent recognition (Task #6)~~ - Cancelada: ChatAgent maneja NLP
 - 📋 Performance Testing & Simple Composition (Tasks #8-#12)
 
 **DoD:** "Usuario interactúa con sistema multi-tenant avanzado → Collections globales + roles + análisis semántico → Memoria híbrida optimizada → Agentes modulares componibles dinámicamente"

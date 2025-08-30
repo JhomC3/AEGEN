@@ -5,10 +5,10 @@ import os
 from pathlib import Path
 from typing import Any
 
-from src.agents.file_readers import READER_REGISTRY
 from src.agents.file_validators import FileValidator
 from src.core.interfaces.modular_agent import ModularAgentBase
 from src.core.schemas import AgentCapability, AgentContext, AgentResult
+from src.tools.multimodal_processor import process_multimodal_file
 
 
 class FileHandlerAgent(ModularAgentBase):
@@ -35,13 +35,18 @@ class FileHandlerAgent(ModularAgentBase):
         return task_type in file_tasks
 
     async def _process_file_content(self, file_path: str, extension: str) -> str:
-        """Procesa contenido usando el reader apropiado."""
-        reader_func = READER_REGISTRY.get(extension)
-        if not reader_func:
-            raise ValueError(f"No reader for extension: {extension}")
-        
+        """Procesa contenido usando el multimodal processor."""
         try:
-            content = await asyncio.to_thread(reader_func, file_path)
+            file_name = Path(file_path).name
+            result = await process_multimodal_file.ainvoke({
+                "file_path": file_path,
+                "file_name": file_name
+            })
+            
+            if "error" in result:
+                raise ValueError(result["error"])
+            
+            content = result.get("content", "")
             return self.validator.sanitize_content(content)
         except Exception as e:
             self.logger.error(f"Failed to process {file_path}: {e}")

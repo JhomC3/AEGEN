@@ -1,15 +1,18 @@
 # src/agents/specialists/chat_agent.py
 import logging
+import os
+from pathlib import Path
 from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.tools import BaseTool, tool
 from langgraph.graph import END, StateGraph
 
+from src.agents.orchestrator import master_orchestrator
 from src.core.engine import llm
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
-from src.core.schemas import GraphStateV2, InternalDelegationResponse
+from src.core.schemas import CanonicalEventV1, GraphStateV2, InternalDelegationResponse
 
 logger = logging.getLogger(__name__)
 
@@ -133,28 +136,49 @@ Responde de manera natural y conversacional.""",
 
 async def _delegate_and_translate(user_message: str, conversation_history: str) -> str:
     """
-    Delega la tarea a un especialista y traduce la respuesta a lenguaje natural.
-
-    TODO: Implementar delegación real al MasterOrchestrator
-    Por ahora, simulamos la delegación para mantener la arquitectura limpia.
+    Delega la tarea a un especialista vía MasterOrchestrator y traduce la respuesta.
     """
     logger.info(f"Delegando tarea compleja: '{user_message[:50]}...'")
 
-    # TODO: Aquí se implementará la llamada real al MasterOrchestrator
-    # con el protocolo InternalDelegationRequest/Response
-
-    # Simulación temporal de respuesta de especialista
-    simulated_specialist_response = InternalDelegationResponse(
-        status="success",
-        result={"task": "planning", "details": "Task completed"},
-        summary=f"He procesado tu solicitud: {user_message}",
-        suggestions=["Puedes preguntar más detalles si los necesitas"],
-    )
-
-    # Traducir respuesta técnica a lenguaje conversacional
-    return await _translate_specialist_response(
-        simulated_specialist_response, user_message, conversation_history
-    )
+    try:
+        # Crear evento canónico para el MasterOrchestrator
+        event = CanonicalEventV1(
+            event_id="chat_delegation",
+            event_type="text",
+            content=user_message,
+            user_id="system",
+            timestamp=None
+        )
+        
+        # Crear estado inicial para MasterOrchestrator
+        initial_state = GraphStateV2(
+            event=event,
+            payload={"user_message": user_message},
+            conversation_history=[]
+        )
+        
+        # Llamada real al MasterOrchestrator
+        final_state = await master_orchestrator.run(initial_state)
+        
+        # Extraer respuesta del payload
+        response = final_state.get("payload", {}).get("response", "")
+        error_message = final_state.get("error_message")
+        
+        if error_message:
+            logger.error(f"Error en delegación: {error_message}")
+            return f"Disculpa, hubo un problema procesando tu solicitud: {error_message}"
+        
+        if not response:
+            logger.warning("No se recibió respuesta del especialista")
+            return "He procesado tu solicitud pero no pude generar una respuesta específica."
+            
+        # La respuesta del especialista ya está en formato conversacional
+        return str(response)
+        
+    except Exception as e:
+        error_msg = f"Error en delegación al MasterOrchestrator: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        return "Disculpa, tuve un problema técnico al procesar tu solicitud."
 
 
 async def _translate_specialist_response(
