@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 from typing import Any
 
+from src.agents.file_readers import READER_REGISTRY
 from src.agents.file_validators import FileValidator
 from src.core.interfaces.modular_agent import ModularAgentBase
 from src.core.schemas import AgentCapability, AgentContext, AgentResult
@@ -90,7 +91,7 @@ class FileHandlerAgent(ModularAgentBase):
             return self._create_success_result(
                 data=result_data,
                 message=f"Successfully processed {file_name}",
-                next_agents=["NLPParserAgent"] if content else []
+                next_agents=["chat_specialist"] if content else []
             )
             
         except (FileNotFoundError, PermissionError, ValueError) as e:

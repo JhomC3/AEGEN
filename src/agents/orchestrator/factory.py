@@ -16,7 +16,7 @@ from .graph_builder import OrchestratorGraphBuilder
 from .master_orchestrator import MasterOrchestrator
 from .routing.chaining_router import ConfigurableChainRouter
 from .routing.event_router import EventRouter
-from .routing.function_calling_router import FunctionCallingRouter
+from .routing.enhanced_router import EnhancedFunctionCallingRouter
 from .specialist_cache import OptimizedSpecialistCache
 
 logger = logging.getLogger(__name__)
@@ -97,7 +97,7 @@ class OrchestratorFactory:
             chaining_config = OrchestratorFactory._get_default_chaining_config()
 
         strategies = {
-            "function_calling": FunctionCallingRouter(specialist_cache),
+            "function_calling": EnhancedFunctionCallingRouter(specialist_cache),
             "event_router": EventRouter(specialist_registry),
             "chaining": ConfigurableChainRouter(chaining_config),
         }
@@ -139,21 +139,38 @@ class LazyMasterOrchestrator:
     _instance: Optional[MasterOrchestrator] = None
     _lock = threading.Lock()
 
-    def __new__(cls):
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:  # Double-check locking
+    def _get_instance(self) -> MasterOrchestrator:
+        """Get or create the MasterOrchestrator instance."""
+        if self._instance is None:
+            with self._lock:
+                if self._instance is None:  # Double-check locking
                     try:
-                        cls._instance = OrchestratorFactory.create_orchestrator()
+                        self._instance = OrchestratorFactory.create_orchestrator()
                         logger.info("MasterOrchestrator inicializado lazily")
                     except Exception as e:
                         logger.error(f"Error en lazy initialization: {e}")
                         raise
-        return cls._instance
+        return self._instance
 
     def __getattr__(self, name):
         """Proxy all method calls to the actual instance."""
-        return getattr(self._instance, name)
+        instance = self._get_instance()
+        return getattr(instance, name)
+
+    async def run(self, initial_state):
+        """Explicitly proxy the run method for better error handling."""
+        instance = self._get_instance()
+        return await instance.run(initial_state)
+
+    def get_cache_stats(self):
+        """Explicitly proxy the cache stats method."""
+        instance = self._get_instance()
+        return instance.get_cache_stats()
+
+    def get_available_strategies(self):
+        """Explicitly proxy the strategies method."""
+        instance = self._get_instance()
+        return instance.get_available_strategies()
 
 
 # Thread-safe lazy instance
