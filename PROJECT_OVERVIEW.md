@@ -2,8 +2,8 @@
 
 > **Versión:** 10.0 (Edición "Contexto Dinámico y Pragmático")
 > **Estado:** Activo y Evolutivo
-> **Branch Actual:** `feature/conversational-flow-3b`
-> **Última Actualización:** 2025-08-19
+> **Branch Actual:** `feature/phase3c-vector-multiagent`
+> **Última Actualización:** 2025-09-04
 
 <!-- LLM-Hint: This document follows a strict hierarchy. In case of conflict, PROJECT_OVERVIEW.md (this file) has the highest authority. The current project phase is defined in the "Estado Real" YAML block below. Use the DoD (Definition of Done) for each phase to understand completion criteria. All sections marked with 🎯 are current focus areas. -->
 
@@ -12,11 +12,11 @@
 ### Estado Real (Semi-Automático)
 <!-- LLM-Hint: This block is semi-automated. Git status and timestamp are updated by 'make sync-docs'. Phase progress and milestones must be updated manually upon completion. -->
 ```yaml
-Fase_Actual: "FASE 3C - EN PROGRESO AVANZADO (Foundation Completada)"
+Fase_Actual: "FASE 3C - CORE RESTORATION COMPLETADA"
 Progreso_Fase_3A: "5/5 hitos completados (✅ COMPLETADA)"
 Progreso_Fase_3B: "4/4 hitos completados + refactorización crítica (✅ COMPLETADA)"
-Progreso_Fase_3C: "5/17 tasks completados (29% - Foundation sólida + características avanzadas iniciadas)"
-Próximo_Hito: "FASE 3C Completion - Core Agents + Advanced Features"
+Progreso_Fase_3C: "11/22 tasks completados (50% - ChatAgent + Orquestador completamente funcional)"
+Próximo_Hito: "Observabilidad y Performance Optimization (Tasks #20-22)"
 Funcionalidades_Activas:
   # Fase 3B (Mantenidas)
   - ✅ Transcripción E2E via Telegram (faster-whisper optimizado)
@@ -28,29 +28,34 @@ Funcionalidades_Activas:
   - ✅ Memoria conversacional bidireccional (audio + texto)
   - ✅ ChatAgent como punto único entrada + delegación inteligente
   - ✅ Chaining transcription → planner → respuesta final
-  - ✅ Calidad transcripción optimizada (ES, float32, VAD)
-  # Fase 3C (Nuevas - Tasks completados)
+  # Fase 3C (Tasks completados - 50% progreso)
   - ✅ Multi-tenant ChromaDB con aislamiento per-user (Task #1)
   - ✅ BaseModularAgent interface estable para composición (Task #2)
   - ✅ VectorMemoryManager persistente por usuario (Task #3)
   - ✅ FileHandlerAgent con validación segura y parsing (Task #5)
   - ✅ Sistema de roles USER/ADMIN/SUPER_ADMIN (Task #13)
   - ✅ SecureChromaManager con control de permisos
+  - ✅ EnhancedFunctionCallingRouter (Tasks #6, #7, #9)
+  - ✅ Integración de Memoria Híbrida (Task #10)
+  - ✅ Estabilización y Depuración del Orquestador (Task #18)
+  - ✅ Restauración COMPLETA ChatAgent ADR-0009 (Task #19)
+  - ✅ Arquitectura híbrida: Performance + Funcionalidad
+  - ✅ Function calling optimization: 36s → <2s routing
 Branch_Trabajo: "feature/phase3c-vector-multiagent"
-ADRs_Recientes: ["ADR-0007-fase3c-vector-multiagent (ACEPTADO)", "ADR-0008-advanced-multitenant-features (PROPUESTO)"]
-Task_Master_Progress: "5/17 tasks done (Tasks #1,#2,#3,#5,#13 completed)"
-Cambios_Pendientes: ['data migration script', 'NLP parser agent', 'global collections manager']
-Última_Sincronización: "2025-08-26 (Claude Code sync)"
+ADRs_Recientes: ["ADR-0007-fase3c-vector-multiagent (ACEPTADO)", "ADR-0008-advanced-multitenant-features (PROPUESTO)", "ADR-0009-routing-performance-migration (COMPLETADO - 100% exitoso)"]
+Task_Master_Progress: "11/22 tasks done (Tasks #1,#2,#3,#5,#7,#8,#9,#10,#13,#18,#19 completed)"
+Cambios_Pendientes: ['observabilidad LLM', 'performance profiling', 'data migration script', 'global collections manager']
+Última_Sincronización: "2025-09-04 (ChatAgent restoration + observability tasks)"
 ```
 
 ### ¿Dónde Estamos Hoy?
 - **✅ Completado:** Fase 3A - MasterRouter básico funcional
 - **✅ Completado:** Fase 3B - Sistema conversacional completo con memoria persistente
 - **✅ Completado:** Refactorización arquitectónica crítica (ADR-0006)
-- **🎯 EN PROGRESO:** Fase 3C - Multi-tenant vector DB + agentes modulares (41% completado)
+- **🎯 EN PROGRESO:** Fase 3C - Multi-tenant vector DB + agentes modulares (50% completado)
 - **📊 Logrado:** LangSmith observabilidad LLM operacional
 - **💾 Logrado:** Redis memoria conversacional robusta + ChromaDB multi-tenant
-- **🎉 Meta Alcanzada:** Foundation sólida multi-tenant + agentes modulares base
+- **🎉 Meta Alcanzada:** Foundation sólida multi-tenant + ChatAgent completamente funcional + architecture híbrida performance/funcionalidad
 - **🔧 Arquitectura:** ADR-0007 (vector multi-tenant) + ADR-0008 (características avanzadas)
 
 **Preámbulo:** Este documento es la fuente de verdad evolutiva del proyecto AEGEN. Se actualiza automáticamente con el estado real y proporciona contexto inmediato sobre dónde estamos y hacia dónde vamos.
@@ -116,20 +121,25 @@ AEGEN/
 │
 ├── 🧠 Orquestación
 │   ├── agents/
-│   │   ├── orchestrator.py  # ✅ MasterRouter básico
+│   │   ├── orchestrator/      # ✅ Lógica de orquestación principal
+│   │   │   ├── master_orchestrator.py # ✅ Coordinador principal
+│   │   │   ├── graph_builder.py       # ✅ Constructor de grafos
+│   │   │   └── routing/               # ✅ Lógica de enrutamiento
+│   │   │       ├── enhanced_router.py   # ✅ Router principal
+│   │   │       └── routing_analyzer.py  # ✅ Analizador de intención
 │   │   └── specialists/
 │   │       ├── transcription_agent.py  # ✅ Funcional
-│   │       └── chat_agent.py          # 🚧 En desarrollo
+│   │       └── chat_agent.py          # ✅ Funcional
 │   │
 │   └── core/
-│       ├── schemas.py       # ✅ CanonicalEventV1, GraphStateV1
+│       ├── schemas.py       # ✅ CanonicalEventV1, GraphStateV2
 │       ├── registry.py      # ✅ Autodescubrimiento
 │       └── interfaces/      # ✅ Contratos TypeScript-style
 │
 ├── 🛠️ Herramientas
 │   ├── speech_processing.py    # ✅ Whisper integrado
 │   ├── telegram_interface.py  # ✅ Bot API
-│   └── document_processing.py # 🚧 Para InventoryAgent
+│   └── document_processing.py # ✅ Para FileHandlerAgent
 │
 └── 📊 Observabilidad
     ├── logging_config.py   # ✅ Structured JSON
@@ -139,7 +149,18 @@ AEGEN/
 
 ### Flujo de Datos Actual
 ```mermaid
-Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Response
+graph TD
+    A[Telegram] --> B(Webhook);
+    B --> C{CanonicalEventV1};
+    C --> D[MasterOrchestrator];
+    D --> E{EnhancedFunctionCallingRouter};
+    E --> F[RoutingAnalyzer];
+    F --> G{LLM (Gemini)};
+    E --> H[SpecialistCache];
+    H --> I[Specialist Agent];
+    I --> J[GraphExecution];
+    J --> K(Response);
+    K --> A;
 ```
 
 ## 🧪 3. Estrategia de Testing (Gradual)
@@ -185,11 +206,11 @@ Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Resp
 
 **DoD ALCANZADO:** "Usuario envía audio/texto → recibe respuesta inteligente y natural → puede referenciar conversación anterior + arquitectura limpia escalable"
 
-### 🔮 FASE 3C: Vector DB Multi-Tenant + Características Avanzadas (10 sem) - **41% COMPLETADO**
+### 🔮 FASE 3C: Vector DB Multi-Tenant + Características Avanzadas (10 sem) - **50% COMPLETADO**
 
 **Objetivo:** Base vectorial multi-tenant + agentes modulares + características avanzadas
 
-**✅ COMPLETADO (Foundation):**
+**✅ COMPLETADO (Foundation + Core Restoration):**
 - ✅ ChromaDB multi-tenant para aislamiento de datos por usuario (Task #1)
 - ✅ BaseModularAgent interface estable para composición (Task #2)
 - ✅ VectorMemoryManager persistente por usuario (Task #3)  
@@ -197,20 +218,30 @@ Telegram → Webhook → CanonicalEvent → MasterRouter → Specialist → Resp
 - ✅ Sistema de roles USER/ADMIN/SUPER_ADMIN (Task #13)
 - ✅ **Procesamiento de Archivos Multimodales** - ChatAgent → MasterOrchestrator → FileHandlerAgent (Task #7)
 - ✅ **Herramientas Multimodales** - src/tools/multimodal_processor.py con registry pattern
-- ✅ **Delegación Inteligente** - ChatAgent con real MasterOrchestrator integration
+- ✅ **CRITICAL MILESTONE:** Restauración COMPLETA ChatAgent ADR-0009 (Task #19)
+- ✅ **Arquitectura Híbrida:** Performance optimizations + Funcionalidad completa
+- ✅ **Performance Fix:** Function calling 36s → <2s routing
+- ✅ **Delegación Inteligente:** ChatAgent 143→628 líneas - 100% funcional
 
-**🎯 EN PROGRESO (Características Avanzadas - ADR-0008):**
+**🎯 PRÓXIMO SPRINT (Observabilidad + Performance):**
+- 📋 **PRIORITY:** Sistema Observabilidad LLM completo (Task #20)
+- 📋 **PRIORITY:** Performance Profiling y Optimización (Task #21)
+- 📋 Data Migration Script para arquitectura nueva (Task #22)
+
+**🔄 PENDIENTE (Características Avanzadas - ADR-0008):**
 - 📋 GlobalCollectionManager para collections compartidas (Task #14)
 - 📋 SmartContentAnalyzer para filtrado inteligente (Task #15)
 - 📋 HybridMemoryManager con estrategias local/cloud (Task #16)
 - 📋 CrossTenantAccess para permisos entre usuarios (Task #17)
 
-**🔄 PENDIENTE (Core Agents):**
-- 📋 Data Migration Script (Task #4)
+**🔄 PENDIENTE (Testing y Optimización):**
+- 📋 E2E Testing & Validation completa (Task #11)
+- 📋 Collections Granulares Decision Point (Task #12)
 - ❌ ~~NLPParserAgent con intent recognition (Task #6)~~ - Cancelada: ChatAgent maneja NLP
-- 📋 Performance Testing & Simple Composition (Tasks #8-#12)
 
-**DoD:** "Usuario interactúa con sistema multi-tenant avanzado → Collections globales + roles + análisis semántico → Memoria híbrida optimizada → Agentes modulares componibles dinámicamente"
+**DoD ACTUAL:** "Usuario interactúa con ChatAgent completamente funcional → Delegación inteligente + traducción respuestas → Performance <2s routing + memoria persistente → Observabilidad completa LLM calls"
+
+**DoD FINAL:** "Usuario interactúa con sistema multi-tenant avanzado → Collections globales + roles + análisis semántico → Memoria híbrida optimizada → Agentes modulares componibles dinámicamente"
 
 ### 🌟 FASE 4: Federación Completa (Q2)
 - Múltiples especialistas con LangSmith observability
@@ -446,12 +477,17 @@ make doctor          # Verifica consistencia docs vs código
 - ✅ **COMPLETADO:** FileHandlerAgent con validación + parsing + security (Task #5)
 - ✅ **COMPLETADO:** Sistema de roles y permisos (Task #13)
 
-### 🎯 Semana 5-6: Fase 3C Advanced Features (ADR-0008)
-- [ ] **EN PROGRESO:** Data Migration Script para collections existentes (Task #4)
-- [ ] **PENDIENTE:** NLPParserAgent básico (intent recognition + entity extraction) (Task #6) 
-- [ ] **PENDIENTE:** GlobalCollectionManager para collections compartidas (Task #14)
-- [ ] **PENDIENTE:** SmartContentAnalyzer para filtrado inteligente (Task #15)
-- [ ] Integration tests FileHandler → NLP pipeline
+### 🎯 Semana 5-6: Observabilidad y Performance Optimization
+- [ ] **PRIORITY:** Sistema Observabilidad LLM completo (Task #20)
+  - LLMCallTracker con métricas tiempo real
+  - Middleware trazabilidad correlation_id  
+  - Dashboard Grafana/Prometheus
+  - Sistema alertas performance degradation
+- [ ] **PRIORITY:** Performance Profiling end-to-end (Task #21)
+  - Profile flujo Telegram → respuesta
+  - Optimización caching routing analyzer
+  - Connection pooling ChromaDB/Redis
+- [ ] Data Migration Script collections existentes (Task #22)
 
 ### 🚀 Semana 7-8: Fase 3C Completion
 - [ ] Sequential execution workflows (Task #7)

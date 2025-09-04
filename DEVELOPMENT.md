@@ -27,6 +27,9 @@ make verify       # Validar antes de commit
 □ Dependencies inyectadas, no construidas
 □ Business logic separado de infrastructure  
 □ Tests unitarios incluidos
+□ LLM calls trackeadas con correlation_id
+□ Performance targets validados (<2s routing)
+□ Observabilidad metrics agregadas
 ```
 
 **🚫 RED FLAGS - STOP si ves:**
@@ -34,6 +37,10 @@ make verify       # Validar antes de commit
 - Métodos > 20 líneas  
 - Multiple if/else complejos
 - Mixing business logic con infrastructure
+- LLM calls sin tracking/observabilidad
+- Hardcoded LLM imports (usar src.core.engine)
+- Performance regressions sin justificación
+- Missing correlation_id propagation
 
 ---
 
@@ -46,17 +53,24 @@ make verify       # Validar antes de commit
 - **JSON logging** estructurado con `correlation_id`
 - **No secretos hardcodeados** - usar Pydantic Settings
 - **No PII en logs** - usar redactor
+- **Observabilidad LLM** - trackear TODAS las llamadas LLM con métricas
+- **Performance monitoring** - correlation_id end-to-end obligatorio
 
 ### Arquitectura
 - **Tools sin estado** - no manejan lifecycle de archivos
 - **Docstrings públicos** formato Numpy/Google + `LLM-hints` 
 - **Single Responsibility** máximo 7 métodos/clase
 - **Clean Architecture** business logic vs infrastructure
+- **LLM Tracing** - todo LLM call debe pasar por tracker central
+- **Performance targets** - <2s routing, <3s delegation, <5s total response
+- **Hybrid Architecture** - balance performance/funcionalidad (ADR-0009)
 
 ### Testing
 - **Tests obligatorios** para nueva funcionalidad
 - **Cobertura no disminuye**
 - **Snapshot tests** para prompts en `prompts/`
+- **Performance tests** - validar targets de latencia
+- **Integration tests** - flujo completo con observabilidad
 
 ---
 
@@ -132,6 +146,7 @@ feat(scope): descripción imperativa
 ### Registry Pattern  
 - Autodescubrimiento de especialistas
 - No hard-coding de dependencies
+- **IMPORTANTE:** Todo especialista debe ser una clase que herede de `SpecialistInterface` y debe ser registrado en el `specialist_registry` para ser descubierto por el sistema.
 
 ### Tool Composition
 - Herramientas atómicas y componibles
@@ -179,6 +194,18 @@ make verify  # + architecture enforcement
 
 ## 🔧 Troubleshooting
 
+### Performance Issues
+```bash
+# Verificar métricas LLM
+curl localhost:8000/metrics | grep llm_call
+
+# Ver latencia por endpoint
+curl localhost:8000/system/status
+
+# Profile memoria y CPU
+make profile
+```
+
 ### Linting falla
 ```bash
 make format  # Auto-fix la mayoría
@@ -195,6 +222,15 @@ pytest tests/unit/test_specific.py -v
 # Ver qué falla específicamente
 make verify
 # Refactorizar según checklist arriba ↑
+```
+
+### Observability Issues
+```bash
+# Verificar correlation IDs
+grep -r "correlation_id" src/
+
+# Ver métricas LLM en vivo
+watch "curl -s localhost:8000/metrics | grep -E '(llm_|performance_)'"
 ```
 
 ### Docker issues
