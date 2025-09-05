@@ -11,13 +11,13 @@ from langchain_core.prompts import ChatPromptTemplate
 
 def build_routing_prompt() -> ChatPromptTemplate:
     """
-    Construye prompt para análisis inteligente con structured output.
+    Construye prompt para análisis inteligente con function calling.
     
     Returns:
-        ChatPromptTemplate: Prompt configurado para RoutingDecision output
+        ChatPromptTemplate: Prompt configurado para function calling (no structured output)
     """
     return ChatPromptTemplate.from_messages([
-        ("system", """Analiza el mensaje del usuario y genera una decisión de routing estructurada.
+        ("system", """Analiza el mensaje del usuario y llama a la función route_user_message con los parámetros correctos.
 
 Tu trabajo es:
 1. Identificar la intención principal del mensaje
@@ -35,12 +35,14 @@ CRITERIOS DE ROUTING:
 
 CONTEXTO CONVERSACIONAL: {context}
 
-Responde usando el formato RoutingDecision con:
-- intent: una de las opciones válidas
+IMPORTANTE: Debes llamar OBLIGATORIAMENTE a la función route_user_message con:
+- intent: una de las opciones válidas (chat, file_analysis, search, help, task_execution, information_request, planning, document_creation)
 - confidence: 0.0-1.0 basado en claridad del mensaje
 - target_specialist: especialista más apropiado
 - requires_tools: true si necesita herramientas específicas
-- entities: lista de entidades encontradas"""),
+- entities: lista de entidades encontradas (strings)
+- subintent: sub-intención específica si aplica
+- next_actions: acciones sugeridas post-routing"""),
         ("human", "{user_message}")
     ])
 

@@ -43,4 +43,5 @@ class ImageToText:
 
     @tool
     def get_stats(self) -> dict[str, int]:
+        """Obtiene estadísticas de procesamiento de imágenes."""
         return self.stats.copy()

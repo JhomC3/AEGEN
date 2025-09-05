@@ -488,6 +488,7 @@ class GraphStateV2(TypedDict):
     event: CanonicalEventV1
     payload: dict[str, Any]
     error_message: str | None
+    session_id: str  # ID de sesión para tracking y memoria
     # Nuevo campo para memoria conversacional
     conversation_history: list[V2ChatMessage]
 

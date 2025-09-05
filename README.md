@@ -18,7 +18,9 @@ Este documento es de **lectura obligatoria** para cualquier contribuidor (humano
 
 - **Arquitectura Evolutiva:** Diseñado para pasar de un monolito a un sistema distribuido cuando sea necesario.
 - **Desacoplamiento por Eventos:** Orquestación de flujos de trabajo a través de un bus de eventos asíncrono.
-- **Observabilidad "Día Cero":** Logging estructurado, trazabilidad de peticiones y métricas Prometheus desde el inicio.
+- **Observabilidad LLM Completa:** Sistema híbrido LangSmith + Prometheus con tracking de llamadas, latency, tokens y costos. Correlation IDs end-to-end y dashboard tiempo real.
+- **Agentes Modulares Multi-tenant:** Sistema de agentes componibles con aislamiento per-usuario y memoria vectorial ChromaDB.
+- **Performance Optimizado:** Routing inteligente <2s, delegación híbrida, function calling optimizado (ADR-0009).
 - **Resiliencia Integrada:** Mecanismos de reintentos e idempotencia para un procesamiento de tareas robusto.
 - **Calidad de Código:** Pipeline de CI/CD con linters y chequeo de tipos (Ruff, Black, MyPy).
 

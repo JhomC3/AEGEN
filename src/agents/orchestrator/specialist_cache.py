@@ -53,11 +53,8 @@ class OptimizedSpecialistCache(SpecialistCache):
         """
         logger.info("Inicializando cache de especialistas...")
 
-        # Obtener especialistas enrutables (excluyendo ChatBot)
-        all_specialists = specialist_registry.get_all_specialists()
-        self._routable_specialists = [
-            s for s in all_specialists if s.name != CHAT_SPECIALIST_NODE
-        ]
+        # Obtener todos los especialistas, incluyendo el de chat
+        self._routable_specialists = specialist_registry.get_all_specialists()
 
         # Cache de herramientas
         self._routable_tools = [s.tool for s in self._routable_specialists]

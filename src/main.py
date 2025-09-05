@@ -10,7 +10,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 # Importar los especialistas para asegurar que se registren al inicio
 from src import agents  # noqa: F401
-from src.api.routers import analysis, status, webhooks
+from src.api.routers import analysis, llm_metrics, status, webhooks
 from src.core.config import settings
 from src.core.dependencies import (
     initialize_global_resources,
@@ -109,6 +109,7 @@ register_exception_handlers(app)
 
 # --- Routers ---
 app.include_router(status.router, prefix="/system", tags=["System"])
+app.include_router(llm_metrics.router, prefix="/system/llm", tags=["LLM Metrics"])
 app.include_router(analysis.router, prefix="/api/v1/analysis", tags=["Analysis"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
 

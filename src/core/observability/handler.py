@@ -1,0 +1,226 @@
+# src/core/observability/handler.py
+"""
+Callback handler para observabilidad LLM.
+Responsabilidad única: Interceptar y trackear llamadas LLM.
+"""
+
+import logging
+import time
+import uuid
+from typing import Any, Dict, List, Optional
+
+from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.outputs import LLMResult
+
+from .correlation import get_correlation_id
+from .metrics import LLMCallMetrics
+from .prometheus_metrics import (
+    llm_active_calls,
+    llm_calls_total,
+    llm_cost_total,
+    llm_latency_seconds,
+    llm_tokens_total,
+)
+
+logger = logging.getLogger(__name__)
+
+
+class LLMObservabilityHandler(BaseCallbackHandler):
+    """
+    Callback handler híbrido para observabilidad LLM.
+    Combina LangSmith tracing con Prometheus metrics.
+    """
+    
+    def __init__(self, call_type: str = "general"):
+        """
+        Inicializa el handler de observabilidad.
+        
+        Args:
+            call_type: Tipo de llamada (routing, delegation, etc.)
+        """
+        super().__init__()
+        self.call_type = call_type
+        self.active_calls: Dict[str, LLMCallMetrics] = {}
+        
+    def on_llm_start(
+        self,
+        serialized: Dict[str, Any],
+        prompts: List[str],
+        **kwargs: Any,
+    ) -> None:
+        """Callback ejecutado al inicio de llamada LLM."""
+        correlation_id = get_correlation_id()
+        provider, model = self._extract_model_info(serialized)
+        
+        call_id = str(uuid.uuid4())
+        metrics = self._create_metrics(correlation_id, provider, model, call_id, prompts, kwargs)
+        
+        self.active_calls[call_id] = metrics
+        self._update_active_calls_gauge(provider, model, increment=True)
+        
+        self._log_call_start(call_id, correlation_id, provider, model)
+    
+    def on_llm_end(self, response: LLMResult, **kwargs: Any) -> None:
+        """Callback ejecutado al finalizar llamada LLM exitosa."""
+        self._finalize_call(response, success=True, **kwargs)
+    
+    def on_llm_error(self, error: Exception, **kwargs: Any) -> None:
+        """Callback ejecutado cuando falla llamada LLM."""
+        self._finalize_call(None, success=False, error=error, **kwargs)
+    
+    def _extract_model_info(self, serialized: Dict[str, Any]) -> tuple[str, str]:
+        """Extrae provider y modelo del LLM serializado."""
+        provider = "unknown"
+        model = "unknown"
+        
+        if serialized.get("id", [])[-1] == "ChatGoogleGenerativeAI":
+            provider = "google"
+            model = serialized.get("kwargs", {}).get("model", "gemini-pro")
+        
+        return provider, model
+    
+    def _create_metrics(
+        self, 
+        correlation_id: str, 
+        provider: str, 
+        model: str, 
+        call_id: str, 
+        prompts: List[str], 
+        kwargs: Dict[str, Any]
+    ) -> LLMCallMetrics:
+        """Crea objeto de métricas para una llamada LLM."""
+        return LLMCallMetrics(
+            correlation_id=correlation_id,
+            provider=provider,
+            model=model,
+            call_type=self.call_type,
+            start_time=time.time(),
+            metadata={
+                "prompts_count": len(prompts),
+                "call_id": call_id,
+                **kwargs
+            }
+        )
+    
+    def _finalize_call(
+        self, 
+        response: Optional[LLMResult], 
+        success: bool,
+        error: Optional[Exception] = None,
+        **kwargs: Any
+    ) -> None:
+        """Finaliza y registra métricas de llamada LLM."""
+        if not self.active_calls:
+            logger.warning("No active LLM calls to finalize")
+            return
+        
+        call_id, metrics = next(iter(self.active_calls.items()))
+        
+        self._update_metrics_with_result(metrics, response, success, error)
+        metrics.finalize()
+        
+        self._update_prometheus_metrics(metrics)
+        self._update_active_calls_gauge(metrics.provider, metrics.model, increment=False)
+        
+        del self.active_calls[call_id]
+        self._log_call_completion(call_id, metrics, success)
+    
+    def _update_metrics_with_result(
+        self, 
+        metrics: LLMCallMetrics, 
+        response: Optional[LLMResult], 
+        success: bool, 
+        error: Optional[Exception]
+    ) -> None:
+        """Actualiza métricas con resultado de la llamada."""
+        metrics.success = success
+        if error:
+            metrics.error_message = str(error)
+        
+        if response and response.llm_output:
+            self._extract_token_usage(metrics, response.llm_output)
+    
+    def _extract_token_usage(self, metrics: LLMCallMetrics, llm_output: Dict[str, Any]) -> None:
+        """Extrae información de tokens del response."""
+        usage = llm_output.get("usage", {})
+        metrics.input_tokens = usage.get("prompt_tokens") or usage.get("input_tokens")
+        metrics.output_tokens = usage.get("completion_tokens") or usage.get("output_tokens")
+    
+    def _update_prometheus_metrics(self, metrics: LLMCallMetrics) -> None:
+        """Actualiza métricas de Prometheus."""
+        success_label = "success" if metrics.success else "failure"
+        
+        self._update_call_counter(metrics, success_label)
+        self._update_token_counters(metrics)
+        self._update_latency_histogram(metrics)
+        self._update_cost_counter(metrics)
+    
+    def _update_call_counter(self, metrics: LLMCallMetrics, success_label: str) -> None:
+        """Actualiza contador de llamadas."""
+        llm_calls_total.labels(
+            provider=metrics.provider,
+            model=metrics.model,
+            call_type=metrics.call_type,
+            success=success_label
+        ).inc()
+    
+    def _update_token_counters(self, metrics: LLMCallMetrics) -> None:
+        """Actualiza contadores de tokens."""
+        if metrics.input_tokens:
+            llm_tokens_total.labels(
+                provider=metrics.provider,
+                model=metrics.model,
+                token_type="input"
+            ).inc(metrics.input_tokens)
+        
+        if metrics.output_tokens:
+            llm_tokens_total.labels(
+                provider=metrics.provider,
+                model=metrics.model,
+                token_type="output"
+            ).inc(metrics.output_tokens)
+    
+    def _update_latency_histogram(self, metrics: LLMCallMetrics) -> None:
+        """Actualiza histograma de latencia."""
+        if metrics.latency_ms:
+            llm_latency_seconds.labels(
+                provider=metrics.provider,
+                model=metrics.model,
+                call_type=metrics.call_type
+            ).observe(metrics.latency_ms / 1000)
+    
+    def _update_cost_counter(self, metrics: LLMCallMetrics) -> None:
+        """Actualiza contador de costos."""
+        if metrics.estimated_cost_usd:
+            llm_cost_total.labels(
+                provider=metrics.provider,
+                model=metrics.model
+            ).inc(metrics.estimated_cost_usd)
+    
+    def _update_active_calls_gauge(self, provider: str, model: str, increment: bool) -> None:
+        """Actualiza gauge de llamadas activas."""
+        gauge = llm_active_calls.labels(provider=provider, model=model)
+        if increment:
+            gauge.inc()
+        else:
+            gauge.dec()
+    
+    def _log_call_start(self, call_id: str, correlation_id: str, provider: str, model: str) -> None:
+        """Log inicio de llamada."""
+        logger.debug(
+            f"LLM call started: {call_id} | "
+            f"correlation_id={correlation_id} | "
+            f"provider={provider} | model={model} | type={self.call_type}"
+        )
+    
+    def _log_call_completion(self, call_id: str, metrics: LLMCallMetrics, success: bool) -> None:
+        """Log finalización de llamada."""
+        cost_str = f"${metrics.estimated_cost_usd:.4f}" if metrics.estimated_cost_usd is not None else "$0.0000"
+        latency_str = f"{metrics.latency_ms:.1f}ms" if metrics.latency_ms is not None else "N/A"
+        
+        logger.info(
+            f"LLM call completed: {call_id} | "
+            f"correlation_id={metrics.correlation_id} | "
+            f"success={success} | latency={latency_str} | "
+            f"tokens={metrics.total_tokens} | cost={cost_str}"
+        )

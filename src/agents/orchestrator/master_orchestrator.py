@@ -82,6 +82,8 @@ class MasterOrchestrator:
         Returns:
             Estado modificado por la strategy
         """
+        session_id = state.get("session_id", "unknown-session")
+        logger.info(f"[{session_id}] Iniciando meta-routing...")
         event = state["event"]
 
         # Seleccionar strategy apropiada basada en event_type
@@ -89,13 +91,14 @@ class MasterOrchestrator:
             if "function_calling" in self._routing_strategies:
                 await self._routing_strategies["function_calling"].route(state)
             else:
-                logger.warning("FunctionCallingRouter no disponible")
+                logger.warning(f"[{session_id}] FunctionCallingRouter no disponible para evento de texto.")
         else:
             if "event_router" in self._routing_strategies:
                 await self._routing_strategies["event_router"].route(state)
             else:
-                logger.warning("EventRouter no disponible")
-
+                logger.warning(f"[{session_id}] EventRouter no disponible para evento tipo '{event.event_type}'.")
+        
+        logger.info(f"[{session_id}] Meta-routing finalizado. Próximo nodo tentativo: {state.get('payload', {}).get('next_node')}")
         return state
 
     async def _route_chain(self, state: GraphStateV2) -> GraphStateV2:
@@ -108,13 +111,15 @@ class MasterOrchestrator:
         Returns:
             Estado modificado por la strategy
         """
+        session_id = state.get("session_id", "unknown-session")
+        logger.info(f"[{session_id}] Iniciando chain-routing...")
         if "chaining" in self._routing_strategies:
             next_specialist = await self._routing_strategies["chaining"].route(state)
             # CRITICAL FIX: Capturar y guardar el resultado del chaining
             state["payload"]["next_specialist"] = next_specialist
-            logger.info(f"Chain routing result: next_specialist = {next_specialist}")
+            logger.info(f"[{session_id}] Chain routing result: next_specialist = {next_specialist}")
         else:
-            logger.warning("ChainingRouter no disponible")
+            logger.warning(f"[{session_id}] ChainingRouter no disponible.")
 
         return state
 
@@ -128,13 +133,14 @@ class MasterOrchestrator:
         Returns:
             str: Nombre del siguiente nodo
         """
+        session_id = state.get("session_id", "unknown-session")
         if state.get("error_message"):
-            logger.error(f"Error de enrutamiento: {state['error_message']}")
+            logger.error(f"[{session_id}] Error de enrutamiento detectado: {state['error_message']}")
             return "__end__"
 
         next_node = state.get("payload", {}).get("next_node")
         if not next_node:
-            logger.warning("No se pudo determinar el siguiente nodo")
+            logger.warning(f"[{session_id}] No se pudo determinar el siguiente nodo desde el payload. Finalizando.")
             return "__end__"
 
         # Validar que el nodo existe en specialists registrados
@@ -143,10 +149,10 @@ class MasterOrchestrator:
         valid_nodes.add("chat_specialist")  # Always valid
 
         if next_node not in valid_nodes:
-            logger.warning(f"Nodo '{next_node}' no válido")
+            logger.warning(f"[{session_id}] Nodo '{next_node}' no es un especialista válido. Nodos válidos: {valid_nodes}. Finalizando.")
             return "__end__"
 
-        logger.info(f"Routing inicial: dirigir a '{next_node}'")
+        logger.info(f"[{session_id}] Decisión de enrutamiento inicial: dirigir a '{next_node}'")
         return cast(str, next_node)
 
     def _chain_router_function(self, state: GraphStateV2) -> str:
@@ -159,21 +165,21 @@ class MasterOrchestrator:
         Returns:
             str: Siguiente nodo en el chain o "__end__"
         """
+        session_id = state.get("session_id", "unknown-session")
+        decision = "__end__"
         if "chaining" in self._routing_strategies:
-            # La strategy ya debería haber actualizado el estado
-            # Solo necesitamos leer la decisión
             payload = state.get("payload", {})
             next_action = payload.get("next_action")
 
             if next_action == "respond_to_user":
-                return "__end__"
-
-            # Para chaining, la strategy puede haber puesto next_specialist
-            next_specialist = payload.get("next_specialist")
-            if next_specialist:
-                return next_specialist
-
-        return "__end__"
+                decision = "__end__"
+            else:
+                next_specialist = payload.get("next_specialist")
+                if next_specialist:
+                    decision = next_specialist
+        
+        logger.info(f"[{session_id}] Decisión de enrutamiento en cadena: dirigir a '{decision}'")
+        return decision
 
     async def run(self, initial_state: GraphStateV2) -> dict:
         """
@@ -185,16 +191,20 @@ class MasterOrchestrator:
         Returns:
             dict: Estado final después de la ejecución
         """
+        session_id = initial_state.get("session_id", "unknown-session")
+        logger.info(f"[{session_id}] >>> Iniciando ejecución del grafo orquestador. Evento: {initial_state.get('event')}")
+
         if not self.graph:
-            logger.error("Grafo no disponible")
+            logger.error(f"[{session_id}] Grafo no disponible. No se puede ejecutar la orquestación.")
             initial_state["error_message"] = "Orquestador no disponible"
             return dict(initial_state)
 
         try:
             final_state_dict = await self.graph.ainvoke(initial_state)
+            logger.info(f"[{session_id}] <<< Finalizada ejecución del grafo orquestador.")
             return cast(dict, final_state_dict)
         except Exception as e:
-            logger.error(f"Error ejecutando grafo: {e}", exc_info=True)
+            logger.error(f"[{session_id}] Error catastrófico ejecutando el grafo: {e}", exc_info=True)
             initial_state["error_message"] = f"Error de ejecución: {e}"
             return dict(initial_state)
 

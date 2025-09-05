@@ -26,8 +26,8 @@ services:
       redis:
         # Depende del servicio de Redis
         condition: service_healthy # Esperar a que Redis esté listo
-      # vector_db: # Si tienes un servicio de Vector DB
-      #   condition: service_started
+      vector_db: # Depende del servicio de Vector DB
+        condition: service_started
 
   redis:
     image: redis:alpine3.21
@@ -42,19 +42,19 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-  # vector_db: # Ejemplo con ChromaDB persistente
-  #   image: chromadb/chroma:latest
-  #   container_name: aegen_vector_db
-  #   environment:
-  #     -   IS_PERSISTENT=TRUE
-  #     - CHROMA_SERVER_HOST=0.0.0.0 # Escuchar en todas las interfaces
-  #   volumes:
-  #     - chromadb_data:/chroma/.chroma/index
-  #   networks:
-  #     - aegen_network
-  #   ports: # Exponer solo si se accede externamente a ChromaDB
-  #      - "8001:8000"
-  #   restart: unless-stopped
+  vector_db: # ChromaDB persistente
+    image: chromadb/chroma:latest
+    container_name: aegen_vector_db
+    environment:
+      - IS_PERSISTENT=TRUE
+      - CHROMA_SERVER_HOST=0.0.0.0 # Escuchar en todas las interfaces
+    volumes:
+      - chromadb_data:/chroma/.chroma/index
+    networks:
+      - aegen_network
+    ports: # Exponer solo si se accede externamente a ChromaDB
+       - "8001:8000"
+    restart: unless-stopped
 
 volumes:
   redis_data:
