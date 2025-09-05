@@ -137,11 +137,27 @@ class LLMObservabilityHandler(BaseCallbackHandler):
         if error:
             metrics.error_message = str(error)
         
-        if response and response.llm_output:
-            self._extract_token_usage(metrics, response.llm_output)
+        if response:
+            # For LLMResult, extract usage from generations[0][0].message.usage_metadata
+            if hasattr(response, 'generations') and response.generations:
+                first_gen = response.generations[0][0] if response.generations[0] else None
+                if first_gen and hasattr(first_gen, 'message') and hasattr(first_gen.message, 'usage_metadata'):
+                    if first_gen.message.usage_metadata:
+                        self._extract_token_usage_from_metadata(metrics, first_gen.message.usage_metadata)
+            # Try usage_metadata directly (newer LangChain AIMessage)
+            elif hasattr(response, 'usage_metadata') and response.usage_metadata:
+                self._extract_token_usage_from_metadata(metrics, response.usage_metadata)
+            # Fallback to llm_output (older versions)
+            elif response.llm_output:
+                self._extract_token_usage(metrics, response.llm_output)
+    
+    def _extract_token_usage_from_metadata(self, metrics: LLMCallMetrics, usage_metadata: Dict[str, Any]) -> None:
+        """Extrae información de tokens del usage_metadata (newer LangChain)."""
+        metrics.input_tokens = usage_metadata.get("input_tokens")
+        metrics.output_tokens = usage_metadata.get("output_tokens")
     
     def _extract_token_usage(self, metrics: LLMCallMetrics, llm_output: Dict[str, Any]) -> None:
-        """Extrae información de tokens del response."""
+        """Extrae información de tokens del response (legacy format)."""
         usage = llm_output.get("usage", {})
         metrics.input_tokens = usage.get("prompt_tokens") or usage.get("input_tokens")
         metrics.output_tokens = usage.get("completion_tokens") or usage.get("output_tokens")

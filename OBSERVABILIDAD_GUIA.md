@@ -93,16 +93,39 @@ curl http://localhost:8000/system/llm/status
 Ahora mismo el robot no ha hecho nada, así que no hay métricas. ¡Vamos a darle trabajo!
 
 **¿Qué hacer?**
-Escribe este comando para que analice algo:
+Simula un mensaje de Telegram que SÍ activa el sistema completo con observabilidad:
 
 ```bash
-curl -X POST http://localhost:8000/api/v1/analysis/ingest \
+curl -X POST http://localhost:8000/api/v1/webhooks/telegram \
   -H "Content-Type: application/json" \
-  -d '{"data": "Hola robot, analiza esta transacción de prueba"}'
+  -d '{
+    "update_id": 123456,
+    "message": {
+      "message_id": 1,
+      "from": {
+        "id": 999999999,
+        "is_bot": false,
+        "first_name": "TestUser",
+        "username": "testuser"
+      },
+      "chat": {
+        "id": 999999999,
+        "first_name": "TestUser",
+        "username": "testuser",
+        "type": "private"
+      },
+      "date": 1699999999,
+      "text": "Hola! Explica qué son los microservicios en 2 oraciones."
+    }
+  }'
 ```
 
 **¿Qué verás?**
-El robot pensará un poco y te dará una respuesta.
+```json
+{"task_id":"abc123-def456","message":"Telegram event accepted for processing."}
+```
+
+El sistema procesará tu mensaje usando el flujo completo con observabilidad.
 
 ---
 
@@ -119,18 +142,18 @@ curl http://localhost:8000/system/llm/metrics/summary
 ```json
 {
   "total_calls": 1,
-  "total_tokens": 45,
-  "average_latency_seconds": 2.5,
-  "total_cost_usd": 0.001,
+  "total_tokens": 89,
+  "average_latency_seconds": 3.2,
+  "total_cost_usd": 0.0000891,
   "active_calls_count": 0
 }
 ```
 
 **🤓 ¿Qué significa?**
 - `total_calls`: ¡El robot habló 1 vez!
-- `total_tokens`: Usó 45 "palabritas" para hablar
-- `average_latency_seconds`: Tardó 2.5 segundos en responder
-- `total_cost_usd`: Nos costó $0.001 (¡menos de un centavo!)
+- `total_tokens`: Usó 89 "palabritas" para hablar (input + output)
+- `average_latency_seconds`: Tardó 3.2 segundos en responder
+- `total_cost_usd`: Nos costó $0.0000891 (¡menos de una décima de centavo!)
 - `active_calls_count`: No está hablando ahora
 
 ---

@@ -30,7 +30,7 @@ except ImportError:
         pass
 
 from src.agents.orchestrator.specialist_cache import SpecialistCache
-from src.core.engine import llm
+from src.core.engine import llm, create_observable_config
 from src.core.routing_models import RoutingDecision, IntentType, EntityInfo
 from src.core.schemas import GraphStateV2
 from .routing_utils import extract_context_from_state
@@ -88,11 +88,13 @@ class RoutingAnalyzer:
         
         try:
             # ✅ PERFORMANCE FIX: Function calling en lugar de structured output
+            # ✅ OBSERVABILITY: Add LLM tracking for routing calls
+            config = create_observable_config(call_type="routing_analysis")
             response = await self._chain.ainvoke({
                 "user_message": message,
                 "available_tools": available_tools,
                 "context": self._format_context_for_llm(context)
-            })
+            }, config=config)
             
             # Extraer resultado del function call
             decision_data = self._extract_tool_result(response)
