@@ -116,7 +116,7 @@ def get_current_phase() -> str:
 
 def load_quality_gates() -> Dict:
     """Carga la configuración de quality gates."""
-    gates_file = Path("quality_gates.yml")
+    gates_file = Path("config/quality_gates.yml")
     if not gates_file.exists():
         print("⚠️  quality_gates.yml no encontrado, usando configuración por defecto")
         return simple_yaml_load(gates_file)
@@ -263,7 +263,7 @@ def main():
     args = parser.parse_args()
 
     # Verificar que estamos en el directorio correcto
-    if not Path("quality_gates.yml").exists():
+    if not Path("config/quality_gates.yml").exists():
         print("❌ Error: Ejecutar desde el directorio raíz del proyecto AEGEN")
         sys.exit(1)
 

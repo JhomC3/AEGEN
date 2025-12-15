@@ -32,7 +32,7 @@ dependencies = [
     "langgraph",
     "langsmith",
     "numpy",
-    "faster-whisper",
+    # "faster-whisper",  # Eliminado para optimización de memoria (GCP Free Tier)
     "pandas",
     "psutil",
     "pydantic-settings",
@@ -44,7 +44,6 @@ dependencies = [
     "structlog",
     "uvicorn[standard]>=0.29.0,<0.30.0",
     "python-telegram-bot[job-queue]>=21.0.1,<22.0.0",
-    "chromadb",
     "Pillow",
     "pytesseract",
     "pypdf",
