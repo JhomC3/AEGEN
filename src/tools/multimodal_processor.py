@@ -14,7 +14,7 @@ from langchain_core.tools import tool
 
 from src.tools.document_processing import DocumentProcessor
 from src.tools.image_processing import ImageToText
-from src.tools.speech_processing import transcribe_with_whisper
+from src.tools.speech_processing import transcribe_audio
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +40,11 @@ PROCESSOR_REGISTRY: dict[str, Callable[[str, str], Awaitable[dict[str, Any]]]] =
     ".jpeg": lambda path, name: _image_processor.image_to_text_tool(file_path=path),
     ".webp": lambda path, name: _image_processor.image_to_text_tool(file_path=path),
     
-    # Audio (delega a transcribe_with_whisper)
-    ".mp3": lambda path, name: transcribe_with_whisper.ainvoke({"audio_path": path}),
-    ".wav": lambda path, name: transcribe_with_whisper.ainvoke({"audio_path": path}),
-    ".ogg": lambda path, name: transcribe_with_whisper.ainvoke({"audio_path": path}),
-    ".m4a": lambda path, name: transcribe_with_whisper.ainvoke({"audio_path": path}),
+    # Audio (delega a transcribe_audio)
+    ".mp3": lambda path, name: transcribe_audio.ainvoke({"audio_path": path}),
+    ".wav": lambda path, name: transcribe_audio.ainvoke({"audio_path": path}),
+    ".ogg": lambda path, name: transcribe_audio.ainvoke({"audio_path": path}),
+    ".m4a": lambda path, name: transcribe_audio.ainvoke({"audio_path": path}),
 }
 
 logger.info(f"MultimodalProcessor initialized with support for: {list(PROCESSOR_REGISTRY.keys())}")

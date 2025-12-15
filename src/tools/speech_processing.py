@@ -1,103 +1,82 @@
-import asyncio
 import logging
+import mimetypes
+import os
 from typing import Any
 
-from faster_whisper import WhisperModel
+import google.generativeai as genai
 from langchain_core.tools import tool
 
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)
 
+# Configurar Gemini API
+if settings.GOOGLE_API_KEY:
+    genai.configure(api_key=settings.GOOGLE_API_KEY.get_secret_value())
 
-class WhisperModelManager:
-    """
-    Gestiona la carga y el acceso al modelo FasterWhisper.
-    Asegura que el modelo se cargue una sola vez (patrón singleton).
-    """
-
-    _instance = None
-
-    # Declarar atributos de instancia para que mypy los reconozca
-    model_name: str
-    logger: logging.Logger
-    _whisper_model: WhisperModel | None = None
-
-    def __new__(cls, model_name: str = settings.DEFAULT_WHISPER_MODEL):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls._instance.model_name = model_name
-            cls._instance.logger = logging.getLogger(cls.__name__)
-            cls._instance.logger.info(
-                f"FasterWhisperModelManager inicializado con el modelo: {model_name}"
-            )
-        return cls._instance
-
-    async def get_model(self) -> WhisperModel:
-        """
-        Carga el modelo FasterWhisper si aún no está cargado y lo devuelve.
-        La carga se realiza en un hilo separado para no bloquear el bucle de eventos.
-        """
-        if self._whisper_model is None:
-            self.logger.info(f"Cargando el modelo FasterWhisper: {self.model_name}...")
-            self._whisper_model = await asyncio.to_thread(
-                WhisperModel, self.model_name, device="cpu", compute_type="float32"
-            )
-            self.logger.info(
-                f"Modelo FasterWhisper '{self.model_name}' cargado con éxito."
-            )
-        return self._whisper_model
-
-
-# Instancia única del gestor del modelo para toda la aplicación
-whisper_manager = WhisperModelManager()
-
-# Estadísticas a nivel de módulo para mantener un seguimiento
+# Estadísticas a nivel de módulo
 transcription_stats = {"transcriptions": 0, "errors": 0}
 
 
 @tool
-async def transcribe_with_whisper(audio_path: str) -> dict[str, Any]:
+async def transcribe_audio(audio_path: str) -> dict[str, Any]:
     """
-    Toma un archivo de audio, lo transcribe usando FasterWhisper y devuelve el texto.
+    Toma un archivo de audio, lo sube a Gemini API y devuelve la transcripción.
+    Reemplaza a la implementación local de Whisper para ahorrar memoria (1GB RAM target).
     """
     try:
-        logger.info(f"Iniciando transcripción para el archivo: {audio_path}")
-        logger.info(
-            f"Usando modelo optimizado: {whisper_manager.model_name} (float32, español, VAD optimizado)"
+        logger.info(f"Iniciando transcripción con Gemini API para: {audio_path}")
+
+        if not os.path.exists(audio_path):
+            raise FileNotFoundError(f"El archivo de audio no existe: {audio_path}")
+
+        # Determinar MIME type
+        mime_type, _ = mimetypes.guess_type(audio_path)
+        if not mime_type:
+            mime_type = "audio/mp3"  # Default fallback
+
+        # 1. Subir archivo a Gemini (File API)
+        logger.info(f"Subiendo archivo a Gemini File API ({mime_type})...")
+        audio_file = genai.upload_file(path=audio_path, mime_type=mime_type)
+        
+        # 2. Configurar modelo
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        
+        # 3. Generar transcripción
+        prompt = """
+        Transcribe el siguiente archivo de audio exactamente como se escucha.
+        Devuelve SOLO un objeto JSON con este formato:
+        {
+            "transcript": "texto transcrito aquí",
+            "language": "código de idioma detectado (ej: es, en)"
+        }
+        """
+        
+        logger.info("Solicitando transcripción a Gemini 1.5 Flash...")
+        response = model.generate_content(
+            [prompt, audio_file],
+            generation_config={"response_mime_type": "application/json"}
         )
-        model = await whisper_manager.get_model()
-
-        # Ejecutar la transcripción (que es bloqueante) en un hilo separado
-        # FasterWhisper devuelve (segments, info) tupla
-        def _transcribe():
-            segments, info = model.transcribe(
-                audio_path,
-                beam_size=5,
-                language="es",  # Forzar español para mayor precisión
-                vad_filter=True,  # Activa Voice Activity Detection para conversaciones
-                vad_parameters={"min_silence_duration_ms": 700},  # VAD menos agresivo
-            )
-            # Combinar todos los segmentos en texto completo
-            transcript = "".join([segment.text for segment in segments])
-            return transcript, info.language
-
-        transcript, language = await asyncio.to_thread(_transcribe)
-
-        audio_info = {
-            "transcript": transcript.strip(),
-            "language": language,
+        
+        # 4. Procesar respuesta
+        import json
+        result = json.loads(response.text)
+        
+        # Limpiar archivo remoto (opcional, pero buena práctica si son muchos)
+        # audio_file.delete() 
+        
+        logger.info(f"Transcripción completa. Idioma: {result.get('language')}")
+        transcription_stats["transcriptions"] += 1
+        
+        return {
+            "transcript": result.get("transcript", ""),
+            "language": result.get("language", "unknown")
         }
 
-        logger.info(f"Transcripción completa para: {audio_path}")
-        transcription_stats["transcriptions"] += 1
-        return audio_info
-
     except Exception as e:
-        error_message = f"Ocurrió un error al transcribir el audio: {e}"
+        error_message = f"Error al transcribir audio con Gemini: {e}"
         logger.error(f"{error_message}", exc_info=True)
         transcription_stats["errors"] += 1
-        # Propagar la excepción para que el workflow la maneje
         raise
 
 

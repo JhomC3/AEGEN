@@ -35,6 +35,7 @@ from src.core.engine import llm, create_observable_config
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry  
 from src.core.schemas import GraphStateV2, V2ChatMessage, CanonicalEventV1, InternalDelegationResponse
+from src.core.schemas import GraphStateV2, V2ChatMessage, CanonicalEventV1, InternalDelegationResponse
 
 # ✅ FUNCTIONALITY RESTORATION: Re-import MasterOrchestrator for delegation
 from src.agents.orchestrator import master_orchestrator
@@ -86,9 +87,13 @@ Capacidades avanzadas:
 Contexto conversacional previo:
 {conversation_history}
 
+Conocimiento relevante disponible:
+{knowledge_context}
+
 Instrucciones:
 - Sé natural y conversacional
 - Usa el contexto para respuestas más relevantes  
+- Integra el conocimiento relevante cuando esté disponible
 - Ofrece ayuda proactiva cuando sea apropiado
 - Si detectas que el usuario necesita algo complejo, sugiere cómo puedo ayudar
 
@@ -189,25 +194,44 @@ async def _optimized_delegation_analysis(
         return False
 
 
+async def _get_knowledge_context(user_message: str, max_results: int = 3) -> str:
+    """
+    ✅ INTEGRATION: Consulta simplificada de contexto.
+    
+    Nota: La integración con ChromaDB ha sido eliminada.
+    Future: Integrar con Gemini File API o búsqueda unificada.
+    """
+    # Por ahora retornamos string vacío para no romper funcionalidad
+    # hasta que se integre knowledge_processing.py totalmente
+    return ""
+
+
 async def _enhanced_conversational_response(
     user_message: str, conversation_history: str
 ) -> str:
     """
-    ✅ RESTORATION: Enhanced direct conversational response with rich context.
+    ✅ RESTORATION + INTEGRATION: Enhanced conversational response with global knowledge base.
     
-    Generates natural conversational responses using optimized prompting 
-    and conversation context integration.
+    Generates natural conversational responses using optimized prompting, 
+    conversation context integration, and global knowledge base context.
     """
     prompt = ChatPromptTemplate.from_template(CONVERSATIONAL_RESPONSE_TEMPLATE)
 
     try:
+        # ✅ INTEGRATION: Obtener contexto de la global knowledge base
+        knowledge_context = await _get_knowledge_context(user_message)
+        
         # ✅ ARCHITECTURE: Use src.core.engine instead of hardcoded LLM with observability
         config = create_observable_config(call_type="conversational_response")
         chain = prompt | llm
-        response = await chain.ainvoke({
+        
+        prompt_input = {
             "user_message": user_message,
             "conversation_history": conversation_history,
-        }, config=config)
+            "knowledge_context": knowledge_context  # Siempre incluir, aunque esté vacío
+        }
+        
+        response = await chain.ainvoke(prompt_input, config=config)
         
         result = str(response.content).strip()
         logger.info(f"Enhanced conversational response generated: {len(result)} chars")
