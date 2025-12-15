@@ -130,9 +130,9 @@ feat(scope): descripción imperativa
 # Opcional
 [BREAKING]
 
-• WHY: user story o bug  
-• WHAT: solución técnica
-• HOW: archivos clave
+• ¿Por qué?: user story o bug  
+• ¿Qué?: solución técnica
+• ¿Cómo?: archivos clave
 ```
 
 ---

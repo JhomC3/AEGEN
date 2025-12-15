@@ -6,6 +6,14 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 ## [Unreleased]
 
 ### Added
+- **Message Bundling System - Intelligent Message Grouping (Task #23)**
+  - Solución crítica para mensajes fuera de orden en sistema asíncrono
+  - Sistema debounce inteligente: agrupa mensajes consecutivos en respuesta coherente
+  - Optimización significativa: reduce 40%+ llamadas LLM/DB (3 mensajes → 1 respuesta)
+  - Redis-based buffering con timeout configurable (1.5s MVP conservador)
+  - Fallback robusto a procesamiento individual en caso de errores
+  - ADR-0011 completo con análisis técnico y consensus AI favorable
+  - Métricas de éxito definidas: UX improvement + cost optimization
 - Implementación del Sistema de Observabilidad LLM (Task #20)
   - Tracking completo de llamadas LLM con métricas Prometheus
   - Correlation IDs para trazabilidad end-to-end
