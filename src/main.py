@@ -13,8 +13,8 @@ from src import agents  # noqa: F401
 from src.api.routers import analysis, llm_metrics, status, webhooks
 from src.core.config import settings
 from src.core.dependencies import (
-    initialize_global_resources,
     initialize_global_collections,
+    initialize_global_resources,
     prime_dependencies,
     shutdown_global_resources,
 )
@@ -54,7 +54,7 @@ async def lifespan(app: FastAPI):
 
     # "Calienta" las dependencias singleton
     prime_dependencies()
-    
+
     # Inicializar collections globales reservadas
     logger.info("Lifespan: Initializing global collections...")
     await initialize_global_collections()

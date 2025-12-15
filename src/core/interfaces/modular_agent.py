@@ -1,6 +1,6 @@
 # src/core/interfaces/modular_agent.py
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Protocol
+from typing import Any, Protocol
 
 from src.core.schemas import AgentCapability, AgentContext, AgentResult
 
@@ -14,7 +14,7 @@ class BaseModularAgent(Protocol):
         pass
 
     @abstractmethod
-    def get_capabilities(self) -> List[AgentCapability]:
+    def get_capabilities(self) -> list[AgentCapability]:
         """Retorna las capacidades que ofrece este agente."""
         pass
 
@@ -27,11 +27,11 @@ class BaseModularAgent(Protocol):
 class ModularAgentBase(ABC):
     """Clase base opcional para implementaciones de BaseModularAgent."""
 
-    def __init__(self, name: str, capabilities: List[AgentCapability]):
+    def __init__(self, name: str, capabilities: list[AgentCapability]):
         self.name = name
         self._capabilities = capabilities
 
-    def get_capabilities(self) -> List[AgentCapability]:
+    def get_capabilities(self) -> list[AgentCapability]:
         """Retorna capacidades configuradas."""
         return self._capabilities.copy()
 
@@ -48,7 +48,7 @@ class ModularAgentBase(ABC):
             "memory_store": AgentCapability.MEMORY_MANAGEMENT,
             "validate_input": AgentCapability.VALIDATION,
         }
-        
+
         required_capability = capability_mapping.get(task_type)
         return required_capability in self._capabilities if required_capability else False
 
@@ -58,10 +58,10 @@ class ModularAgentBase(ABC):
         pass
 
     def _create_success_result(
-        self, 
-        data: Any, 
-        message: Optional[str] = None,
-        next_agents: Optional[List[str]] = None
+        self,
+        data: Any,
+        message: str | None = None,
+        next_agents: list[str] | None = None
     ) -> AgentResult:
         """Crea resultado exitoso."""
         return AgentResult(
@@ -72,9 +72,9 @@ class ModularAgentBase(ABC):
         )
 
     def _create_error_result(
-        self, 
-        error_message: str, 
-        error_details: Optional[str] = None
+        self,
+        error_message: str,
+        error_details: str | None = None
     ) -> AgentResult:
         """Crea resultado de error."""
         return AgentResult(

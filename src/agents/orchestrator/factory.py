@@ -8,15 +8,15 @@ con todas sus dependencies inyectadas correctamente.
 
 import logging
 import threading
-from typing import Any, Dict, Optional
+from typing import Any
 
 from src.core.registry import specialist_registry
 
 from .graph_builder import OrchestratorGraphBuilder
 from .master_orchestrator import MasterOrchestrator
 from .routing.chaining_router import ConfigurableChainRouter
-from .routing.event_router import EventRouter
 from .routing.enhanced_router import EnhancedFunctionCallingRouter
+from .routing.event_router import EventRouter
 from .specialist_cache import OptimizedSpecialistCache
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class OrchestratorFactory:
 
     @staticmethod
     def create_orchestrator(
-        chaining_config: Optional[Dict[str, Any]] = None,
+        chaining_config: dict[str, Any] | None = None,
     ) -> MasterOrchestrator:
         """
         Crea MasterOrchestrator completamente configurado.
@@ -80,8 +80,8 @@ class OrchestratorFactory:
     @staticmethod
     def _create_routing_strategies(
         specialist_cache: OptimizedSpecialistCache,
-        chaining_config: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        chaining_config: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """
         Crea todas las routing strategies necesarias.
 
@@ -107,7 +107,7 @@ class OrchestratorFactory:
         return strategies
 
     @staticmethod
-    def _get_default_chaining_config() -> Dict[str, Any]:
+    def _get_default_chaining_config() -> dict[str, Any]:
         """
         Retorna configuración por defecto para mantener compatibilidad Phase 3B.
 
@@ -136,7 +136,7 @@ class LazyMasterOrchestrator:
     usando el patrón Singleton con double-check locking.
     """
 
-    _instance: Optional[MasterOrchestrator] = None
+    _instance: MasterOrchestrator | None = None
     _lock = threading.Lock()
 
     def _get_instance(self) -> MasterOrchestrator:

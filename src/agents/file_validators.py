@@ -13,7 +13,7 @@ ALLOWED_EXTENSIONS = {
 ALLOWED_MIME_TYPES = {
     'text/plain', 'text/markdown', 'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation', 
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'text/csv'
 }
@@ -27,14 +27,14 @@ class FileValidator:
         """Valida existencia y acceso del archivo."""
         if not file_path:
             raise ValueError("File path cannot be empty")
-        
+
         path = Path(file_path)
         if not path.exists():
             raise FileNotFoundError(f"File does not exist: {file_path}")
-        
+
         if not path.is_file():
             raise ValueError(f"Path is not a file: {file_path}")
-        
+
         if not os.access(file_path, os.R_OK):
             raise PermissionError(f"File is not readable: {file_path}")
 
@@ -44,7 +44,7 @@ class FileValidator:
         file_size = os.path.getsize(file_path)
         if file_size > MAX_FILE_SIZE:
             raise ValueError(f"File too large: {file_size} bytes (max: {MAX_FILE_SIZE})")
-        
+
         if file_size == 0:
             raise ValueError("File is empty")
 
@@ -68,15 +68,15 @@ class FileValidator:
         """Sanitiza contenido extraído."""
         if not content or not content.strip():
             raise ValueError("Extracted content is empty")
-        
+
         # Remove harmful characters
         sanitized = content.replace('\x00', '')
         sanitized = ''.join(char for char in sanitized if ord(char) >= 32 or char in '\n\r\t')
-        
+
         # Limit content size
         if len(sanitized) > MAX_CONTENT_SIZE:
             sanitized = sanitized[:MAX_CONTENT_SIZE] + "\n[... content truncated ...]"
-        
+
         return sanitized.strip()
 
     @classmethod

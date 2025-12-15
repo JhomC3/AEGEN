@@ -23,26 +23,26 @@ llm = ChatGoogleGenerativeAI(
 def create_observable_config(call_type: str = "general", config: dict = None):
     """
     Crea configuración con observabilidad automática.
-    
+
     Args:
         call_type: Tipo de llamada para métricas
         config: Configuración base existente
-        
+
     Returns:
         Configuración con handler de observabilidad
     """
     from src.core.observability.handler import LLMObservabilityHandler
-    
+
     if config is None:
         config = {}
-    
+
     if "callbacks" not in config:
         config["callbacks"] = []
-    
+
     # Agregar handler de observabilidad
     observability_handler = LLMObservabilityHandler(call_type=call_type)
     config["callbacks"].append(observability_handler)
-    
+
     return config
 
 

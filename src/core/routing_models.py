@@ -7,7 +7,8 @@ de routing determinísticas basadas en análisis LLM structured.
 """
 
 from enum import Enum
-from typing import List, Optional, Dict, Any
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -28,7 +29,7 @@ class EntityInfo(BaseModel):
     type: str = Field(description="Tipo de entidad (email, url, document, etc.)")
     value: str = Field(description="Valor extraído de la entidad")
     confidence: float = Field(ge=0.0, le=1.0, description="Confianza en extracción")
-    position: Optional[int] = Field(None, description="Posición en texto original")
+    position: int | None = Field(None, description="Posición en texto original")
 
 
 class RoutingDecision(BaseModel):
@@ -37,19 +38,19 @@ class RoutingDecision(BaseModel):
     confidence: float = Field(ge=0.0, le=1.0, description="Confianza en clasificación")
     target_specialist: str = Field(description="Especialista objetivo para routing")
     requires_tools: bool = Field(description="Si requiere herramientas especializadas")
-    
+
     # Información NLP integrada
-    entities: List[EntityInfo] = Field(default_factory=list, description="Entidades extraídas")
-    subintent: Optional[str] = Field(None, description="Sub-intención específica")
-    
+    entities: list[EntityInfo] = Field(default_factory=list, description="Entidades extraídas")
+    subintent: str | None = Field(None, description="Sub-intención específica")
+
     # Metadata para debugging y optimización
-    processing_metadata: Dict[str, Any] = Field(
-        default_factory=dict, 
+    processing_metadata: dict[str, Any] = Field(
+        default_factory=dict,
         description="Metadata del procesamiento"
     )
-    
+
     # Sugerencias para pipeline
-    next_actions: List[str] = Field(
+    next_actions: list[str] = Field(
         default_factory=list,
         description="Acciones sugeridas post-routing"
     )
@@ -60,5 +61,5 @@ class RoutingContext(BaseModel):
     user_id: str
     session_id: str
     conversation_history_length: int = 0
-    previous_intent: Optional[IntentType] = None
-    available_specialists: List[str] = Field(default_factory=list)
+    previous_intent: IntentType | None = None
+    available_specialists: list[str] = Field(default_factory=list)

@@ -6,10 +6,10 @@ Responsabilidad única: gestionar operaciones de cache Redis
 con estrategias de fallback y health monitoring.
 """
 
-import logging
-from typing import Dict, Any, List, Optional
 import json
-from datetime import datetime, timezone
+import logging
+from datetime import UTC, datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -21,9 +21,9 @@ class RedisFallbackManager:
         # En implementación real se inyectaría cliente Redis
         self.redis_client = redis_client
         self.logger = logging.getLogger(__name__)
-        self._mock_cache: Dict[str, Dict[str, Any]] = {}  # Mock para development
+        self._mock_cache: dict[str, dict[str, Any]] = {}  # Mock para development
 
-    async def get_from_redis_or_fallback(self, user_id: str, query: str) -> List[Dict[str, Any]]:
+    async def get_from_redis_or_fallback(self, user_id: str, query: str) -> list[dict[str, Any]]:
         """Obtiene datos de Redis o indica necesidad de fallback."""
         try:
             # Verificar health de Redis primero
@@ -32,7 +32,7 @@ class RedisFallbackManager:
                 return []
 
             cache_key = self._build_cache_key(user_id, query)
-            
+
             if self.redis_client:
                 # Implementación real con Redis
                 cached_data = await self.redis_client.get(cache_key)
@@ -50,16 +50,16 @@ class RedisFallbackManager:
             self.logger.error(f"Failed Redis lookup for user {user_id}: {e}", exc_info=True)
             return []
 
-    async def cache_to_redis(self, user_id: str, key: str, data: Dict[str, Any], ttl: int) -> bool:
+    async def cache_to_redis(self, user_id: str, key: str, data: dict[str, Any], ttl: int) -> bool:
         """Almacena datos en Redis con TTL."""
         try:
             cache_key = self._build_cache_key(user_id, key)
-            
+
             cache_entry = {
                 'data': data,
-                'cached_at': datetime.now(timezone.utc).isoformat(),
+                'cached_at': datetime.now(UTC).isoformat(),
                 'ttl': ttl,
-                'expires_at': datetime.now(timezone.utc).timestamp() + ttl
+                'expires_at': datetime.now(UTC).timestamp() + ttl
             }
 
             if self.redis_client:
@@ -83,7 +83,7 @@ class RedisFallbackManager:
             'type': 'context',
             'user_id': user_id
         }
-        
+
         context_key = f"context_{hash(content) % 10000}"
         return await self.cache_to_redis(user_id, context_key, context_data, ttl)
 
@@ -101,7 +101,7 @@ class RedisFallbackManager:
             else:
                 # Mock implementation
                 keys_to_delete = [
-                    key for key in self._mock_cache.keys() 
+                    key for key in self._mock_cache.keys()
                     if user_id in key and pattern in key
                 ]
                 for key in keys_to_delete:
@@ -128,16 +128,16 @@ class RedisFallbackManager:
             self.logger.warning(f"Redis health check failed: {e}")
             return False
 
-    async def get_persistent_data(self, user_id: str) -> List[Dict[str, Any]]:
+    async def get_persistent_data(self, user_id: str) -> list[dict[str, Any]]:
         """Obtiene datos que necesitan persistencia a ChromaDB."""
         try:
             persistent_data = []
-            
+
             if self.redis_client:
                 # Implementación real - buscar datos marcados para persistencia
                 pattern = self._build_cache_key(user_id, "*persistent*")
                 keys = await self.redis_client.keys(pattern)
-                
+
                 for key in keys:
                     data = await self.redis_client.get(key)
                     if data:
@@ -159,17 +159,17 @@ class RedisFallbackManager:
         try:
             if not self.redis_client:
                 # Mock cleanup
-                current_time = datetime.now(timezone.utc).timestamp()
+                current_time = datetime.now(UTC).timestamp()
                 expired_keys = [
                     key for key, entry in self._mock_cache.items()
                     if entry.get('expires_at', 0) < current_time
                 ]
-                
+
                 for key in expired_keys:
                     del self._mock_cache[key]
-                
+
                 return len(expired_keys)
-            
+
             # Redis auto-expiry, return 0
             return 0
 
@@ -181,7 +181,7 @@ class RedisFallbackManager:
         """Construye clave de cache con namespace."""
         return f"aegen:user:{user_id}:{key}"
 
-    def _is_expired(self, cache_entry: Dict[str, Any]) -> bool:
+    def _is_expired(self, cache_entry: dict[str, Any]) -> bool:
         """Verifica si entrada de cache ha expirado."""
         expires_at = cache_entry.get('expires_at', 0)
-        return datetime.now(timezone.utc).timestamp() > expires_at
+        return datetime.now(UTC).timestamp() > expires_at

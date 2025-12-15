@@ -1,14 +1,13 @@
 # src/agents/file_readers.py
 import csv
 from collections.abc import Callable
-from typing import Dict
 
 import docx
 import openpyxl
 import pptx
 import pypdf
 
-READER_REGISTRY: Dict[str, Callable[[str], str]] = {}
+READER_REGISTRY: dict[str, Callable[[str], str]] = {}
 
 
 def register_reader(*extensions: str):
@@ -42,8 +41,8 @@ def read_pdf(file_path: str) -> str:
                 if text:
                     content.append(text)
     except Exception as e:
-        raise ValueError(f"Error reading PDF: {str(e)}")
-    
+        raise ValueError(f"Error reading PDF: {str(e)}") from e
+
     if not content:
         raise ValueError("PDF appears to be empty")
     return "\n\n".join(content)
@@ -59,7 +58,7 @@ def read_docx(file_path: str) -> str:
             raise ValueError("DOCX is empty")
         return "\n".join(paragraphs)
     except Exception as e:
-        raise ValueError(f"Error reading DOCX: {str(e)}")
+        raise ValueError(f"Error reading DOCX: {str(e)}") from e
 
 
 @register_reader(".pptx")
@@ -76,7 +75,7 @@ def read_pptx(file_path: str) -> str:
             raise ValueError("PPTX is empty")
         return "\n".join(content)
     except Exception as e:
-        raise ValueError(f"Error reading PPTX: {str(e)}")
+        raise ValueError(f"Error reading PPTX: {str(e)}") from e
 
 
 @register_reader(".xlsx")
@@ -94,7 +93,7 @@ def read_xlsx(file_path: str) -> str:
             raise ValueError("XLSX is empty")
         return "\n".join(content)
     except Exception as e:
-        raise ValueError(f"Error reading XLSX: {str(e)}")
+        raise ValueError(f"Error reading XLSX: {str(e)}") from e
 
 
 @register_reader(".csv")
@@ -111,4 +110,4 @@ def read_csv(file_path: str) -> str:
             raise ValueError("CSV is empty")
         return "\n".join(content)
     except Exception as e:
-        raise ValueError(f"Error reading CSV: {str(e)}")
+        raise ValueError(f"Error reading CSV: {str(e)}") from e

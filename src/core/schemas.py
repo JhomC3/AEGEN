@@ -615,7 +615,7 @@ class AgentContext(BaseModel):
     previous_results: list[dict[str, Any]] = Field(
         default_factory=list, description="Resultados de agentes anteriores"
     )
-    
+
     def get_metadata(self, key: str, default: Any = None) -> Any:
         """Obtiene metadata específica con valor por defecto."""
         return self.metadata.get(key, default)
@@ -634,12 +634,12 @@ class AgentResult(BaseModel):
     next_suggested_agents: list[str] = Field(
         default_factory=list, description="Agentes sugeridos para siguiente paso"
     )
-    
+
     @property
     def is_success(self) -> bool:
         """Indica si la ejecución fue exitosa (completa o parcial)."""
         return self.status in [AgentResultStatus.SUCCESS, AgentResultStatus.PARTIAL_SUCCESS]
-    
+
     def get_metadata(self, key: str, default: Any = None) -> Any:
         """Obtiene metadata específica con valor por defecto."""
         return self.metadata.get(key, default)

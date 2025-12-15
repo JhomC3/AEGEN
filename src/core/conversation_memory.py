@@ -1,7 +1,7 @@
 # src/core/conversation_memory.py
 import logging
 from datetime import datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 from src.core.session_manager import SessionManager
 
@@ -20,7 +20,7 @@ class ConversationMemory:
         chat_id: str,
         include_vector: bool = False, # Deprecated, kept for compatibility
         include_session: bool = True
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Obtiene contexto conversacional (Solo Redis)."""
         context = {
             "user_id": user_id,
@@ -29,15 +29,15 @@ class ConversationMemory:
             "session_context": None,
             "timestamp": datetime.utcnow().isoformat()
         }
-        
+
         try:
             if include_session and self.session_manager:
                 session_context = await self.session_manager.get_session(chat_id)
                 context["session_context"] = session_context
-            
+
             logger.info(f"Retrieved conversation context for user {user_id}, chat {chat_id}")
             return context
-            
+
         except Exception as e:
             logger.error(f"Failed to get conversation context: {e}", exc_info=True)
             return context
@@ -48,7 +48,7 @@ class ConversationMemory:
         chat_id: str,
         user_message: str,
         assistant_response: str,
-        metadata: Optional[Dict[str, Any]] = None
+        metadata: dict[str, Any] | None = None
     ) -> bool:
         """
         Almacena un turno de conversación.

@@ -7,7 +7,7 @@ Todas las responsabilidades complejas delegadas a strategies inyectadas.
 """
 
 import logging
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 from src.core.schemas import GraphStateV2
 
@@ -36,7 +36,7 @@ class MasterOrchestrator:
     def __init__(
         self,
         graph_builder: GraphBuilder,
-        routing_strategies: Dict[str, RoutingStrategy],
+        routing_strategies: dict[str, RoutingStrategy],
         specialist_cache: SpecialistCache,
     ):
         """
@@ -97,7 +97,7 @@ class MasterOrchestrator:
                 await self._routing_strategies["event_router"].route(state)
             else:
                 logger.warning(f"[{session_id}] EventRouter no disponible para evento tipo '{event.event_type}'.")
-        
+
         logger.info(f"[{session_id}] Meta-routing finalizado. Próximo nodo tentativo: {state.get('payload', {}).get('next_node')}")
         return state
 
@@ -177,7 +177,7 @@ class MasterOrchestrator:
                 next_specialist = payload.get("next_specialist")
                 if next_specialist:
                     decision = next_specialist
-        
+
         logger.info(f"[{session_id}] Decisión de enrutamiento en cadena: dirigir a '{decision}'")
         return decision
 
@@ -208,7 +208,7 @@ class MasterOrchestrator:
             initial_state["error_message"] = f"Error de ejecución: {e}"
             return dict(initial_state)
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Retorna estadísticas del cache para monitoring."""
         return self._cache.get_cache_stats()
 

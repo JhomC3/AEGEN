@@ -9,8 +9,8 @@ from fastapi import APIRouter, BackgroundTasks, status
 
 from src.agents.orchestrator.factory import master_orchestrator
 from src.core import schemas
-from src.core.schemas import GraphStateV2
 from src.core.middleware import correlation_id
+from src.core.schemas import GraphStateV2
 from src.core.session_manager import session_manager
 from src.tools import telegram_interface
 

@@ -9,7 +9,7 @@ from .handler import LLMObservabilityHandler
 from .metrics import LLMCallMetrics
 
 __all__ = [
-    "get_correlation_id", 
+    "get_correlation_id",
     "set_correlation_id",
     "LLMObservabilityHandler",
     "LLMCallMetrics"

@@ -1,7 +1,6 @@
 # tests/test_file_handler_agent.py
 import os
 import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -48,12 +47,12 @@ class TestFileHandlerAgent:
 
     def test_can_handle_file_tasks(self, agent):
         """Test que puede manejar tareas de archivos."""
-        assert agent.can_handle("file_upload") == True
-        assert agent.can_handle("file_parse") == True
-        assert agent.can_handle("document_processing") == True
-        assert agent.can_handle("content_extraction") == True
-        assert agent.can_handle("file_validation") == True
-        assert agent.can_handle("other_task") == False
+        assert agent.can_handle("file_upload") is True
+        assert agent.can_handle("file_parse") is True
+        assert agent.can_handle("document_processing") is True
+        assert agent.can_handle("content_extraction") is True
+        assert agent.can_handle("file_validation") is True
+        assert agent.can_handle("other_task") is False
 
     @pytest.mark.asyncio
     async def test_process_valid_txt_file(self, agent, context, temp_txt_file):
@@ -62,9 +61,9 @@ class TestFileHandlerAgent:
             "file_path": temp_txt_file,
             "file_name": "test.txt"
         }
-        
+
         result = await agent.execute(input_data, context)
-        
+
         assert result.status == "success"
         assert "Test content" in result.data["content"]
         assert result.data["file_name"] == "test.txt"
@@ -76,9 +75,9 @@ class TestFileHandlerAgent:
     async def test_missing_file_path(self, agent, context):
         """Test error con file_path faltante."""
         input_data = {"file_name": "test.txt"}
-        
+
         result = await agent.execute(input_data, context)
-        
+
         assert result.status == "error"
         assert "Missing 'file_path'" in result.message
 
@@ -86,9 +85,9 @@ class TestFileHandlerAgent:
     async def test_invalid_input_format(self, agent, context):
         """Test error con formato de input inválido."""
         input_data = "invalid input"
-        
+
         result = await agent.execute(input_data, context)
-        
+
         assert result.status == "error"
         assert "Invalid input" in result.message
 
@@ -98,9 +97,9 @@ class TestFileHandlerAgent:
         input_data = {
             "file_path": "/nonexistent/file.txt"
         }
-        
+
         result = await agent.execute(input_data, context)
-        
+
         assert result.status == "error"
         assert "File does not exist" in result.message
 
@@ -110,9 +109,9 @@ class TestFileHandlerAgent:
         input_data = {
             "file_path": empty_txt_file
         }
-        
+
         result = await agent.execute(input_data, context)
-        
+
         assert result.status == "error"
         assert "empty" in result.message.lower()
 
@@ -122,11 +121,11 @@ class TestFileHandlerAgent:
         with tempfile.NamedTemporaryFile(suffix='.exe', delete=False) as f:
             f.write(b"binary content")
             temp_path = f.name
-        
+
         try:
             input_data = {"file_path": temp_path}
             result = await agent.execute(input_data, context)
-            
+
             assert result.status == "error"
             assert "not allowed" in result.message
         finally:

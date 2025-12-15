@@ -15,28 +15,28 @@ async def test_memory_functionality():
     """Test básico de funcionalidad de memoria."""
     try:
         from src.agents.specialists.chat_agent import _get_knowledge_context
-        
+
         # Probar que la función de knowledge context funciona sin errores
         print("🧠 Probando integración de memory...")
-        
+
         # Simular consulta (aunque la base esté vacía)
         context = await _get_knowledge_context("test query")
         print(f"✅ Knowledge context function works: {len(context)} chars returned")
-        
+
         # Probar chat agent tool
         from src.agents.specialists.chat_agent import conversational_chat_tool
-        
+
         print("💬 Probando ChatAgent con memory integration...")
         result = await conversational_chat_tool.ainvoke({
             "user_message": "Hola, ¿qué es la terapia cognitiva?",
             "conversation_history": ""
         })
-        
+
         print(f"✅ ChatAgent response: {result[:100]}...")
-        
+
         print("\n🎉 ÉXITO: La integración de memoria funciona correctamente!")
         return True
-        
+
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback

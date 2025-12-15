@@ -38,10 +38,10 @@ async def transcribe_audio(audio_path: str) -> dict[str, Any]:
         # 1. Subir archivo a Gemini (File API)
         logger.info(f"Subiendo archivo a Gemini File API ({mime_type})...")
         audio_file = genai.upload_file(path=audio_path, mime_type=mime_type)
-        
+
         # 2. Configurar modelo
         model = genai.GenerativeModel("gemini-1.5-flash")
-        
+
         # 3. Generar transcripción
         prompt = """
         Transcribe el siguiente archivo de audio exactamente como se escucha.
@@ -51,23 +51,23 @@ async def transcribe_audio(audio_path: str) -> dict[str, Any]:
             "language": "código de idioma detectado (ej: es, en)"
         }
         """
-        
+
         logger.info("Solicitando transcripción a Gemini 1.5 Flash...")
         response = model.generate_content(
             [prompt, audio_file],
             generation_config={"response_mime_type": "application/json"}
         )
-        
+
         # 4. Procesar respuesta
         import json
         result = json.loads(response.text)
-        
+
         # Limpiar archivo remoto (opcional, pero buena práctica si son muchos)
-        # audio_file.delete() 
-        
+        # audio_file.delete()
+
         logger.info(f"Transcripción completa. Idioma: {result.get('language')}")
         transcription_stats["transcriptions"] += 1
-        
+
         return {
             "transcript": result.get("transcript", ""),
             "language": result.get("language", "unknown")

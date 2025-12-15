@@ -7,7 +7,7 @@ principios de dependency inversion y clean architecture.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List
+from typing import Any
 
 from src.core.registry import SpecialistRegistry
 from src.core.schemas import GraphStateV2
@@ -46,7 +46,7 @@ class GraphBuilder(ABC):
     """
 
     @abstractmethod
-    def build(self, routing_functions: Dict[str, Any]) -> Any:
+    def build(self, routing_functions: dict[str, Any]) -> Any:
         """
         Construye y retorna el grafo de orquestación.
 
@@ -73,17 +73,17 @@ class SpecialistCache(ABC):
         pass
 
     @abstractmethod
-    def get_routable_specialists(self) -> List[Any]:
+    def get_routable_specialists(self) -> list[Any]:
         """Retorna lista de especialistas enrutables (cached)."""
         pass
 
     @abstractmethod
-    def get_routable_tools(self) -> List[Any]:
+    def get_routable_tools(self) -> list[Any]:
         """Retorna lista de herramientas enrutables (cached)."""
         pass
 
     @abstractmethod
-    def get_tool_to_specialist_map(self) -> Dict[str, str]:
+    def get_tool_to_specialist_map(self) -> dict[str, str]:
         """Retorna mapeo tool_name -> specialist_name (O(1) lookup)."""
         pass
 
@@ -98,6 +98,6 @@ class SpecialistCache(ABC):
         pass
 
     @abstractmethod
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """Retorna estadísticas del cache para debugging/monitoring."""
         pass

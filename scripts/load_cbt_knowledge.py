@@ -4,7 +4,7 @@ Script para cargar conocimiento CBT a la global knowledge base.
 
 Uso:
     python scripts/load_cbt_knowledge.py
-    
+
     # O especificar archivo personalizado:
     python scripts/load_cbt_knowledge.py --file cbt_data.json
 """
@@ -14,13 +14,9 @@ import json
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
-# Agregar directorio del proyecto al path
-project_root = Path(__file__).parent.parent
-sys.path.append(str(project_root))
-
-from src.core.dependencies import get_global_collection_manager
+import aiofiles
 
 logger = logging.getLogger(__name__)
 
@@ -118,22 +114,23 @@ CBT_KNOWLEDGE_BASE = [
     }
 ]
 
-async def load_cbt_knowledge(knowledge_data: List[Dict[str, Any]] = None):
+async def load_cbt_knowledge(knowledge_data: list[dict[str, Any]] = None):
     """
     Carga conocimiento CBT a la global knowledge base.
-    
+
     Args:
         knowledge_data: Lista de documentos CBT. Si None, usa CBT_KNOWLEDGE_BASE predefinido.
     """
     if knowledge_data is None:
         knowledge_data = CBT_KNOWLEDGE_BASE
-    
+
     try:
         # Obtener manager de colecciones globales
+        from src.core.dependencies import get_global_collection_manager
         global_manager = get_global_collection_manager()
-        
+
         print(f"🧠 Cargando {len(knowledge_data)} documentos CBT...")
-        
+
         success_count = 0
         for i, item in enumerate(knowledge_data, 1):
             try:
@@ -144,18 +141,18 @@ async def load_cbt_knowledge(knowledge_data: List[Dict[str, Any]] = None):
                     metadata=item["metadata"],
                     user_id="cbt_knowledge_loader"
                 )
-                
+
                 if result.get("success", False):
                     success_count += 1
                     print(f"✅ {i}/{len(knowledge_data)} - {item['metadata']['topic']}")
                 else:
                     print(f"❌ {i}/{len(knowledge_data)} - Error: {result.get('error', 'Unknown')}")
-                    
+
             except Exception as e:
                 print(f"❌ {i}/{len(knowledge_data)} - Exception: {e}")
-        
+
         print(f"\n🎉 Carga completada: {success_count}/{len(knowledge_data)} documentos cargados exitosamente")
-        
+
         # Verificar que se cargaron correctamente
         test_query = await global_manager.query_global_collection(
             collection_name="global_knowledge_base",
@@ -163,9 +160,9 @@ async def load_cbt_knowledge(knowledge_data: List[Dict[str, Any]] = None):
             user_id="test",
             n_results=3
         )
-        
+
         print(f"\n🔍 Verificación: encontrados {len(test_query)} documentos para 'reestructuración cognitiva'")
-        
+
     except Exception as e:
         print(f"❌ Error cargando conocimiento CBT: {e}")
         raise
@@ -173,14 +170,15 @@ async def load_cbt_knowledge(knowledge_data: List[Dict[str, Any]] = None):
 async def load_from_file(file_path: str):
     """Carga conocimiento CBT desde archivo JSON."""
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
-            knowledge_data = json.load(f)
-        
+        async with aiofiles.open(file_path, encoding='utf-8') as f:
+            content = await f.read()
+            knowledge_data = json.loads(content)
+
         if not isinstance(knowledge_data, list):
             raise ValueError("El archivo debe contener una lista de documentos")
-        
+
         await load_cbt_knowledge(knowledge_data)
-        
+
     except Exception as e:
         print(f"❌ Error cargando desde archivo {file_path}: {e}")
         raise
@@ -188,21 +186,25 @@ async def load_from_file(file_path: str):
 def create_sample_file(file_path: str = "cbt_knowledge_sample.json"):
     """Crea archivo de ejemplo con formato correcto."""
     sample_data = CBT_KNOWLEDGE_BASE[:3]  # Primeros 3 elementos como ejemplo
-    
+
     with open(file_path, 'w', encoding='utf-8') as f:
         json.dump(sample_data, f, indent=2, ensure_ascii=False)
-    
+
     print(f"📄 Archivo de ejemplo creado: {file_path}")
 
 if __name__ == "__main__":
+    # Agregar directorio del proyecto al path para encontrar módulos de `src`
+    # Solo cuando el script se ejecuta directamente
+    project_root = Path(__file__).parent.parent
+    sys.path.append(str(project_root))
     import argparse
-    
+
     parser = argparse.ArgumentParser(description="Cargar conocimiento CBT a la global knowledge base")
     parser.add_argument("--file", type=str, help="Archivo JSON con conocimiento CBT")
     parser.add_argument("--create-sample", action="store_true", help="Crear archivo de ejemplo")
-    
+
     args = parser.parse_args()
-    
+
     if args.create_sample:
         create_sample_file()
     elif args.file:

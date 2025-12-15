@@ -1,6 +1,7 @@
 # src/core/dependencies.py
 import logging
 from functools import lru_cache
+from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
 from redis import asyncio as aioredis
@@ -8,12 +9,15 @@ from redis import asyncio as aioredis
 from src.core.bus.in_memory import InMemoryEventBus
 from src.core.bus.redis import RedisEventBus
 from src.core.config import settings
-from src.core.interfaces.bus import IEventBus
 from src.core.conversation_memory import ConversationMemory
-from src.core.user_preferences import UserPreferences
+from src.core.interfaces.bus import IEventBus
 from src.core.role_manager import RoleManager
-from src.core.session_manager import session_manager
 from src.core.security.access_controller import AccessController
+from src.core.session_manager import session_manager
+from src.core.user_preferences import UserPreferences
+
+if TYPE_CHECKING:
+    from src.agents.file_handler_agent import FileHandlerAgent
 
 logger = logging.getLogger(__name__)
 
@@ -99,14 +103,14 @@ def get_role_manager() -> RoleManager:
 
 
 @lru_cache
-def get_file_handler_agent() -> "FileHandlerAgent":
+def get_file_handler_agent() -> FileHandlerAgent:
     """FastAPI dependency para FileHandlerAgent."""
     from src.agents.file_handler_agent import FileHandlerAgent
     logger.debug("Creating/providing FileHandlerAgent instance.")
     return FileHandlerAgent()
 
 
-@lru_cache()
+@lru_cache
 def get_access_controller() -> AccessController:
     """FastAPI dependency para AccessController."""
     logger.debug("Creating/providing AccessController instance.")

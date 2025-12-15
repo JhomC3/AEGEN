@@ -12,7 +12,7 @@ from langchain_core.prompts import ChatPromptTemplate
 def build_routing_prompt() -> ChatPromptTemplate:
     """
     Construye prompt para análisis inteligente con function calling.
-    
+
     Returns:
         ChatPromptTemplate: Prompt configurado para function calling (no structured output)
     """
@@ -50,7 +50,7 @@ IMPORTANTE: Debes llamar OBLIGATORIAMENTE a la función route_user_message con:
 def build_fallback_context_message() -> str:
     """
     Mensaje de contexto para situaciones de fallback.
-    
+
     Returns:
         str: Contexto informativo para fallback routing
     """

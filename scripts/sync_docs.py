@@ -11,7 +11,6 @@ import subprocess
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Dict
 
 
 def run_command(cmd: str) -> str:
@@ -26,7 +25,7 @@ def run_command(cmd: str) -> str:
         return ""
 
 
-def get_git_status() -> Dict[str, str]:
+def get_git_status() -> dict[str, str]:
     """Extrae información actual del repositorio git."""
     branch = run_command("git rev-parse --abbrev-ref HEAD")
 

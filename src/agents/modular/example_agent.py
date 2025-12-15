@@ -5,7 +5,7 @@ Demuestra cómo implementar un agente simple, async y con single responsibility.
 """
 
 import logging
-from typing import Any, List
+from typing import Any
 
 from src.core.interfaces.modular_agent import ModularAgentBase
 from src.core.schemas import AgentCapability, AgentContext, AgentResult
@@ -26,23 +26,23 @@ class ExampleModularAgent(ModularAgentBase):
         """Valida input_data de manera async."""
         try:
             logger.info(f"ExampleAgent validating input for user {context.user_id}")
-            
+
             # Validación simple - single responsibility
             if not input_data:
                 return self._create_error_result(
                     "Input data is empty",
                     "No data provided for validation"
                 )
-            
+
             # Simulación async I/O (obligatorio por filosofía)
             # En implementación real sería: await validate_with_external_service()
             await self._async_validation(input_data)
-            
+
             return self._create_success_result(
                 data={"validated": True, "input_type": type(input_data).__name__},
                 message="Input validation completed successfully"
             )
-            
+
         except Exception as e:
             logger.error(f"Validation error: {e}", exc_info=True)
             return self._create_error_result(
@@ -55,7 +55,7 @@ class ExampleModularAgent(ModularAgentBase):
         # Simulate async I/O - filosofía requires no sync operations
         import asyncio
         await asyncio.sleep(0.001)  # Tiny async operation
-        
+
         # Validación simple
         if isinstance(input_data, dict) and not input_data:
             raise ValueError("Empty dictionary not allowed")

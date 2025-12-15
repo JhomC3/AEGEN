@@ -7,12 +7,12 @@ entre Redis (cache rápido) y ChromaDB (persistencia vectorial).
 """
 
 import logging
-from typing import Dict, Any, List, Optional
 from enum import Enum
+from typing import Any
 
-from src.memory.redis_fallback import RedisFallbackManager
+from src.core.vector_memory_manager import MemoryType, VectorMemoryManager
 from src.memory.consistency_manager import ConsistencyManager
-from src.core.vector_memory_manager import VectorMemoryManager, MemoryType
+from src.memory.redis_fallback import RedisFallbackManager
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +36,7 @@ class HybridMemoryCoordinator:
         self.logger = logging.getLogger(__name__)
 
     async def store_context_hybrid(self, user_id: str, content: str, context_type: MemoryType,
-                                 strategy: StorageStrategy = StorageStrategy.AUTO_DECIDE, 
+                                 strategy: StorageStrategy = StorageStrategy.AUTO_DECIDE,
                                  ttl: int = 3600) -> bool:
         """Almacena contexto usando estrategia híbrida."""
         try:
@@ -60,9 +60,9 @@ class HybridMemoryCoordinator:
             self.logger.error(f"Failed hybrid storage for user {user_id}: {e}", exc_info=True)
             return False
 
-    async def retrieve_context_hybrid(self, user_id: str, query: str, 
+    async def retrieve_context_hybrid(self, user_id: str, query: str,
                                     strategy: StorageStrategy = StorageStrategy.REDIS_FIRST,
-                                    limit: int = 5) -> List[Dict[str, Any]]:
+                                    limit: int = 5) -> list[dict[str, Any]]:
         """Recupera contexto usando estrategia híbrida."""
         try:
             if strategy == StorageStrategy.REDIS_FIRST:
@@ -90,7 +90,7 @@ class HybridMemoryCoordinator:
         try:
             # Obtener datos de Redis que necesitan persistencia
             redis_data = await self.redis_manager.get_persistent_data(user_id)
-            
+
             if not redis_data:
                 return True
 
@@ -150,11 +150,11 @@ class HybridMemoryCoordinator:
         redis_success = await self.redis_manager.cache_context(user_id, content, ttl)
         return chroma_success and redis_success
 
-    async def _query_chroma_fallback(self, user_id: str, query: str, limit: int) -> List[Dict[str, Any]]:
+    async def _query_chroma_fallback(self, user_id: str, query: str, limit: int) -> list[dict[str, Any]]:
         """Consulta ChromaDB como fallback."""
         return await self.vector_manager.retrieve_context(user_id, query, limit=limit)
 
-    async def _cache_results_to_redis(self, user_id: str, query: str, results: List[Dict[str, Any]]) -> None:
+    async def _cache_results_to_redis(self, user_id: str, query: str, results: list[dict[str, Any]]) -> None:
         """Cache resultados en Redis."""
         cache_key = f"query_cache_{query[:50]}"
         await self.redis_manager.cache_to_redis(user_id, cache_key, {'results': results}, ttl=300)

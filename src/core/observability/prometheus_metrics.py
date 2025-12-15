@@ -4,7 +4,7 @@ Configuración de métricas Prometheus para observabilidad LLM.
 Responsabilidad única: Definición de métricas Prometheus.
 """
 
-from prometheus_client import Counter, Histogram, Gauge
+from prometheus_client import Counter, Gauge, Histogram
 
 # === Prometheus Metrics ===
 
@@ -16,7 +16,7 @@ llm_calls_total = Counter(
 )
 
 llm_tokens_total = Counter(
-    'llm_tokens_total', 
+    'llm_tokens_total',
     'Total tokens consumed by provider, model, and token type',
     ['provider', 'model', 'token_type']
 )

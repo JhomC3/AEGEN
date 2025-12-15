@@ -10,32 +10,32 @@ para eliminar bottleneck de 36+ segundos a <2 segundos (ADR-0009).
 """
 
 import logging
-from typing import Dict, Any
+from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
-from pydantic import ValidationError
 
 # Import Google API exceptions with fallback
 try:
-    from google.api_core.exceptions import ResourceExhausted
+
     from langchain_google_genai.common import GoogleAPICallError
 except ImportError:
     # Fallback para entornos donde google.api_core no está disponible
-    class ResourceExhausted(Exception):
+    class ResourceExhaustedError(Exception):
         """Fallback ResourceExhausted exception"""
         pass
-    
+
     class GoogleAPICallError(Exception):
         """Fallback GoogleAPICallError exception"""
         pass
 
 from src.agents.orchestrator.specialist_cache import SpecialistCache
-from src.core.engine import llm, create_observable_config
-from src.core.routing_models import RoutingDecision, IntentType, EntityInfo
+from src.core.engine import create_observable_config, llm
+from src.core.routing_models import EntityInfo, IntentType, RoutingDecision
 from src.core.schemas import GraphStateV2
-from .routing_utils import extract_context_from_state
-from .routing_patterns import PatternExtractor, IntentValidator, SpecialistMapper
+
+from .routing_patterns import IntentValidator, PatternExtractor, SpecialistMapper
 from .routing_tools import route_user_message
+from .routing_utils import extract_context_from_state
 
 logger = logging.getLogger(__name__)
 
@@ -43,18 +43,18 @@ logger = logging.getLogger(__name__)
 class RoutingAnalyzer:
     """
     Orquestador de análisis LLM para routing decisions.
-    
+
     Coordina function calling LLM con componentes especializados
     para análisis robusto y post-processing inteligente.
-    
+
     Performance optimized: Uses llm.bind_tools() instead of 
     llm.with_structured_output() to eliminate 36+s latency bottleneck.
     """
-    
+
     def __init__(self, routing_prompt: ChatPromptTemplate):
         """
         Inicializa analizador con componentes especializados.
-        
+
         Args:
             routing_prompt: Prompt template configurado para function calling
         """
@@ -62,30 +62,30 @@ class RoutingAnalyzer:
         # Elimina bottleneck de 36+ segundos a <2 segundos
         routing_tools = [route_user_message]
         self._chain = routing_prompt | llm.bind_tools(routing_tools)
-        
+
         # Mantiene componentes de post-processing existentes
         self._pattern_extractor = PatternExtractor()
         self._intent_validator = IntentValidator()
         self._specialist_mapper = SpecialistMapper()
-    
+
     async def analyze(self, message: str, state: GraphStateV2, cache: SpecialistCache) -> RoutingDecision:
         """
         Analiza mensaje y genera decisión de routing estructurada.
-        
+
         Args:
             message: Mensaje del usuario a analizar
             state: Estado del grafo con contexto conversacional
             cache: Cache de especialistas disponibles
-            
+
         Returns:
             RoutingDecision: Decisión estructurada con intent, confianza y entities
-            
+
         Raises:
             Exception: Si falla análisis LLM o post-processing
         """
         available_tools = list(cache.get_tool_to_specialist_map().keys())
         context = extract_context_from_state(state)
-        
+
         try:
             # ✅ PERFORMANCE FIX: Function calling en lugar de structured output
             # ✅ OBSERVABILITY: Add LLM tracking for routing calls
@@ -95,89 +95,89 @@ class RoutingAnalyzer:
                 "available_tools": available_tools,
                 "context": self._format_context_for_llm(context)
             }, config=config)
-            
+
             # Extraer resultado del function call
             decision_data = self._extract_tool_result(response)
-            
+
             # Convertir a RoutingDecision manteniendo compatibilidad
             decision = self._build_routing_decision_from_data(decision_data)
-            
+
             # Post-processing y validación (mantiene lógica existente)
             enhanced_decision = self._enhance_decision(decision, message, cache)
-            
+
             logger.info(f"Análisis completado: {enhanced_decision.intent.value} → "
                        f"{enhanced_decision.target_specialist} "
                        f"(confianza: {enhanced_decision.confidence:.2f})")
-            
+
             return enhanced_decision
-            
-        except (ResourceExhausted, GoogleAPICallError) as e:
+
+        except (ResourceExhaustedError, GoogleAPICallError) as e:
             logger.warning(f"Error de API de Google durante el enrutamiento: {e}. Se usará fallback.")
             return self._create_fallback_decision(message)
         except Exception as e:
             logger.error(f"Error inesperado en el análisis de enrutamiento: {e}", exc_info=True)
             return self._create_fallback_decision(message)
-    
+
     def _enhance_decision(self, decision: RoutingDecision, message: str, cache: SpecialistCache) -> RoutingDecision:
         """
         Mejora decisión LLM usando componentes especializados.
-        
+
         Args:
             decision: Decisión base del LLM
             message: Mensaje original para análisis complementario
             cache: Cache para mapeo de especialistas
-            
+
         Returns:
             RoutingDecision: Decisión mejorada con validation y mapping
         """
         # Extraer entidades adicionales con pattern extractor
         pattern_entities = self._pattern_extractor.extract_entities_from_text(message)
         decision.entities.extend(pattern_entities)
-        
+
         # Ajustar confianza si hay evidencia clara del intent
         if self._intent_validator.has_clear_intent_evidence(message, decision.intent):
             decision.confidence = min(decision.confidence + 0.15, 1.0)
-        
+
         # Mapear a especialista disponible real
         decision.target_specialist = self._specialist_mapper.map_intent_to_specialist(
             decision.intent, cache
         )
-        
+
         # Determinar requirement de tools
         decision.requires_tools = decision.intent != IntentType.CHAT
-        
+
         return decision
-    
-    def _format_context_for_llm(self, context: Dict[str, Any]) -> str:
+
+    def _format_context_for_llm(self, context: dict[str, Any]) -> str:
         """
         Formatea contexto para inclusión en prompt LLM.
-        
+
         Args:
             context: Diccionario con información contextual
-            
+
         Returns:
             str: Contexto formateado para prompt
         """
         if not context:
             return "Sin contexto previo"
-        
+
         parts = []
-        
+
         if context.get("user_id"):
             parts.append(f"Usuario: {context['user_id']}")
-        
+
         if context.get("history_length", 0) > 0:
             parts.append(f"Historial: {context['history_length']} mensajes")
-        
+
         return " | ".join(parts) if parts else "Sesión nueva"
-    
+
     def _create_fallback_decision(self, message: str) -> RoutingDecision:
         """
         Crea decisión fallback segura cuando falla análisis LLM.
-        
+
         Args:
             message: Mensaje original para metadata básica
-            
+
         Returns:
             RoutingDecision: Decisión fallback para chat specialist
         """
@@ -194,14 +194,14 @@ class RoutingAnalyzer:
                 "method": "function_calling_fallback"
             }
         )
-    
-    def _extract_tool_result(self, response) -> Dict[str, Any]:
+
+    def _extract_tool_result(self, response) -> dict[str, Any]:
         """
         Extrae resultado del function call y retorna data dict.
-        
+
         Args:
             response: Response del LLM con tool calls
-            
+
         Returns:
             Dict: Data del function call para construir RoutingDecision
         """
@@ -209,24 +209,24 @@ class RoutingAnalyzer:
         if hasattr(response, 'tool_calls') and response.tool_calls:
             tool_call = response.tool_calls[0]  # Primer tool call
             return tool_call.get('args', {})
-        
+
         # Si es AIMessage con tool_calls
         if hasattr(response, 'additional_kwargs') and 'tool_calls' in response.additional_kwargs:
             tool_calls = response.additional_kwargs['tool_calls']
             if tool_calls:
                 return tool_calls[0].get('function', {}).get('arguments', {})
-        
+
         # Fallback si no hay tool calls válidos
         logger.warning("No se encontraron tool calls válidos en response")
         return self._create_fallback_decision_data()
-    
-    def _build_routing_decision_from_data(self, decision_data: Dict[str, Any]) -> RoutingDecision:
+
+    def _build_routing_decision_from_data(self, decision_data: dict[str, Any]) -> RoutingDecision:
         """
         Construye RoutingDecision desde function call data.
-        
+
         Args:
             decision_data: Datos del function call
-            
+
         Returns:
             RoutingDecision: Objeto compatible con sistema existente
         """
@@ -237,7 +237,7 @@ class RoutingAnalyzer:
         except ValueError:
             logger.warning(f"Intent inválido '{intent_str}', usando CHAT")
             intent = IntentType.CHAT
-        
+
         # Convertir entities de strings a EntityInfo objects
         entities_raw = decision_data.get('entities', [])
         entities = []
@@ -248,14 +248,14 @@ class RoutingAnalyzer:
                     value=entity_str,
                     confidence=0.8,  # Default confidence para function call entities
                 ))
-        
+
         # Ensure next_actions is always a list
         next_actions = decision_data.get('next_actions')
         if next_actions is None:
             next_actions = []
         elif not isinstance(next_actions, list):
             next_actions = [next_actions] if next_actions else []
-        
+
         return RoutingDecision(
             intent=intent,
             confidence=float(decision_data.get('confidence', 0.5)),
@@ -269,18 +269,18 @@ class RoutingAnalyzer:
                 "method": "function_calling"
             }
         )
-    
-    def _create_fallback_decision_data(self) -> Dict[str, Any]:
+
+    def _create_fallback_decision_data(self) -> dict[str, Any]:
         """
         Crea decision data fallback para casos de error.
-        
+
         Returns:
             Dict: Datos básicos para RoutingDecision fallback
         """
         return {
             "intent": "chat",
             "confidence": 0.3,
-            "target_specialist": "chat_specialist", 
+            "target_specialist": "chat_specialist",
             "requires_tools": False,
             "entities": [],
             "next_actions": [],  # Add required field

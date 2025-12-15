@@ -7,12 +7,11 @@ componentes de memoria híbrida Redis + ChromaDB.
 """
 
 import logging
-from typing import Optional
 
-from src.memory.redis_fallback import RedisFallbackManager
-from src.memory.consistency_manager import ConsistencyManager, ConsistencyLevel
-from src.memory.hybrid_coordinator import HybridMemoryCoordinator
 from src.core.vector_memory_manager import VectorMemoryManager
+from src.memory.consistency_manager import ConsistencyLevel, ConsistencyManager
+from src.memory.hybrid_coordinator import HybridMemoryCoordinator
+from src.memory.redis_fallback import RedisFallbackManager
 
 logger = logging.getLogger(__name__)
 
@@ -24,11 +23,11 @@ class MemoryFactory:
         self.vector_manager = vector_manager
         self.redis_client = redis_client
         self.logger = logging.getLogger(__name__)
-        
+
         # Cache de componentes
-        self._redis_manager: Optional[RedisFallbackManager] = None
-        self._consistency_manager: Optional[ConsistencyManager] = None
-        self._hybrid_coordinator: Optional[HybridMemoryCoordinator] = None
+        self._redis_manager: RedisFallbackManager | None = None
+        self._consistency_manager: ConsistencyManager | None = None
+        self._hybrid_coordinator: HybridMemoryCoordinator | None = None
 
     def get_redis_manager(self) -> RedisFallbackManager:
         """Crea o retorna RedisFallbackManager."""
@@ -49,14 +48,14 @@ class MemoryFactory:
         if self._hybrid_coordinator is None:
             redis_manager = self.get_redis_manager()
             consistency_manager = self.get_consistency_manager()
-            
+
             self._hybrid_coordinator = HybridMemoryCoordinator(
                 self.vector_manager,
                 redis_manager,
                 consistency_manager
             )
             self.logger.debug("Created HybridMemoryCoordinator instance")
-            
+
         return self._hybrid_coordinator
 
     def create_memory_components(self) -> dict:
