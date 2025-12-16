@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 
 # Constantes
 CHAT_SPECIALIST_NODE = "chat_specialist"
-PAYLOAD_KEY = "payload"
-NEXT_NODE_KEY = "next_node"
+
+
 
 
 def route_to_chat(state: GraphStateV2) -> str:
@@ -30,10 +30,10 @@ def route_to_chat(state: GraphStateV2) -> str:
     Returns:
         str: Nombre del nodo ChatBot specialist
     """
-    if PAYLOAD_KEY not in state:
-        state[PAYLOAD_KEY] = {}
+    if "payload" not in state:
+        state["payload"] = {}
 
-    state[PAYLOAD_KEY][NEXT_NODE_KEY] = CHAT_SPECIALIST_NODE
+    state["payload"]["next_node"] = CHAT_SPECIALIST_NODE
     logger.debug("Routing fallback a ChatBot")
     return CHAT_SPECIALIST_NODE
 
@@ -46,12 +46,12 @@ def update_state_with_decision(state: GraphStateV2, decision: RoutingDecision) -
         state: Estado del grafo a modificar
         decision: Decisión de routing con metadata completa
     """
-    if PAYLOAD_KEY not in state:
-        state[PAYLOAD_KEY] = {}
+    if "payload" not in state:
+        state["payload"] = {}
 
-    payload = state[PAYLOAD_KEY]
+    payload = state["payload"]
     payload.update({
-        NEXT_NODE_KEY: decision.target_specialist,
+        "next_node": decision.target_specialist,
         "routing_decision": decision.model_dump(),
         "intent": decision.intent.value,
         "entities": [entity.model_dump() for entity in decision.entities],

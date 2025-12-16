@@ -48,6 +48,7 @@ from src.core.schemas import (
     CanonicalEventV1,
     GraphStateV2,
     InternalDelegationResponse,
+    V2ChatMessage,
 )
 
 logger = logging.getLogger(__name__)
@@ -516,7 +517,7 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
     }
 
 
-def _format_conversation_history(conversation_history: list[dict[str, Any]]) -> str:
+def _format_conversation_history(conversation_history: list[V2ChatMessage]) -> str:
     """
     ✅ RESTORATION: Rich conversation history formatting with context optimization.
 
@@ -563,7 +564,7 @@ def _format_conversation_history(conversation_history: list[dict[str, Any]]) -> 
 
 
 def _update_conversation_history_enhanced(
-    current_history: list[dict[str, Any]],
+    current_history: list[V2ChatMessage],
     user_message: str,
     response_text: str,
     used_delegation: bool,

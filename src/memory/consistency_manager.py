@@ -90,7 +90,7 @@ class ConsistencyManager:
     async def validate_cross_system_integrity(self) -> dict[str, Any]:
         """Valida integridad entre sistemas."""
         try:
-            validation_report = {
+            validation_report: dict[str, Any] = {
                 "timestamp": datetime.now(UTC).isoformat(),
                 "redis_status": "unknown",
                 "chroma_status": "unknown",

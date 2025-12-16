@@ -10,9 +10,9 @@ import logging
 from enum import Enum
 from typing import Any
 
-from src.memory.vector_memory_manager import MemoryType, VectorMemoryManager
 from src.memory.consistency_manager import ConsistencyManager
 from src.memory.redis_fallback import RedisFallbackManager
+from src.memory.vector_memory_manager import MemoryType, VectorMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -94,10 +94,14 @@ class HybridMemoryCoordinator:
                 if results:
                     return results[:limit]
                 # Fallback a ChromaDB
-                return await self._query_chroma_fallback(user_id, query, limit)
+                return await self._query_chroma_fallback(
+                    user_id, query, MemoryType.CONVERSATION, limit
+                )
 
             elif strategy == StorageStrategy.CHROMA_FIRST:
-                results = await self._query_chroma_fallback(user_id, query, limit)
+                results = await self._query_chroma_fallback(
+                    user_id, query, MemoryType.CONVERSATION, limit
+                )
                 if results:
                     # Cache results en Redis para siguiente vez
                     await self._cache_results_to_redis(user_id, query, results)
@@ -171,30 +175,34 @@ class HybridMemoryCoordinator:
         redis_success = await self.redis_manager.cache_context(user_id, content, ttl)
         if redis_success:
             # Almacenar también en ChromaDB para persistencia
-            await self.vector_manager.store_context(user_id, content, context_type)
+            await self.vector_manager.store_context(user_id, content, context_type, metadata={})
         return redis_success
 
     async def _store_chroma_first(
         self, user_id: str, content: str, context_type: MemoryType
     ) -> bool:
         """Estrategia ChromaDB primero."""
-        return await self.vector_manager.store_context(user_id, content, context_type)
+        return await self.vector_manager.store_context(
+            user_id, content, context_type, metadata={}
+        )
 
     async def _store_both_sync(
         self, user_id: str, content: str, context_type: MemoryType, ttl: int
     ) -> bool:
         """Estrategia sincronizada en ambos."""
         chroma_success = await self.vector_manager.store_context(
-            user_id, content, context_type
+            user_id, content, context_type, metadata={}
         )
         redis_success = await self.redis_manager.cache_context(user_id, content, ttl)
         return chroma_success and redis_success
 
     async def _query_chroma_fallback(
-        self, user_id: str, query: str, limit: int
+        self, user_id: str, query: str, context_type: MemoryType, limit: int
     ) -> list[dict[str, Any]]:
         """Consulta ChromaDB como fallback."""
-        return await self.vector_manager.retrieve_context(user_id, query, limit=limit)
+        return await self.vector_manager.retrieve_context(
+            user_id, query, context_type, limit=limit
+        )
 
     async def _cache_results_to_redis(
         self, user_id: str, query: str, results: list[dict[str, Any]]

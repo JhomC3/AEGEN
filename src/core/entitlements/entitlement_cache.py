@@ -5,6 +5,7 @@ Cache simple de roles de usuario para optimización de rendimiento.
 
 import logging
 from datetime import datetime, timedelta
+from typing import Any
 
 from src.core.schemas import UserRole
 
@@ -69,7 +70,7 @@ class EntitlementCache:
         self.stats = {"hits": 0, "misses": 0}
         self.logger.info("Permission cache cleared")
 
-    def get_stats(self) -> dict[str, any]:
+    def get_stats(self) -> dict[str, Any]:
         """Obtiene estadísticas del cache."""
         total_requests = self.stats["hits"] + self.stats["misses"]
         hit_ratio = (

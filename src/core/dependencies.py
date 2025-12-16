@@ -1,11 +1,11 @@
 # src/core/dependencies.py
 import logging
 from functools import lru_cache
-from typing import TYPE_CHECKING
 
 from fastapi import HTTPException, status
 from redis import asyncio as aioredis
 
+from src.agents.file_handler_agent import FileHandlerAgent
 from src.core.bus.in_memory import InMemoryEventBus
 from src.core.bus.redis import RedisEventBus
 from src.core.config import settings
@@ -15,9 +15,7 @@ from src.core.role_manager import RoleManager
 from src.core.security.access_controller import AccessController
 from src.core.session_manager import session_manager
 from src.core.user_preferences import UserPreferences
-
 from src.memory.vector_memory_manager import VectorMemoryManager
-from src.agents.file_handler_agent import FileHandlerAgent
 
 logger = logging.getLogger(__name__)
 
@@ -106,6 +104,7 @@ def get_role_manager() -> RoleManager:
 def get_vector_memory_manager() -> VectorMemoryManager:
     """FastAPI dependency para VectorMemoryManager."""
     from src.memory.vector_memory_manager import VectorMemoryManager
+
     return VectorMemoryManager()
 
 

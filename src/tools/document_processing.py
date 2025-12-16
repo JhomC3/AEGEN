@@ -96,6 +96,7 @@ def read_csv(file_path: str) -> str:
 
 # --- Main Processing Tool ---
 
+
 @tool
 async def process_document(file_path: str, file_name: str) -> dict:
     """
@@ -107,7 +108,9 @@ async def process_document(file_path: str, file_name: str) -> dict:
     reader_func = READER_REGISTRY.get(file_extension)
 
     if not reader_func:
-        error_message = f"El procesamiento para archivos '{file_extension}' no está implementado."
+        error_message = (
+            f"El procesamiento para archivos '{file_extension}' no está implementado."
+        )
         logger.warning(error_message)
         return {"error": error_message}
 
