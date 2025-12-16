@@ -36,7 +36,9 @@ class LLMCallMetrics(BaseModel):
     estimated_cost_usd: float | None = Field(None, description="Costo estimado USD")
 
     # Metadata
-    metadata: dict[str, Any] = Field(default_factory=dict, description="Metadata adicional")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Metadata adicional"
+    )
 
     def finalize(self, end_time: float | None = None) -> None:
         """Finaliza la métrica calculando latencia y tokens totales."""

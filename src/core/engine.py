@@ -46,7 +46,9 @@ def create_observable_config(call_type: str = "general", config: dict = None):
     return config
 
 
-logger.info(f"LLM Engine initialized with observability support: {settings.DEFAULT_LLM_MODEL}")
+logger.info(
+    f"LLM Engine initialized with observability support: {settings.DEFAULT_LLM_MODEL}"
+)
 
 # --- FIN DE LA SOLUCIÓN CON OBSERVABILIDAD ---
 

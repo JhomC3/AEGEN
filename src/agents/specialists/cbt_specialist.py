@@ -10,7 +10,7 @@ Capabilities:
 - therapeutic_guidance: Guía terapéutica basada en CBT
 - emotional_support: Apoyo emocional estructurado
 
-Keywords activadores: ansiedad, depresión, terapia, emociones, estrés, 
+Keywords activadores: ansiedad, depresión, terapia, emociones, estrés,
                      pensamientos, sentimientos, miedos, autoestima
 """
 
@@ -33,42 +33,86 @@ logger = logging.getLogger(__name__)
 # Cargar prompts especializados
 PROMPTS_DIR = Path(__file__).parent.parent.parent / "prompts"
 
+
 def load_prompt(filename: str) -> str:
     """Carga prompt desde archivo de texto."""
     try:
         prompt_path = PROMPTS_DIR / filename
-        return prompt_path.read_text(encoding='utf-8')
+        return prompt_path.read_text(encoding="utf-8")
     except Exception as e:
         logger.error(f"Error loading prompt {filename}: {e}")
         return f"Error loading prompt {filename}. Using fallback response."
+
 
 CBT_THERAPEUTIC_TEMPLATE = load_prompt("cbt_therapeutic_response.txt")
 CBT_ANALYSIS_TEMPLATE = load_prompt("cbt_analysis.txt")
 
 # Keywords que activan el CBT specialist
 CBT_KEYWORDS = {
-    'spanish': [
-        'ansiedad', 'ansioso', 'ansiosa', 'depresión', 'depresion',
-        'deprimido', 'deprimida', 'terapia', 'emociones',
-        'estrés', 'estres', 'pensamientos', 'sentimientos', 'miedos',
-        'autoestima', 'tristeza', 'preocupación', 'preocupacion',
-        'pánico', 'panico', 'angustia', 'ira', 'enojo', 'celos',
-        'soledad', 'timidez', 'inseguridad', 'trauma', 'duelo',
-        'relaciones', 'pareja', 'familia', 'trabajo', 'universidad'
+    "spanish": [
+        "ansiedad",
+        "ansioso",
+        "ansiosa",
+        "depresión",
+        "depresion",
+        "deprimido",
+        "deprimida",
+        "terapia",
+        "emociones",
+        "estrés",
+        "estres",
+        "pensamientos",
+        "sentimientos",
+        "miedos",
+        "autoestima",
+        "tristeza",
+        "preocupación",
+        "preocupacion",
+        "pánico",
+        "panico",
+        "angustia",
+        "ira",
+        "enojo",
+        "celos",
+        "soledad",
+        "timidez",
+        "inseguridad",
+        "trauma",
+        "duelo",
+        "relaciones",
+        "pareja",
+        "familia",
+        "trabajo",
+        "universidad",
     ],
-    'english': [
-        'anxiety', 'anxious', 'depression', 'depressed', 'therapy',
-        'emotions', 'stress', 'thoughts', 'feelings', 'fears',
-        'self-esteem', 'sadness', 'worry', 'panic', 'anger',
-        'loneliness', 'trauma', 'grief'
-    ]
+    "english": [
+        "anxiety",
+        "anxious",
+        "depression",
+        "depressed",
+        "therapy",
+        "emotions",
+        "stress",
+        "thoughts",
+        "feelings",
+        "fears",
+        "self-esteem",
+        "sadness",
+        "worry",
+        "panic",
+        "anger",
+        "loneliness",
+        "trauma",
+        "grief",
+    ],
 }
+
 
 @tool
 async def cbt_therapeutic_guidance_tool(
     user_message: str,
     conversation_history: str = "",
-    analysis_context: str | None = None
+    analysis_context: str | None = None,
 ) -> str:
     """
     Herramienta principal de CBT que proporciona guía terapéutica
@@ -93,14 +137,18 @@ async def cbt_therapeutic_guidance_tool(
             user_message, conversation_history, knowledge_context, analysis_context
         )
 
-        logger.info(f"CBT therapeutic response generated: {len(therapeutic_response)} chars")
+        logger.info(
+            f"CBT therapeutic response generated: {len(therapeutic_response)} chars"
+        )
         return therapeutic_response
 
     except Exception as e:
         logger.error(f"Error in CBT therapeutic guidance: {e}", exc_info=True)
-        return ("Entiendo que estás pasando por un momento difícil. "
-               "Te recomiendo buscar apoyo de un profesional de salud mental "
-               "que pueda brindarte la ayuda personalizada que necesitas.")
+        return (
+            "Entiendo que estás pasando por un momento difícil. "
+            "Te recomiendo buscar apoyo de un profesional de salud mental "
+            "que pueda brindarte la ayuda personalizada que necesitas."
+        )
 
 
 async def _get_cbt_knowledge_context(user_message: str, max_results: int = 3) -> str:
@@ -123,7 +171,7 @@ async def _get_cbt_knowledge_context(user_message: str, max_results: int = 3) ->
             collection_name="global_knowledge_base",
             query_text=cbt_query,
             user_id="cbt_specialist",
-            n_results=max_results
+            n_results=max_results,
         )
 
         if not results:
@@ -133,11 +181,13 @@ async def _get_cbt_knowledge_context(user_message: str, max_results: int = 3) ->
         # Formatear contexto de conocimiento
         context_parts = []
         for i, result in enumerate(results[:max_results], 1):
-            document = result.get('document', '')
+            document = result.get("document", "")
             context_parts.append(f"Fuente {i}: {document[:200]}...")
 
         context = "\n".join(context_parts)
-        logger.info(f"CBT knowledge context retrieved: {len(context)} chars from {len(results)} sources")
+        logger.info(
+            f"CBT knowledge context retrieved: {len(context)} chars from {len(results)} sources"
+        )
         return context
 
     except Exception as e:
@@ -149,7 +199,7 @@ async def _generate_therapeutic_response(
     user_message: str,
     conversation_history: str,
     knowledge_context: str,
-    analysis_context: str | None = None
+    analysis_context: str | None = None,
 ) -> str:
     """
     Genera respuesta terapéutica usando prompt especializado CBT.
@@ -171,7 +221,7 @@ async def _generate_therapeutic_response(
 
         prompt_input = {
             "user_message": user_message,
-            "knowledge_context": knowledge_context
+            "knowledge_context": knowledge_context,
         }
 
         # Añadir contexto de análisis si está disponible
@@ -190,9 +240,11 @@ async def _generate_therapeutic_response(
 
     except Exception as e:
         logger.error(f"Error generating therapeutic response: {e}", exc_info=True)
-        return ("Comprendo que estás atravesando una situación desafiante. "
-               "Es importante que sepas que tus sentimientos son válidos. "
-               "Te animo a buscar apoyo profesional si sientes que lo necesitas.")
+        return (
+            "Comprendo que estás atravesando una situación desafiante. "
+            "Es importante que sepas que tus sentimientos son válidos. "
+            "Te animo a buscar apoyo profesional si sientes que lo necesitas."
+        )
 
 
 async def _cbt_node(state: GraphStateV2) -> dict[str, Any]:
@@ -220,7 +272,7 @@ async def _cbt_node(state: GraphStateV2) -> dict[str, Any]:
         # Generar respuesta terapéutica usando la herramienta
         therapeutic_response = await cbt_therapeutic_guidance_tool.ainvoke({
             "user_message": user_message,
-            "conversation_history": conversation_history
+            "conversation_history": conversation_history,
         })
 
         # Actualizar payload con respuesta
@@ -231,15 +283,13 @@ async def _cbt_node(state: GraphStateV2) -> dict[str, Any]:
             "specialist_metadata": {
                 "specialist_type": "cbt_therapy",
                 "session_id": session_id,
-                "therapeutic_approach": "cognitive_behavioral_therapy"
-            }
+                "therapeutic_approach": "cognitive_behavioral_therapy",
+            },
         }
 
         logger.info(f"[{session_id}] CBT therapeutic response generated successfully")
 
-        return {
-            "payload": updated_payload
-        }
+        return {"payload": updated_payload}
 
     except Exception as e:
         error_msg = f"Error in CBT specialist node: {e}"
@@ -247,7 +297,7 @@ async def _cbt_node(state: GraphStateV2) -> dict[str, Any]:
 
         return {
             "payload": state.get("payload", {}),
-            "error_message": "Error procesando respuesta terapéutica. Por favor, considera buscar apoyo profesional."
+            "error_message": "Error procesando respuesta terapéutica. Por favor, considera buscar apoyo profesional.",
         }
 
 
@@ -265,7 +315,11 @@ def _format_conversation_history(conversation_history: list[dict[str, Any]]) -> 
         return "Sin historial previo."
 
     # Usar últimos 5 mensajes para contexto relevante
-    recent_history = conversation_history[-5:] if len(conversation_history) > 5 else conversation_history
+    recent_history = (
+        conversation_history[-5:]
+        if len(conversation_history) > 5
+        else conversation_history
+    )
 
     history_parts = []
     for msg in recent_history:
@@ -308,7 +362,7 @@ class CBTSpecialist(SpecialistInterface):
 
     Capabilities:
     - Análisis de patrones de pensamiento y emociones
-    - Guía terapéutica estructurada basada en CBT  
+    - Guía terapéutica estructurada basada en CBT
     - Apoyo emocional empático y profesional
     - Técnicas de reestructuración cognitiva
     - Estrategias de manejo de ansiedad y depresión
@@ -319,7 +373,9 @@ class CBTSpecialist(SpecialistInterface):
         self._graph = self._build_graph()
         self._tool: BaseTool = cbt_therapeutic_guidance_tool
 
-        logger.info("✅ CBT Specialist initialized with therapeutic guidance capabilities")
+        logger.info(
+            "✅ CBT Specialist initialized with therapeutic guidance capabilities"
+        )
 
     @property
     def name(self) -> str:
@@ -341,17 +397,19 @@ class CBTSpecialist(SpecialistInterface):
             Lista de capabilities que puede manejar
         """
         return [
-            "cbt_analysis",           # Análisis CBT de pensamientos/emociones
-            "therapeutic_guidance",   # Guía terapéutica estructurada
-            "emotional_support",      # Apoyo emocional empático
-            "anxiety_management",     # Manejo de ansiedad
-            "depression_support",     # Apoyo para depresión
-            "cognitive_restructuring", # Reestructuración cognitiva
-            "mindfulness_techniques", # Técnicas mindfulness
-            "behavioral_activation"   # Activación conductual
+            "cbt_analysis",  # Análisis CBT de pensamientos/emociones
+            "therapeutic_guidance",  # Guía terapéutica estructurada
+            "emotional_support",  # Apoyo emocional empático
+            "anxiety_management",  # Manejo de ansiedad
+            "depression_support",  # Apoyo para depresión
+            "cognitive_restructuring",  # Reestructuración cognitiva
+            "mindfulness_techniques",  # Técnicas mindfulness
+            "behavioral_activation",  # Activación conductual
         ]
 
-    def can_handle_message(self, message: str, context: dict[str, Any] | None = None) -> bool:
+    def can_handle_message(
+        self, message: str, context: dict[str, Any] | None = None
+    ) -> bool:
         """
         Determina si el CBT Specialist puede manejar un mensaje específico.
 

@@ -2,7 +2,7 @@
 """
 Enhanced FunctionCallingRouter con NLP integrado y structured output.
 
-Responsabilidad única: análisis inteligente + routing determinístico 
+Responsabilidad única: análisis inteligente + routing determinístico
 en single LLM call, eliminando duplicación y recursión.
 """
 
@@ -58,7 +58,9 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
 
         try:
             # Análisis integrado con componentes especializados
-            routing_decision = await self._analyzer.analyze(user_message, state, self._cache)
+            routing_decision = await self._analyzer.analyze(
+                user_message, state, self._cache
+            )
 
             # Aplicar decisión con validaciones
             return self._apply_routing_decision(state, routing_decision)
@@ -67,13 +69,16 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
             logger.error(f"Error en Enhanced Router: {e}", exc_info=True)
             return route_to_chat(state)
 
-    def _apply_routing_decision(self, state: GraphStateV2, decision: RoutingDecision) -> str:
+    def _apply_routing_decision(
+        self, state: GraphStateV2, decision: RoutingDecision
+    ) -> str:
         """Aplica la decisión de routing al state."""
 
         # Verificar confianza mínima
         if decision.confidence < MIN_CONFIDENCE_THRESHOLD:
-            logger.warning(f"Baja confianza ({decision.confidence:.2f}), "
-                          f"fallback a ChatBot")
+            logger.warning(
+                f"Baja confianza ({decision.confidence:.2f}), fallback a ChatBot"
+            )
             return route_to_chat(state)
 
         # Verificar que el specialist esté disponible

@@ -15,10 +15,7 @@ class FileHandlerAgent(ModularAgentBase):
     """Agente modular para procesamiento seguro de archivos."""
 
     def __init__(self):
-        capabilities = [
-            AgentCapability.FILE_PROCESSING,
-            AgentCapability.VALIDATION
-        ]
+        capabilities = [AgentCapability.FILE_PROCESSING, AgentCapability.VALIDATION]
         super().__init__("FileHandlerAgent", capabilities)
         self.logger = logging.getLogger(__name__)
         self.validator = FileValidator()
@@ -29,8 +26,11 @@ class FileHandlerAgent(ModularAgentBase):
     def can_handle(self, task_type: str, input_data: Any = None) -> bool:
         """Determina si puede manejar el tipo de tarea."""
         file_tasks = {
-            "file_upload", "file_parse", "document_processing",
-            "content_extraction", "file_validation"
+            "file_upload",
+            "file_parse",
+            "document_processing",
+            "content_extraction",
+            "file_validation",
         }
         return task_type in file_tasks
 
@@ -40,7 +40,7 @@ class FileHandlerAgent(ModularAgentBase):
             file_name = Path(file_path).name
             result = await process_multimodal_file.ainvoke({
                 "file_path": file_path,
-                "file_name": file_name
+                "file_name": file_name,
             })
 
             if "error" in result:
@@ -50,7 +50,7 @@ class FileHandlerAgent(ModularAgentBase):
             return self.validator.sanitize_content(content)
         except Exception as e:
             self.logger.error(f"Failed to process {file_path}: {e}")
-            raise ValueError(f"Processing failed: {str(e)}")
+            raise ValueError(f"Processing failed: {str(e)}") from e
 
     async def execute(self, input_data: Any, context: AgentContext) -> AgentResult:
         """
@@ -62,7 +62,9 @@ class FileHandlerAgent(ModularAgentBase):
 
             # Validate input
             if not isinstance(input_data, dict):
-                return self._create_error_result("Invalid input: expected dict with 'file_path'")
+                return self._create_error_result(
+                    "Invalid input: expected dict with 'file_path'"
+                )
 
             file_path = input_data.get("file_path")
             if not file_path:
@@ -82,7 +84,7 @@ class FileHandlerAgent(ModularAgentBase):
                 "file_name": file_name,
                 "file_size": os.path.getsize(file_path),
                 "extension": extension,
-                "content_length": len(content)
+                "content_length": len(content),
             }
 
             self.logger.info(f"Processed {file_name}: {len(content)} characters")
@@ -90,7 +92,7 @@ class FileHandlerAgent(ModularAgentBase):
             return self._create_success_result(
                 data=result_data,
                 message=f"Successfully processed {file_name}",
-                next_agents=["chat_specialist"] if content else []
+                next_agents=["chat_specialist"] if content else [],
             )
 
         except (FileNotFoundError, PermissionError, ValueError) as e:

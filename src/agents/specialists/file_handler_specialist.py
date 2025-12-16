@@ -32,7 +32,7 @@ async def file_processing_tool(file_path: str, file_name: str = "") -> str:
     # Preparar input y context
     input_data = {
         "file_path": file_path,
-        "file_name": file_name or file_path.split("/")[-1]
+        "file_name": file_name or file_path.split("/")[-1],
     }
     context = AgentContext(user_id="system", session_id="file_processing")
 
@@ -113,7 +113,7 @@ class FileHandlerSpecialist(SpecialistInterface):
         # Procesar archivo usando la herramienta
         result = await self.tool.ainvoke({
             "file_path": file_path,
-            "file_name": file_name
+            "file_name": file_name,
         })
 
         # Actualizar payload con resultado

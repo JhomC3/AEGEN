@@ -55,11 +55,12 @@ async def transcribe_audio(audio_path: str) -> dict[str, Any]:
         logger.info("Solicitando transcripción a Gemini 1.5 Flash...")
         response = model.generate_content(
             [prompt, audio_file],
-            generation_config={"response_mime_type": "application/json"}
+            generation_config={"response_mime_type": "application/json"},
         )
 
         # 4. Procesar respuesta
         import json
+
         result = json.loads(response.text)
 
         # Limpiar archivo remoto (opcional, pero buena práctica si son muchos)
@@ -70,7 +71,7 @@ async def transcribe_audio(audio_path: str) -> dict[str, Any]:
 
         return {
             "transcript": result.get("transcript", ""),
-            "language": result.get("language", "unknown")
+            "language": result.get("language", "unknown"),
         }
 
     except Exception as e:

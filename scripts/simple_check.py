@@ -13,7 +13,7 @@ def check_file_sizes() -> bool:
     """Check that Python files are < 100 lines."""
     violations = []
 
-    for py_file in Path('src').glob('**/*.py'):
+    for py_file in Path("src").glob("**/*.py"):
         if not py_file.exists():
             continue
 
@@ -37,11 +37,14 @@ def check_basic_patterns() -> bool:
     try:
         # Get changed files
         result = subprocess.run(
-            ['git', 'diff', '--name-only', 'HEAD'],
-            capture_output=True, text=True, check=True
+            ["git", "diff", "--name-only", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
         )
-        changed_files = [f for f in result.stdout.strip().split('\n')
-                        if f and f.endswith('.py')]
+        changed_files = [
+            f for f in result.stdout.strip().split("\n") if f and f.endswith(".py")
+        ]
 
         if not changed_files:
             return True
@@ -55,10 +58,10 @@ def check_basic_patterns() -> bool:
             content = Path(file_path).read_text()
 
             # Check for sync I/O patterns
-            if 'import requests' in content:
+            if "import requests" in content:
                 violations.append(f"{file_path}: Use aiohttp instead of requests")
 
-            if 'open(' in content and 'async' not in content:
+            if "open(" in content and "async" not in content:
                 violations.append(f"{file_path}: Use aiofiles for file I/O")
 
         if violations:

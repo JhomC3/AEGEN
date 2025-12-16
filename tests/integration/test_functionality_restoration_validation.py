@@ -15,7 +15,9 @@ class TestFunctionalityRestoration:
         chat_agent_path = "src/agents/specialists/chat_agent.py"
 
         # Check file exists
-        assert os.path.exists(chat_agent_path), f"ChatAgent file not found: {chat_agent_path}"
+        assert os.path.exists(chat_agent_path), (
+            f"ChatAgent file not found: {chat_agent_path}"
+        )
 
         with open(chat_agent_path) as f:
             content = f.read()
@@ -42,7 +44,7 @@ class TestFunctionalityRestoration:
             "_enhanced_conversational_response",
             "_format_conversation_history",
             "DELEGATION_ANALYSIS_TEMPLATE",
-            "CONVERSATIONAL_RESPONSE_TEMPLATE"
+            "CONVERSATIONAL_RESPONSE_TEMPLATE",
         ]
 
         missing_functions = []
@@ -56,7 +58,7 @@ class TestFunctionalityRestoration:
         architectural_checks = [
             "src.core.engine",
             "master_orchestrator",
-            "InternalDelegationResponse"
+            "InternalDelegationResponse",
         ]
 
         missing_architecture = []
@@ -64,7 +66,9 @@ class TestFunctionalityRestoration:
             if check not in content:
                 missing_architecture.append(check)
 
-        assert len(missing_architecture) <= 1, f"Architecture issues: {missing_architecture}"
+        assert len(missing_architecture) <= 1, (
+            f"Architecture issues: {missing_architecture}"
+        )
 
         print("✅ ChatAgent restoration validation PASSED")
 
@@ -78,14 +82,18 @@ class TestFunctionalityRestoration:
 
             # Check that function calling optimizations are present
             function_calling_present = (
-                "function calling" in routing_content and
-                "bind_tools" in routing_content
+                "function calling" in routing_content
+                and "bind_tools" in routing_content
             )
 
-            print(f"   Function calling optimization: {'✅' if function_calling_present else '❌'}")
+            print(
+                f"   Function calling optimization: {'✅' if function_calling_present else '❌'}"
+            )
 
             # This is a soft check - routing might have been refactored
             if not function_calling_present:
-                print("   ⚠️  Function calling patterns not detected (may be refactored)")
+                print(
+                    "   ⚠️  Function calling patterns not detected (may be refactored)"
+                )
 
         print("✅ Performance balance validation completed")

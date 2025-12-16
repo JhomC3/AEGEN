@@ -2,7 +2,7 @@
 """
 Simple AccessController para validación de permisos de collections globales.
 
-Implementación básica para MVP que puede ser extendida más tarde con 
+Implementación básica para MVP que puede ser extendida más tarde con
 funcionalidad más robusta de autorización.
 """
 
@@ -16,7 +16,7 @@ class AccessController:
     """
     Controlador de acceso simple para collections globales.
 
-    Responsabilidad única: validar permisos básicos de acceso a 
+    Responsabilidad única: validar permisos básicos de acceso a
     collections globales basado en user_id y collection_name.
 
     Para MVP: implementación permisiva que logea accesos.
@@ -28,17 +28,14 @@ class AccessController:
         self.logger.info("Simple AccessController initialized (MVP mode)")
 
     async def validate_global_access(
-        self,
-        user_id: str,
-        collection_name: str,
-        operation: str = "read"
+        self, user_id: str, collection_name: str, operation: str = "read"
     ) -> bool:
         """
         Valida si usuario tiene acceso a collection global.
 
         Args:
             user_id: ID del usuario solicitante
-            collection_name: Nombre de la collection global  
+            collection_name: Nombre de la collection global
             operation: Tipo de operación (read, write, delete)
 
         Returns:
@@ -60,7 +57,7 @@ class AccessController:
         collection_name: str,
         operation: str,
         success: bool,
-        metadata: dict[str, Any] | None = None
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         """
         Registra intento de acceso para auditoria.

@@ -34,13 +34,11 @@ PROCESSOR_REGISTRY: dict[str, Callable[[str, str], Awaitable[dict[str, Any]]]] =
     ".pptx": _document_processor.process_document,
     ".xlsx": _document_processor.process_document,
     ".csv": _document_processor.process_document,
-
     # Imágenes (delega a ImageToText)
     ".png": lambda path, name: _image_processor.image_to_text_tool(file_path=path),
     ".jpg": lambda path, name: _image_processor.image_to_text_tool(file_path=path),
     ".jpeg": lambda path, name: _image_processor.image_to_text_tool(file_path=path),
     ".webp": lambda path, name: _image_processor.image_to_text_tool(file_path=path),
-
     # Audio (delega a transcribe_audio)
     ".mp3": lambda path, name: transcribe_audio.ainvoke({"audio_path": path}),
     ".wav": lambda path, name: transcribe_audio.ainvoke({"audio_path": path}),
@@ -48,7 +46,9 @@ PROCESSOR_REGISTRY: dict[str, Callable[[str, str], Awaitable[dict[str, Any]]]] =
     ".m4a": lambda path, name: transcribe_audio.ainvoke({"audio_path": path}),
 }
 
-logger.info(f"MultimodalProcessor initialized with support for: {list(PROCESSOR_REGISTRY.keys())}")
+logger.info(
+    f"MultimodalProcessor initialized with support for: {list(PROCESSOR_REGISTRY.keys())}"
+)
 
 
 @tool

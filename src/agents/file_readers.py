@@ -12,10 +12,12 @@ READER_REGISTRY: dict[str, Callable[[str], str]] = {}
 
 def register_reader(*extensions: str):
     """Decorador para registrar lectores por extensión."""
+
     def decorator(func: Callable[[str], str]) -> Callable[[str], str]:
         for ext in extensions:
             READER_REGISTRY[ext.lower()] = func
         return func
+
     return decorator
 
 

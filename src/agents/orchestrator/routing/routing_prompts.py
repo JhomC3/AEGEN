@@ -17,11 +17,13 @@ def build_routing_prompt() -> ChatPromptTemplate:
         ChatPromptTemplate: Prompt configurado para function calling (no structured output)
     """
     return ChatPromptTemplate.from_messages([
-        ("system", """Analiza el mensaje del usuario y llama a la función route_user_message con los parámetros correctos.
+        (
+            "system",
+            """Analiza el mensaje del usuario y llama a la función route_user_message con los parámetros correctos.
 
 Tu trabajo es:
 1. Identificar la intención principal del mensaje
-2. Extraer entidades relevantes (emails, URLs, archivos, fechas)  
+2. Extraer entidades relevantes (emails, URLs, archivos, fechas)
 3. Seleccionar el especialista más adecuado
 4. Calcular tu nivel de confianza en la decisión
 
@@ -42,8 +44,9 @@ IMPORTANTE: Debes llamar OBLIGATORIAMENTE a la función route_user_message con:
 - requires_tools: true si necesita herramientas específicas
 - entities: lista de entidades encontradas (strings)
 - subintent: sub-intención específica si aplica
-- next_actions: acciones sugeridas post-routing"""),
-        ("human", "{user_message}")
+- next_actions: acciones sugeridas post-routing""",
+        ),
+        ("human", "{user_message}"),
     ])
 
 

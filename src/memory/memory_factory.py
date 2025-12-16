@@ -36,11 +36,15 @@ class MemoryFactory:
             self.logger.debug("Created RedisFallbackManager instance")
         return self._redis_manager
 
-    def get_consistency_manager(self, consistency_level: ConsistencyLevel = ConsistencyLevel.EVENTUAL) -> ConsistencyManager:
+    def get_consistency_manager(
+        self, consistency_level: ConsistencyLevel = ConsistencyLevel.EVENTUAL
+    ) -> ConsistencyManager:
         """Crea o retorna ConsistencyManager."""
         if self._consistency_manager is None:
             self._consistency_manager = ConsistencyManager(consistency_level)
-            self.logger.debug(f"Created ConsistencyManager with level: {consistency_level}")
+            self.logger.debug(
+                f"Created ConsistencyManager with level: {consistency_level}"
+            )
         return self._consistency_manager
 
     def get_hybrid_coordinator(self) -> HybridMemoryCoordinator:
@@ -50,9 +54,7 @@ class MemoryFactory:
             consistency_manager = self.get_consistency_manager()
 
             self._hybrid_coordinator = HybridMemoryCoordinator(
-                self.vector_manager,
-                redis_manager,
-                consistency_manager
+                self.vector_manager, redis_manager, consistency_manager
             )
             self.logger.debug("Created HybridMemoryCoordinator instance")
 
@@ -61,7 +63,7 @@ class MemoryFactory:
     def create_memory_components(self) -> dict:
         """Crea todos los componentes de memoria híbrida."""
         return {
-            'redis_manager': self.get_redis_manager(),
-            'consistency_manager': self.get_consistency_manager(),
-            'hybrid_coordinator': self.get_hybrid_coordinator()
+            "redis_manager": self.get_redis_manager(),
+            "consistency_manager": self.get_consistency_manager(),
+            "hybrid_coordinator": self.get_hybrid_coordinator(),
         }

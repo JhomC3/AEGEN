@@ -27,9 +27,9 @@ class TestBaseModularAgentInterface:
         assert isinstance(agent, BaseModularAgent)
 
         # Verificar métodos requeridos existen
-        assert hasattr(agent, 'execute')
-        assert hasattr(agent, 'get_capabilities')
-        assert hasattr(agent, 'can_handle')
+        assert hasattr(agent, "execute")
+        assert hasattr(agent, "get_capabilities")
+        assert hasattr(agent, "can_handle")
 
     def test_agent_capabilities(self):
         """Test de get_capabilities method."""
@@ -92,10 +92,7 @@ class TestExampleModularAgent:
         start_time = time.time()
 
         # Ejecutar múltiples agentes concurrentemente
-        tasks = [
-            agent.execute({"test": f"data_{i}"}, context)
-            for i in range(3)
-        ]
+        tasks = [agent.execute({"test": f"data_{i}"}, context) for i in range(3)]
 
         results = await asyncio.gather(*tasks)
         elapsed = time.time() - start_time
@@ -123,8 +120,7 @@ class TestAgentContextAndResult:
     def test_agent_context_metadata(self):
         """Test de manejo de metadata en AgentContext."""
         context = AgentContext(
-            user_id="user123",
-            metadata={"key1": "value1", "key2": 42}
+            user_id="user123", metadata={"key1": "value1", "key2": 42}
         )
 
         assert context.get_metadata("key1") == "value1"
@@ -134,17 +130,12 @@ class TestAgentContextAndResult:
     def test_agent_result_is_success_property(self):
         """Test de la propiedad is_success en AgentResult."""
         success_result = AgentResult(
-            status=AgentResultStatus.SUCCESS,
-            data={"test": "success"}
+            status=AgentResultStatus.SUCCESS, data={"test": "success"}
         )
         partial_success_result = AgentResult(
-            status=AgentResultStatus.PARTIAL_SUCCESS,
-            data={"test": "partial"}
+            status=AgentResultStatus.PARTIAL_SUCCESS, data={"test": "partial"}
         )
-        error_result = AgentResult(
-            status=AgentResultStatus.ERROR,
-            data=None
-        )
+        error_result = AgentResult(status=AgentResultStatus.ERROR, data=None)
 
         assert success_result.is_success is True
         assert partial_success_result.is_success is True

@@ -24,7 +24,7 @@ class TestFileHandlerAgent:
     @pytest.fixture
     def temp_txt_file(self):
         """Crea archivo temporal de texto."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("Test content\nLine 2")
             temp_path = f.name
         yield temp_path
@@ -33,7 +33,7 @@ class TestFileHandlerAgent:
     @pytest.fixture
     def empty_txt_file(self):
         """Crea archivo temporal vacío."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
             f.write("")
             temp_path = f.name
         yield temp_path
@@ -57,10 +57,7 @@ class TestFileHandlerAgent:
     @pytest.mark.asyncio
     async def test_process_valid_txt_file(self, agent, context, temp_txt_file):
         """Test procesamiento exitoso de archivo válido."""
-        input_data = {
-            "file_path": temp_txt_file,
-            "file_name": "test.txt"
-        }
+        input_data = {"file_path": temp_txt_file, "file_name": "test.txt"}
 
         result = await agent.execute(input_data, context)
 
@@ -94,9 +91,7 @@ class TestFileHandlerAgent:
     @pytest.mark.asyncio
     async def test_nonexistent_file(self, agent, context):
         """Test error con archivo inexistente."""
-        input_data = {
-            "file_path": "/nonexistent/file.txt"
-        }
+        input_data = {"file_path": "/nonexistent/file.txt"}
 
         result = await agent.execute(input_data, context)
 
@@ -106,9 +101,7 @@ class TestFileHandlerAgent:
     @pytest.mark.asyncio
     async def test_empty_file_error(self, agent, context, empty_txt_file):
         """Test error con archivo vacío."""
-        input_data = {
-            "file_path": empty_txt_file
-        }
+        input_data = {"file_path": empty_txt_file}
 
         result = await agent.execute(input_data, context)
 
@@ -118,7 +111,7 @@ class TestFileHandlerAgent:
     @pytest.mark.asyncio
     async def test_unsupported_extension(self, agent, context):
         """Test error con extensión no soportada."""
-        with tempfile.NamedTemporaryFile(suffix='.exe', delete=False) as f:
+        with tempfile.NamedTemporaryFile(suffix=".exe", delete=False) as f:
             f.write(b"binary content")
             temp_path = f.name
 

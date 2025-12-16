@@ -72,13 +72,15 @@ class EntitlementCache:
     def get_stats(self) -> dict[str, any]:
         """Obtiene estadísticas del cache."""
         total_requests = self.stats["hits"] + self.stats["misses"]
-        hit_ratio = (self.stats["hits"] / total_requests * 100) if total_requests > 0 else 0
+        hit_ratio = (
+            (self.stats["hits"] / total_requests * 100) if total_requests > 0 else 0
+        )
 
         return {
             "cached_users": len(self.cache),
             "cache_hits": self.stats["hits"],
             "cache_misses": self.stats["misses"],
-            "hit_ratio": f"{hit_ratio:.1f}%"
+            "hit_ratio": f"{hit_ratio:.1f}%",
         }
 
 

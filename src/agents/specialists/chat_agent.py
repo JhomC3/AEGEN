@@ -2,13 +2,13 @@
 """
 Enhanced ChatAgent with intelligent delegation and optimized performance.
 
-Architecture restored: Intelligent delegation system (ADR-0006) with performance 
-optimizations from ADR-0009. Maintains <2s response time while preserving 
+Architecture restored: Intelligent delegation system (ADR-0006) with performance
+optimizations from ADR-0009. Maintains <2s response time while preserving
 advanced conversational capabilities.
 
 Key features restored:
 - Intelligent delegation analysis with fast LLM classification
-- Integration with MasterOrchestrator for complex tasks  
+- Integration with MasterOrchestrator for complex tasks
 - Advanced conversation translation and context management
 - Optimized threshold-based routing (simple vs complex messages)
 """
@@ -29,11 +29,14 @@ except ImportError:
     # Fallback para entornos donde google.api_core no está disponible
     class ResourceExhaustedError(Exception):
         """Fallback ResourceExhausted exception"""
+
         pass
 
     class GoogleAPICallError(Exception):
         """Fallback GoogleAPICallError exception"""
+
         pass
+
 
 # ✅ ARCHITECTURE FIX: Use src.core.engine instead of hardcoded LLM
 # ✅ FUNCTIONALITY RESTORATION: Re-import MasterOrchestrator for delegation
@@ -58,7 +61,7 @@ DELEGATION_ANALYSIS_TEMPLATE = """Eres un clasificador rápido de intenciones qu
 
 DELEGAR a especialistas si el mensaje incluye:
 - Planificación de tareas complejas o cronogramas
-- Análisis técnico, de datos, o de archivos 
+- Análisis técnico, de datos, o de archivos
 - Procesamiento de documentos, audio, o multimedia
 - Solicitudes que requieren herramientas específicas
 - Tareas que requieren múltiples pasos o workflows
@@ -99,7 +102,7 @@ Conocimiento relevante disponible:
 
 Instrucciones:
 - Sé natural y conversacional
-- Usa el contexto para respuestas más relevantes  
+- Usa el contexto para respuestas más relevantes
 - Integra el conocimiento relevante cuando esté disponible
 - Ofrece ayuda proactiva cuando sea apropiado
 - Si detectas que el usuario necesita algo complejo, sugiere cómo puedo ayudar
@@ -135,7 +138,9 @@ Traduce la respuesta a lenguaje conversacional natural manteniendo toda la infor
 
 
 @tool
-async def conversational_chat_tool(user_message: str, conversation_history: str = "") -> str:
+async def conversational_chat_tool(
+    user_message: str, conversation_history: str = ""
+) -> str:
     """
     ✅ FUNCTIONALITY RESTORED: Intelligent delegation tool with performance optimization.
 
@@ -154,15 +159,20 @@ async def conversational_chat_tool(user_message: str, conversation_history: str 
 
     if not requires_delegation:
         # ✅ PERFORMANCE: Direct conversational response (<1s)
-        return await _enhanced_conversational_response(user_message, conversation_history)
+        return await _enhanced_conversational_response(
+            user_message, conversation_history
+        )
     else:
         # ✅ RESTORATION: Intelligent delegation with translation (<3s vs 36+s previous)
-        return await _optimized_delegate_and_translate(user_message, conversation_history)
+        return await _optimized_delegate_and_translate(
+            user_message, conversation_history
+        )
 
 
 # ============================================================================
 # PERFORMANCE-OPTIMIZED DELEGATION ANALYSIS FUNCTIONS
 # ============================================================================
+
 
 async def _optimized_delegation_analysis(
     user_message: str, conversation_history: str
@@ -184,15 +194,20 @@ async def _optimized_delegation_analysis(
         # ✅ ARCHITECTURE: Use src.core.engine instead of hardcoded LLM with observability
         config = create_observable_config(call_type="delegation_analysis")
         chain = delegation_prompt | llm
-        response = await chain.ainvoke({
-            "user_message": user_message,
-            "conversation_history": recent_history,
-        }, config=config)
+        response = await chain.ainvoke(
+            {
+                "user_message": user_message,
+                "conversation_history": recent_history,
+            },
+            config=config,
+        )
 
         decision = str(response.content).strip().upper()
         should_delegate = decision == "DELEGAR"
 
-        logger.info(f"Delegation analysis: '{user_message[:30]}...' → {decision} ({should_delegate})")
+        logger.info(
+            f"Delegation analysis: '{user_message[:30]}...' → {decision} ({should_delegate})"
+        )
         return should_delegate
 
     except Exception as e:
@@ -219,7 +234,7 @@ async def _enhanced_conversational_response(
     """
     ✅ RESTORATION + INTEGRATION: Enhanced conversational response with global knowledge base.
 
-    Generates natural conversational responses using optimized prompting, 
+    Generates natural conversational responses using optimized prompting,
     conversation context integration, and global knowledge base context.
     """
     prompt = ChatPromptTemplate.from_template(CONVERSATIONAL_RESPONSE_TEMPLATE)
@@ -235,7 +250,7 @@ async def _enhanced_conversational_response(
         prompt_input = {
             "user_message": user_message,
             "conversation_history": conversation_history,
-            "knowledge_context": knowledge_context  # Siempre incluir, aunque esté vacío
+            "knowledge_context": knowledge_context,  # Siempre incluir, aunque esté vacío
         }
 
         response = await chain.ainvoke(prompt_input, config=config)
@@ -252,11 +267,13 @@ async def _enhanced_conversational_response(
         return "Disculpa, tuve un problema técnico. ¿Podrías intentar de nuevo?"
 
 
-async def _optimized_delegate_and_translate(user_message: str, conversation_history: str) -> str:
+async def _optimized_delegate_and_translate(
+    user_message: str, conversation_history: str
+) -> str:
     """
     ✅ FUNCTIONALITY RESTORATION: Intelligent delegation with performance optimization.
 
-    Delegates complex tasks to MasterOrchestrator and translates technical responses 
+    Delegates complex tasks to MasterOrchestrator and translates technical responses
     to natural conversational language. Optimized for <3s total time vs 36+s previous.
     """
     logger.info(f"Delegando tarea compleja optimizada: '{user_message[:50]}...'")
@@ -268,14 +285,14 @@ async def _optimized_delegate_and_translate(user_message: str, conversation_hist
             event_type="text",
             content=user_message,
             user_id="system",  # Will be overridden by actual user context
-            timestamp=None
+            timestamp=None,
         )
 
         # ✅ RESTORATION: Create initial state for MasterOrchestrator
         initial_state = GraphStateV2(
             event=event,
             payload={"user_message": user_message},
-            conversation_history=_parse_conversation_history(conversation_history)
+            conversation_history=_parse_conversation_history(conversation_history),
         )
 
         # ✅ OPTIMIZATION: Direct call to MasterOrchestrator with timeout handling
@@ -287,7 +304,9 @@ async def _optimized_delegate_and_translate(user_message: str, conversation_hist
 
         if error_message:
             logger.error(f"Error en delegación: {error_message}")
-            return f"Disculpa, hubo un problema procesando tu solicitud: {error_message}"
+            return (
+                f"Disculpa, hubo un problema procesando tu solicitud: {error_message}"
+            )
 
         if not response:
             logger.warning("No se recibió respuesta del especialista")
@@ -339,13 +358,16 @@ async def _translate_specialist_response(
         # ✅ ARCHITECTURE: Use src.core.engine with observability
         config = create_observable_config(call_type="response_translation")
         chain = translation_prompt | llm
-        response = await chain.ainvoke({
-            "conversation_history": conversation_history,
-            "original_user_message": original_user_message,
-            "status": status,
-            "summary": summary,
-            "suggestions": suggestions,
-        }, config=config)
+        response = await chain.ainvoke(
+            {
+                "conversation_history": conversation_history,
+                "original_user_message": original_user_message,
+                "status": status,
+                "summary": summary,
+                "suggestions": suggestions,
+            },
+            config=config,
+        )
 
         translated = str(response.content).strip()
         logger.info(f"Specialist response translated: {len(translated)} chars")
@@ -357,7 +379,9 @@ async def _translate_specialist_response(
         return summary
 
 
-def _get_recent_history_summary(conversation_history: str, max_length: int = 200) -> str:
+def _get_recent_history_summary(
+    conversation_history: str, max_length: int = 200
+) -> str:
     """
     ✅ OPTIMIZATION: Efficient conversation history summarization for delegation analysis.
 
@@ -367,7 +391,7 @@ def _get_recent_history_summary(conversation_history: str, max_length: int = 200
         return conversation_history
 
     # Take last part of conversation history
-    lines = conversation_history.split('\n')
+    lines = conversation_history.split("\n")
     summary_lines = []
     current_length = 0
 
@@ -378,7 +402,7 @@ def _get_recent_history_summary(conversation_history: str, max_length: int = 200
         summary_lines.insert(0, line)
         current_length += len(line)
 
-    result = '\n'.join(summary_lines)
+    result = "\n".join(summary_lines)
     return result if result else "Sin historial previo"
 
 
@@ -392,7 +416,7 @@ def _parse_conversation_history(conversation_history: str) -> list[dict[str, Any
         return []
 
     history_list = []
-    lines = conversation_history.split('\n')
+    lines = conversation_history.split("\n")
 
     for line in lines:
         line = line.strip()
@@ -400,22 +424,22 @@ def _parse_conversation_history(conversation_history: str) -> list[dict[str, Any
             continue
 
         # Parse "Role: Content" format
-        if ':' in line:
-            parts = line.split(':', 1)
+        if ":" in line:
+            parts = line.split(":", 1)
             if len(parts) == 2:
                 role = parts[0].strip().lower()
                 content = parts[1].strip()
 
                 # Map roles to expected format
-                if role in ['user', 'usuario']:
-                    role = 'user'
-                elif role in ['assistant', 'asistente', 'aegen']:
-                    role = 'assistant'
+                if role in ["user", "usuario"]:
+                    role = "user"
+                elif role in ["assistant", "asistente", "aegen"]:
+                    role = "assistant"
 
                 history_list.append({
                     "role": role,
                     "content": content,
-                    "timestamp": datetime.now().isoformat()
+                    "timestamp": datetime.now().isoformat(),
                 })
 
     return history_list
@@ -425,12 +449,13 @@ def _parse_conversation_history(conversation_history: str) -> list[dict[str, Any
 # ENHANCED CHAT NODE WITH INTELLIGENT DELEGATION
 # ============================================================================
 
+
 async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
     """
     ✅ FUNCTIONALITY RESTORED: Enhanced chat node with intelligent delegation capabilities.
 
     Features restored:
-    - Intelligent delegation analysis 
+    - Intelligent delegation analysis
     - Advanced conversation context management
     - Performance-optimized routing (<2s total time)
     - Rich conversation history handling
@@ -443,21 +468,29 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
     session_id = state.get("session_id", "unknown-session")
     user_message = event_obj.content or ""
 
-    logger.info(f"[{session_id}] Enhanced ChatAgent Node ejecutándose: '{user_message[:50]}...'")
+    logger.info(
+        f"[{session_id}] Enhanced ChatAgent Node ejecutándose: '{user_message[:50]}...'"
+    )
 
     # ✅ RESTORATION: Build rich conversation history context
     conversation_history = state.get("conversation_history", [])
     history_text = _format_conversation_history(conversation_history)
 
     # ✅ PERFORMANCE + FUNCTIONALITY: Intelligent delegation with optimization
-    requires_delegation = await _optimized_delegation_analysis(user_message, history_text)
+    requires_delegation = await _optimized_delegation_analysis(
+        user_message, history_text
+    )
 
     if not requires_delegation:
         # ✅ PERFORMANCE: Direct conversational response (<1s)
-        response_text = await _enhanced_conversational_response(user_message, history_text)
+        response_text = await _enhanced_conversational_response(
+            user_message, history_text
+        )
     else:
         # ✅ RESTORATION: Intelligent delegation with translation (<3s)
-        response_text = await _optimized_delegate_and_translate(user_message, history_text)
+        response_text = await _optimized_delegate_and_translate(
+            user_message, history_text
+        )
 
     # ✅ RESTORATION: Advanced conversation history update with metadata
     updated_history = _update_conversation_history_enhanced(
@@ -473,8 +506,8 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
             "required_delegation": requires_delegation,
             "response_type": "delegated" if requires_delegation else "direct",
             "session_id": session_id,
-            "enhanced_features": "adr_0006_restored"
-        }
+            "enhanced_features": "adr_0006_restored",
+        },
     }
 
     return {
@@ -494,7 +527,11 @@ def _format_conversation_history(conversation_history: list[dict[str, Any]]) -> 
         return "Sin historial conversacional previo."
 
     # ✅ OPTIMIZATION: Use recent context for better performance (last 8 messages)
-    recent_history = conversation_history[-8:] if len(conversation_history) > 8 else conversation_history
+    recent_history = (
+        conversation_history[-8:]
+        if len(conversation_history) > 8
+        else conversation_history
+    )
 
     history_parts = []
     for _i, msg in enumerate(recent_history):
@@ -507,7 +544,8 @@ def _format_conversation_history(conversation_history: list[dict[str, Any]]) -> 
             # Simplified timestamp for readability
             try:
                 from datetime import datetime
-                dt = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+
+                dt = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
                 time_str = dt.strftime("%H:%M")
                 context = f"[{time_str}]"
             except Exception as e:
@@ -528,7 +566,7 @@ def _update_conversation_history_enhanced(
     current_history: list[dict[str, Any]],
     user_message: str,
     response_text: str,
-    used_delegation: bool
+    used_delegation: bool,
 ) -> list[dict[str, Any]]:
     """
     ✅ RESTORATION: Enhanced conversation history update with rich metadata.
@@ -546,7 +584,7 @@ def _update_conversation_history_enhanced(
             "content": user_message,
             "timestamp": current_time,
             "message_length": len(user_message),
-            "message_type": "user_input"
+            "message_type": "user_input",
         })
 
     # ✅ ENHANCEMENT: Add assistant response with delegation metadata
@@ -557,7 +595,7 @@ def _update_conversation_history_enhanced(
         "message_length": len(str(response_text)),
         "agent_type": "chat_specialist_enhanced",
         "delegation_used": used_delegation,
-        "processing_type": "delegated" if used_delegation else "direct"
+        "processing_type": "delegated" if used_delegation else "direct",
     }
 
     updated_history.append(response_metadata)
@@ -572,6 +610,7 @@ def _update_conversation_history_enhanced(
 # ============================================================================
 # ENHANCED CHATSPECIALIST WITH FULL FUNCTIONALITY RESTORED
 # ============================================================================
+
 
 class ChatSpecialist(SpecialistInterface):
     """
@@ -589,7 +628,7 @@ class ChatSpecialist(SpecialistInterface):
 
     Capabilities:
     - Conversational chat with context awareness
-    - Intelligent task complexity analysis 
+    - Intelligent task complexity analysis
     - Seamless delegation to appropriate specialists
     - Advanced conversation memory and personalization
     - Performance-optimized hybrid routing
@@ -600,7 +639,9 @@ class ChatSpecialist(SpecialistInterface):
         self._graph = self._build_graph()
         self._tool: BaseTool = conversational_chat_tool
 
-        logger.info("✅ Enhanced ChatSpecialist initialized with full ADR-0006 + ADR-0009 capabilities")
+        logger.info(
+            "✅ Enhanced ChatSpecialist initialized with full ADR-0006 + ADR-0009 capabilities"
+        )
 
     @property
     def name(self) -> str:
@@ -622,14 +663,14 @@ class ChatSpecialist(SpecialistInterface):
         intelligent delegation, advanced context management, and optimization features.
         """
         return [
-            "text",                          # Basic text conversation
-            "intelligent_delegation",        # Smart routing to specialists
-            "conversation_memory",          # Rich conversation context
-            "context_awareness",            # Advanced context understanding
-            "specialist_integration",      # MasterOrchestrator integration
-            "response_translation",         # Technical to conversational translation
-            "performance_optimized",        # <2s response time optimization
-            "metadata_tracking"             # Rich delegation and performance metadata
+            "text",  # Basic text conversation
+            "intelligent_delegation",  # Smart routing to specialists
+            "conversation_memory",  # Rich conversation context
+            "context_awareness",  # Advanced context understanding
+            "specialist_integration",  # MasterOrchestrator integration
+            "response_translation",  # Technical to conversational translation
+            "performance_optimized",  # <2s response time optimization
+            "metadata_tracking",  # Rich delegation and performance metadata
         ]
 
     def _build_graph(self) -> Any:
@@ -661,8 +702,8 @@ class ChatSpecialist(SpecialistInterface):
                 "intelligent_delegation",
                 "master_orchestrator_integration",
                 "response_translation",
-                "conversation_context_management"
-            ]
+                "conversation_context_management",
+            ],
         }
 
 

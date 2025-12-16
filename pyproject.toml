@@ -68,6 +68,7 @@ test = [
 
 lint = [
     "ruff",
+    "black",
     "mypy",
     "pre-commit",
     "bandit",

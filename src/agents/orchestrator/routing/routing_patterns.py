@@ -45,46 +45,52 @@ class PatternExtractor:
 
     def _extract_emails(self, text: str) -> list[EntityInfo]:
         """Extrae direcciones email válidas."""
-        pattern = r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b'
+        pattern = r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"
         entities = []
 
         for match in re.finditer(pattern, text, re.IGNORECASE):
-            entities.append(EntityInfo(
-                type="email",
-                value=match.group(),
-                confidence=0.95,
-                position=match.start()
-            ))
+            entities.append(
+                EntityInfo(
+                    type="email",
+                    value=match.group(),
+                    confidence=0.95,
+                    position=match.start(),
+                )
+            )
 
         return entities
 
     def _extract_urls(self, text: str) -> list[EntityInfo]:
         """Extrae URLs con protocolo HTTP/HTTPS."""
-        pattern = r'https?://(?:[-\w.])+(?:\:[0-9]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:\#(?:[\w.])*)?)?'
+        pattern = r"https?://(?:[-\w.])+(?:\:[0-9]+)?(?:/(?:[\w/_.])*(?:\?(?:[\w&=%.])*)?(?:\#(?:[\w.])*)?)?"
         entities = []
 
         for match in re.finditer(pattern, text):
-            entities.append(EntityInfo(
-                type="url",
-                value=match.group(),
-                confidence=0.9,
-                position=match.start()
-            ))
+            entities.append(
+                EntityInfo(
+                    type="url",
+                    value=match.group(),
+                    confidence=0.9,
+                    position=match.start(),
+                )
+            )
 
         return entities
 
     def _extract_documents(self, text: str) -> list[EntityInfo]:
         """Extrae nombres de archivos con extensiones comunes."""
-        pattern = r'\b\w+\.(pdf|docx?|xlsx?|pptx?|txt|csv|json|xml)\b'
+        pattern = r"\b\w+\.(pdf|docx?|xlsx?|pptx?|txt|csv|json|xml)\b"
         entities = []
 
         for match in re.finditer(pattern, text, re.IGNORECASE):
-            entities.append(EntityInfo(
-                type="document",
-                value=match.group(),
-                confidence=0.85,
-                position=match.start()
-            ))
+            entities.append(
+                EntityInfo(
+                    type="document",
+                    value=match.group(),
+                    confidence=0.85,
+                    position=match.start(),
+                )
+            )
 
         return entities
 
@@ -100,21 +106,46 @@ class IntentValidator:
     # Patrones por intent type
     INTENT_PATTERNS = {
         IntentType.FILE_ANALYSIS: [
-            "archivo", "documento", "pdf", "analizar", "revisar",
-            "examinar", "procesar", "leer", "extraer"
+            "archivo",
+            "documento",
+            "pdf",
+            "analizar",
+            "revisar",
+            "examinar",
+            "procesar",
+            "leer",
+            "extraer",
         ],
         IntentType.PLANNING: [
-            "planificar", "cronograma", "organizar", "planear",
-            "programar", "itinerario", "agenda", "calendario"
+            "planificar",
+            "cronograma",
+            "organizar",
+            "planear",
+            "programar",
+            "itinerario",
+            "agenda",
+            "calendario",
         ],
         IntentType.SEARCH: [
-            "buscar", "encontrar", "información sobre", "dime sobre",
-            "investiga", "consulta", "averigua", "explora"
+            "buscar",
+            "encontrar",
+            "información sobre",
+            "dime sobre",
+            "investiga",
+            "consulta",
+            "averigua",
+            "explora",
         ],
         IntentType.HELP: [
-            "ayuda", "cómo", "explicar", "tutorial", "guía",
-            "instrucciones", "asistencia", "apoyo"
-        ]
+            "ayuda",
+            "cómo",
+            "explicar",
+            "tutorial",
+            "guía",
+            "instrucciones",
+            "asistencia",
+            "apoyo",
+        ],
     }
 
     def has_clear_intent_evidence(self, text: str, intent: IntentType) -> bool:
@@ -148,10 +179,12 @@ class SpecialistMapper:
         IntentType.PLANNING: ["planner_agent", "task_manager"],
         IntentType.SEARCH: ["search_agent", "web_retriever"],
         IntentType.CHAT: ["chat_specialist"],
-        IntentType.HELP: ["chat_specialist", "help_agent"]
+        IntentType.HELP: ["chat_specialist", "help_agent"],
     }
 
-    def map_intent_to_specialist(self, intent: IntentType, cache: SpecialistCache) -> str:
+    def map_intent_to_specialist(
+        self, intent: IntentType, cache: SpecialistCache
+    ) -> str:
         """
         Mapea intent a especialista disponible en el sistema.
 
@@ -163,7 +196,9 @@ class SpecialistMapper:
             str: Nombre del especialista más apropiado
         """
         available_specialists = list(cache.get_tool_to_specialist_map().values())
-        preferred_specialists = self.INTENT_TO_SPECIALISTS.get(intent, ["chat_specialist"])
+        preferred_specialists = self.INTENT_TO_SPECIALISTS.get(
+            intent, ["chat_specialist"]
+        )
 
         # Buscar primer especialista disponible en orden de preferencia
         for preferred in preferred_specialists:

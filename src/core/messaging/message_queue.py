@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Message:
     """Estructura de mensaje en cola."""
+
     id: str
     user_id: str
     content: str
@@ -28,8 +29,13 @@ class Message:
     target_agent: str | None = None
 
     @classmethod
-    def create(cls, user_id: str, content: str, target_agent: str | None = None,
-               metadata: dict[str, Any] | None = None) -> "Message":
+    def create(
+        cls,
+        user_id: str,
+        content: str,
+        target_agent: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> "Message":
         """Crea nuevo mensaje con ID único."""
         return cls(
             id=str(uuid4()),
@@ -37,7 +43,7 @@ class Message:
             content=content,
             timestamp=datetime.now(),
             metadata=metadata or {},
-            target_agent=target_agent
+            target_agent=target_agent,
         )
 
 
@@ -64,7 +70,9 @@ class UserMessageQueue:
         """
         try:
             if message.user_id != self.user_id:
-                self.logger.error(f"Message user_id {message.user_id} doesn't match queue user_id {self.user_id}")
+                self.logger.error(
+                    f"Message user_id {message.user_id} doesn't match queue user_id {self.user_id}"
+                )
                 return False
 
             # Intentar agregar a cola (no bloqueante)
@@ -73,10 +81,14 @@ class UserMessageQueue:
             return True
 
         except asyncio.QueueFull:
-            self.logger.warning(f"Queue full for user {self.user_id}, dropping message {message.id}")
+            self.logger.warning(
+                f"Queue full for user {self.user_id}, dropping message {message.id}"
+            )
             return False
         except Exception as e:
-            self.logger.error(f"Failed to enqueue message for user {self.user_id}: {e}", exc_info=True)
+            self.logger.error(
+                f"Failed to enqueue message for user {self.user_id}: {e}", exc_info=True
+            )
             return False
 
     async def get_next_message(self) -> Message | None:
@@ -95,7 +107,10 @@ class UserMessageQueue:
         except asyncio.QueueEmpty:
             return None
         except Exception as e:
-            self.logger.error(f"Failed to get next message for user {self.user_id}: {e}", exc_info=True)
+            self.logger.error(
+                f"Failed to get next message for user {self.user_id}: {e}",
+                exc_info=True,
+            )
             return None
 
     async def mark_message_processed(self) -> None:
@@ -103,11 +118,16 @@ class UserMessageQueue:
         try:
             if self.current_message:
                 self.processed_count += 1
-                self.logger.debug(f"Processed message {self.current_message.id} for user {self.user_id}")
+                self.logger.debug(
+                    f"Processed message {self.current_message.id} for user {self.user_id}"
+                )
                 self.current_message = None
 
         except Exception as e:
-            self.logger.error(f"Failed to mark message as processed for user {self.user_id}: {e}", exc_info=True)
+            self.logger.error(
+                f"Failed to mark message as processed for user {self.user_id}: {e}",
+                exc_info=True,
+            )
 
     def is_processing(self) -> bool:
         """Verifica si está procesando un mensaje actualmente."""
@@ -132,7 +152,9 @@ class UserMessageQueue:
             "queue_size": self.queue_size(),
             "processing": self.processing,
             "processed_count": self.processed_count,
-            "current_message_id": self.current_message.id if self.current_message else None
+            "current_message_id": self.current_message.id
+            if self.current_message
+            else None,
         }
 
 
@@ -150,9 +172,13 @@ class MessageQueueManager:
             self.logger.debug(f"Created new queue for user {user_id}")
         return self.user_queues[user_id]
 
-    async def enqueue_message(self, user_id: str, content: str,
-                            target_agent: str | None = None,
-                            metadata: dict[str, Any] | None = None) -> bool:
+    async def enqueue_message(
+        self,
+        user_id: str,
+        content: str,
+        target_agent: str | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> bool:
         """
         Encola mensaje para usuario.
 
@@ -171,7 +197,9 @@ class MessageQueueManager:
             return await queue.enqueue_message(message)
 
         except Exception as e:
-            self.logger.error(f"Failed to enqueue message for user {user_id}: {e}", exc_info=True)
+            self.logger.error(
+                f"Failed to enqueue message for user {user_id}: {e}", exc_info=True
+            )
             return False
 
     def get_queue_stats(self, user_id: str) -> dict[str, Any] | None:
@@ -182,7 +210,8 @@ class MessageQueueManager:
     def cleanup_empty_queues(self) -> int:
         """Limpia colas vacías inactivas."""
         empty_queues = [
-            user_id for user_id, queue in self.user_queues.items()
+            user_id
+            for user_id, queue in self.user_queues.items()
             if queue.is_empty() and not queue.is_processing()
         ]
 

@@ -4,18 +4,18 @@ import os
 from pathlib import Path
 
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
-MAX_CONTENT_SIZE = 1024 * 1024   # 1MB
+MAX_CONTENT_SIZE = 1024 * 1024  # 1MB
 
-ALLOWED_EXTENSIONS = {
-    '.txt', '.md', '.pdf', '.docx', '.pptx', '.xlsx', '.csv'
-}
+ALLOWED_EXTENSIONS = {".txt", ".md", ".pdf", ".docx", ".pptx", ".xlsx", ".csv"}
 
 ALLOWED_MIME_TYPES = {
-    'text/plain', 'text/markdown', 'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    'text/csv'
+    "text/plain",
+    "text/markdown",
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "text/csv",
 }
 
 
@@ -43,7 +43,9 @@ class FileValidator:
         """Valida tamaño del archivo."""
         file_size = os.path.getsize(file_path)
         if file_size > MAX_FILE_SIZE:
-            raise ValueError(f"File too large: {file_size} bytes (max: {MAX_FILE_SIZE})")
+            raise ValueError(
+                f"File too large: {file_size} bytes (max: {MAX_FILE_SIZE})"
+            )
 
         if file_size == 0:
             raise ValueError("File is empty")
@@ -70,8 +72,10 @@ class FileValidator:
             raise ValueError("Extracted content is empty")
 
         # Remove harmful characters
-        sanitized = content.replace('\x00', '')
-        sanitized = ''.join(char for char in sanitized if ord(char) >= 32 or char in '\n\r\t')
+        sanitized = content.replace("\x00", "")
+        sanitized = "".join(
+            char for char in sanitized if ord(char) >= 32 or char in "\n\r\t"
+        )
 
         # Limit content size
         if len(sanitized) > MAX_CONTENT_SIZE:

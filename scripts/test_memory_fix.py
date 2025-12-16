@@ -11,6 +11,7 @@ from pathlib import Path
 project_root = Path(__file__).parent.parent
 sys.path.append(str(project_root))
 
+
 async def test_memory_functionality():
     """Test básico de funcionalidad de memoria."""
     try:
@@ -29,7 +30,7 @@ async def test_memory_functionality():
         print("💬 Probando ChatAgent con memory integration...")
         result = await conversational_chat_tool.ainvoke({
             "user_message": "Hola, ¿qué es la terapia cognitiva?",
-            "conversation_history": ""
+            "conversation_history": "",
         })
 
         print(f"✅ ChatAgent response: {result[:100]}...")
@@ -40,8 +41,10 @@ async def test_memory_functionality():
     except Exception as e:
         print(f"❌ Error: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 if __name__ == "__main__":
     success = asyncio.run(test_memory_functionality())

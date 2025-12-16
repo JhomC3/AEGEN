@@ -20,7 +20,7 @@ class UserPreferences:
                 user_id=user_id,
                 query="user preferences and settings",
                 context_type=MemoryType.PREFERENCE,
-                limit=10
+                limit=10,
             )
 
             # Consolidar preferencias
@@ -38,9 +38,7 @@ class UserPreferences:
             return {}
 
     async def update_user_preferences(
-        self,
-        user_id: str,
-        preferences: dict[str, Any]
+        self, user_id: str, preferences: dict[str, Any]
     ) -> bool:
         """Actualiza preferencias del usuario."""
         try:
@@ -50,7 +48,7 @@ class UserPreferences:
                 user_id=user_id,
                 content=content,
                 context_type=MemoryType.PREFERENCE,
-                metadata={"preferences": preferences}
+                metadata={"preferences": preferences},
             )
 
         except Exception as e:

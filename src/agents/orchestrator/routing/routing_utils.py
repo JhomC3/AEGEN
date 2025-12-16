@@ -56,11 +56,13 @@ def update_state_with_decision(state: GraphStateV2, decision: RoutingDecision) -
         "intent": decision.intent.value,
         "entities": [entity.model_dump() for entity in decision.entities],
         "confidence": decision.confidence,
-        "requires_tools": decision.requires_tools
+        "requires_tools": decision.requires_tools,
     })
 
-    logger.info(f"Estado actualizado: {decision.intent} → {decision.target_specialist} "
-                f"(confianza: {decision.confidence:.2f})")
+    logger.info(
+        f"Estado actualizado: {decision.intent} → {decision.target_specialist} "
+        f"(confianza: {decision.confidence:.2f})"
+    )
 
 
 def extract_context_from_state(state: GraphStateV2) -> dict[str, Any]:
@@ -79,7 +81,7 @@ def extract_context_from_state(state: GraphStateV2) -> dict[str, Any]:
     context = {}
 
     # Información del usuario
-    if hasattr(event, 'user_id'):
+    if hasattr(event, "user_id"):
         context["user_id"] = event.user_id
 
     # Historial conversacional

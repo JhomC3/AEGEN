@@ -2,7 +2,12 @@
 from abc import ABC, abstractmethod
 from typing import Any, Protocol
 
-from src.core.schemas import AgentCapability, AgentContext, AgentResult
+from src.core.schemas import (
+    AgentCapability,
+    AgentContext,
+    AgentResult,
+    AgentResultStatus,
+)
 
 
 class BaseModularAgent(Protocol):
@@ -50,7 +55,9 @@ class ModularAgentBase(ABC):
         }
 
         required_capability = capability_mapping.get(task_type)
-        return required_capability in self._capabilities if required_capability else False
+        return (
+            required_capability in self._capabilities if required_capability else False
+        )
 
     @abstractmethod
     async def execute(self, input_data: Any, context: AgentContext) -> AgentResult:
@@ -61,25 +68,23 @@ class ModularAgentBase(ABC):
         self,
         data: Any,
         message: str | None = None,
-        next_agents: list[str] | None = None
+        next_agents: list[str] | None = None,
     ) -> AgentResult:
         """Crea resultado exitoso."""
         return AgentResult(
-            status="success",
+            status=AgentResultStatus.SUCCESS,
             data=data,
             message=message,
-            next_suggested_agents=next_agents or []
+            next_suggested_agents=next_agents or [],
         )
 
     def _create_error_result(
-        self,
-        error_message: str,
-        error_details: str | None = None
+        self, error_message: str, error_details: str | None = None
     ) -> AgentResult:
         """Crea resultado de error."""
         return AgentResult(
-            status="error",
+            status=AgentResultStatus.ERROR,
             data=None,
             message=error_message,
-            error_details=error_details
+            error_details=error_details,
         )

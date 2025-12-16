@@ -23,7 +23,9 @@ class RedisFallbackManager:
         self.logger = logging.getLogger(__name__)
         self._mock_cache: dict[str, dict[str, Any]] = {}  # Mock para development
 
-    async def get_from_redis_or_fallback(self, user_id: str, query: str) -> list[dict[str, Any]]:
+    async def get_from_redis_or_fallback(
+        self, user_id: str, query: str
+    ) -> list[dict[str, Any]]:
         """Obtiene datos de Redis o indica necesidad de fallback."""
         try:
             # Verificar health de Redis primero
@@ -42,24 +44,28 @@ class RedisFallbackManager:
                 # Mock implementation
                 cached_data = self._mock_cache.get(cache_key)
                 if cached_data and not self._is_expired(cached_data):
-                    return cached_data.get('data', [])
+                    return cached_data.get("data", [])
 
             return []  # No data in cache, needs fallback
 
         except Exception as e:
-            self.logger.error(f"Failed Redis lookup for user {user_id}: {e}", exc_info=True)
+            self.logger.error(
+                f"Failed Redis lookup for user {user_id}: {e}", exc_info=True
+            )
             return []
 
-    async def cache_to_redis(self, user_id: str, key: str, data: dict[str, Any], ttl: int) -> bool:
+    async def cache_to_redis(
+        self, user_id: str, key: str, data: dict[str, Any], ttl: int
+    ) -> bool:
         """Almacena datos en Redis con TTL."""
         try:
             cache_key = self._build_cache_key(user_id, key)
 
             cache_entry = {
-                'data': data,
-                'cached_at': datetime.now(UTC).isoformat(),
-                'ttl': ttl,
-                'expires_at': datetime.now(UTC).timestamp() + ttl
+                "data": data,
+                "cached_at": datetime.now(UTC).isoformat(),
+                "ttl": ttl,
+                "expires_at": datetime.now(UTC).timestamp() + ttl,
             }
 
             if self.redis_client:
@@ -73,16 +79,14 @@ class RedisFallbackManager:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to cache data for user {user_id}: {e}", exc_info=True)
+            self.logger.error(
+                f"Failed to cache data for user {user_id}: {e}", exc_info=True
+            )
             return False
 
     async def cache_context(self, user_id: str, content: str, ttl: int) -> bool:
         """Cache contexto conversacional."""
-        context_data = {
-            'content': content,
-            'type': 'context',
-            'user_id': user_id
-        }
+        context_data = {"content": content, "type": "context", "user_id": user_id}
 
         context_key = f"context_{hash(content) % 10000}"
         return await self.cache_to_redis(user_id, context_key, context_data, ttl)
@@ -96,22 +100,29 @@ class RedisFallbackManager:
                 keys = await self.redis_client.keys(keys_pattern)
                 if keys:
                     await self.redis_client.delete(*keys)
-                    self.logger.info(f"Invalidated {len(keys)} cache entries for user {user_id}")
+                    self.logger.info(
+                        f"Invalidated {len(keys)} cache entries for user {user_id}"
+                    )
                     return True
             else:
                 # Mock implementation
                 keys_to_delete = [
-                    key for key in self._mock_cache.keys()
+                    key
+                    for key in self._mock_cache.keys()
                     if user_id in key and pattern in key
                 ]
                 for key in keys_to_delete:
                     del self._mock_cache[key]
-                self.logger.info(f"Invalidated {len(keys_to_delete)} mock cache entries")
+                self.logger.info(
+                    f"Invalidated {len(keys_to_delete)} mock cache entries"
+                )
 
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to invalidate cache for user {user_id}: {e}", exc_info=True)
+            self.logger.error(
+                f"Failed to invalidate cache for user {user_id}: {e}", exc_info=True
+            )
             return False
 
     async def redis_health_check(self) -> bool:
@@ -145,13 +156,17 @@ class RedisFallbackManager:
             else:
                 # Mock implementation
                 for key, cache_entry in self._mock_cache.items():
-                    if user_id in key and cache_entry.get('data', {}).get('persistent', False):
-                        persistent_data.append(cache_entry['data'])
+                    if user_id in key and cache_entry.get("data", {}).get(
+                        "persistent", False
+                    ):
+                        persistent_data.append(cache_entry["data"])
 
             return persistent_data
 
         except Exception as e:
-            self.logger.error(f"Failed to get persistent data for user {user_id}: {e}", exc_info=True)
+            self.logger.error(
+                f"Failed to get persistent data for user {user_id}: {e}", exc_info=True
+            )
             return []
 
     async def cleanup_expired_entries(self) -> int:
@@ -161,8 +176,9 @@ class RedisFallbackManager:
                 # Mock cleanup
                 current_time = datetime.now(UTC).timestamp()
                 expired_keys = [
-                    key for key, entry in self._mock_cache.items()
-                    if entry.get('expires_at', 0) < current_time
+                    key
+                    for key, entry in self._mock_cache.items()
+                    if entry.get("expires_at", 0) < current_time
                 ]
 
                 for key in expired_keys:
@@ -183,5 +199,5 @@ class RedisFallbackManager:
 
     def _is_expired(self, cache_entry: dict[str, Any]) -> bool:
         """Verifica si entrada de cache ha expirado."""
-        expires_at = cache_entry.get('expires_at', 0)
+        expires_at = cache_entry.get("expires_at", 0)
         return datetime.now(UTC).timestamp() > expires_at

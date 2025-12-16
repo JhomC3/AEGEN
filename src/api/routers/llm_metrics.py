@@ -60,8 +60,8 @@ async def get_llm_status() -> LLMStatus:
         active_calls_dict = {}
         for metric_family in llm_active_calls.collect():
             for sample in metric_family.samples:
-                provider = sample.labels.get('provider', 'unknown')
-                model = sample.labels.get('model', 'unknown')
+                provider = sample.labels.get("provider", "unknown")
+                model = sample.labels.get("model", "unknown")
                 key = f"{provider}:{model}"
                 active_calls_dict[key] = sample.value
 
@@ -71,12 +71,14 @@ async def get_llm_status() -> LLMStatus:
             total_calls_today=0,  # TODO: Implementar agregación diaria
             average_latency_ms=0.0,  # TODO: Calcular from histogram
             total_cost_today=0.0,  # TODO: Implementar agregación diaria
-            status="operational"
+            status="operational",
         )
 
     except Exception as e:
         logger.error(f"Error getting LLM status: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error retrieving LLM status") from e
+        raise HTTPException(
+            status_code=500, detail="Error retrieving LLM status"
+        ) from e
 
 
 @router.get("/metrics/summary", response_model=LLMMetricsSummary)
@@ -118,12 +120,14 @@ async def get_llm_metrics_summary() -> LLMMetricsSummary:
             total_tokens=total_tokens,
             average_latency_seconds=0.0,  # TODO: Calcular from histogram
             total_cost_usd=total_cost,
-            active_calls_count=active_calls
+            active_calls_count=active_calls,
         )
 
     except Exception as e:
         logger.error(f"Error getting metrics summary: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Error retrieving metrics summary") from e
+        raise HTTPException(
+            status_code=500, detail="Error retrieving metrics summary"
+        ) from e
 
 
 @router.get("/health")
@@ -148,7 +152,7 @@ async def llm_health_check() -> dict[str, Any]:
             "correlation_id": correlation_id,
             "status": "healthy" if metrics_working else "degraded",
             "metrics_collector": "operational" if metrics_working else "failed",
-            "timestamp": "2025-09-04T12:00:00Z"  # TODO: Usar timestamp real
+            "timestamp": "2025-09-04T12:00:00Z",  # TODO: Usar timestamp real
         }
 
     except Exception as e:
@@ -156,5 +160,5 @@ async def llm_health_check() -> dict[str, Any]:
         return {
             "status": "unhealthy",
             "error": str(e),
-            "timestamp": "2025-09-04T12:00:00Z"
+            "timestamp": "2025-09-04T12:00:00Z",
         }

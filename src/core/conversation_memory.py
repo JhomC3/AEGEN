@@ -18,16 +18,16 @@ class ConversationMemory:
         self,
         user_id: str,
         chat_id: str,
-        include_vector: bool = False, # Deprecated, kept for compatibility
-        include_session: bool = True
+        include_vector: bool = False,  # Deprecated, kept for compatibility
+        include_session: bool = True,
     ) -> dict[str, Any]:
         """Obtiene contexto conversacional (Solo Redis)."""
         context = {
             "user_id": user_id,
             "chat_id": chat_id,
-            "vector_context": [], # Empty as vector DB is removed
+            "vector_context": [],  # Empty as vector DB is removed
             "session_context": None,
-            "timestamp": datetime.utcnow().isoformat()
+            "timestamp": datetime.utcnow().isoformat(),
         }
 
         try:
@@ -35,7 +35,9 @@ class ConversationMemory:
                 session_context = await self.session_manager.get_session(chat_id)
                 context["session_context"] = session_context
 
-            logger.info(f"Retrieved conversation context for user {user_id}, chat {chat_id}")
+            logger.info(
+                f"Retrieved conversation context for user {user_id}, chat {chat_id}"
+            )
             return context
 
         except Exception as e:
@@ -48,7 +50,7 @@ class ConversationMemory:
         chat_id: str,
         user_message: str,
         assistant_response: str,
-        metadata: dict[str, Any] | None = None
+        metadata: dict[str, Any] | None = None,
     ) -> bool:
         """
         Almacena un turno de conversación.

@@ -18,6 +18,7 @@ from src.core.user_preferences import UserPreferences
 
 if TYPE_CHECKING:
     from src.agents.file_handler_agent import FileHandlerAgent
+    from src.core.vector_memory_manager import VectorMemoryManager
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ async def initialize_global_resources() -> tuple[aioredis.Redis | None, IEventBu
 
 
 async def initialize_global_collections():
-    """ No-op: ChromaDB eliminado. """
+    """No-op: ChromaDB eliminado."""
     pass
 
 
@@ -94,18 +95,26 @@ def get_conversation_memory() -> ConversationMemory:
 
 def get_user_preferences() -> UserPreferences:
     """FastAPI dependency para UserPreferences."""
-    return UserPreferences()
+    return UserPreferences(vector_memory_manager=get_vector_memory_manager())
 
 
 def get_role_manager() -> RoleManager:
     """FastAPI dependency para RoleManager."""
-    return RoleManager()
+    return RoleManager(vector_memory_manager=get_vector_memory_manager())
+
+
+@lru_cache
+def get_vector_memory_manager() -> VectorMemoryManager:
+    """FastAPI dependency para VectorMemoryManager."""
+    from src.core.vector_memory_manager import VectorMemoryManager
+    return VectorMemoryManager()
 
 
 @lru_cache
 def get_file_handler_agent() -> FileHandlerAgent:
     """FastAPI dependency para FileHandlerAgent."""
     from src.agents.file_handler_agent import FileHandlerAgent
+
     logger.debug("Creating/providing FileHandlerAgent instance.")
     return FileHandlerAgent()
 
@@ -125,4 +134,3 @@ def prime_dependencies():
     get_file_handler_agent()
     get_access_controller()
     logger.info("Primed singleton dependencies.")
-

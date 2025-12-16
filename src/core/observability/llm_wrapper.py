@@ -31,7 +31,9 @@ class ObservableLLM(Runnable):
         self.llm = llm
         self.default_call_type = call_type
 
-    def invoke(self, input_data: Any, config: dict[str, Any] | None = None, **kwargs) -> Any:
+    def invoke(
+        self, input_data: Any, config: dict[str, Any] | None = None, **kwargs
+    ) -> Any:
         """
         Invoke síncrono con observabilidad.
 
@@ -44,11 +46,13 @@ class ObservableLLM(Runnable):
             Respuesta del LLM
         """
         handler = self._create_handler(config)
-        config = self._add_handler_to_config(config, handler)
+        return self.llm.with_config({"callbacks": [handler]}).invoke(
+            input_data, config, **kwargs
+        )
 
-        return self.llm.invoke(input_data, config, **kwargs)
-
-    async def ainvoke(self, input_data: Any, config: dict[str, Any] | None = None, **kwargs) -> Any:
+    async def ainvoke(
+        self, input_data: Any, config: dict[str, Any] | None = None, **kwargs
+    ) -> Any:
         """
         Invoke asíncrono con observabilidad.
 
@@ -61,11 +65,13 @@ class ObservableLLM(Runnable):
             Respuesta del LLM
         """
         handler = self._create_handler(config)
-        config = self._add_handler_to_config(config, handler)
+        return await self.llm.with_config({"callbacks": [handler]}).ainvoke(
+            input_data, config, **kwargs
+        )
 
-        return await self.llm.ainvoke(input_data, config, **kwargs)
-
-    def batch(self, inputs: list[Any], config: dict[str, Any] | None = None, **kwargs) -> list[Any]:
+    def batch(
+        self, inputs: list[Any], config: dict[str, Any] | None = None, **kwargs
+    ) -> list[Any]:
         """
         Batch processing con observabilidad.
 
@@ -78,11 +84,13 @@ class ObservableLLM(Runnable):
             Lista de respuestas
         """
         handler = self._create_handler(config)
-        config = self._add_handler_to_config(config, handler)
+        return self.llm.with_config({"callbacks": [handler]}).batch(
+            inputs, config, **kwargs
+        )
 
-        return self.llm.batch(inputs, config, **kwargs)
-
-    async def abatch(self, inputs: list[Any], config: dict[str, Any] | None = None, **kwargs) -> list[Any]:
+    async def abatch(
+        self, inputs: list[Any], config: dict[str, Any] | None = None, **kwargs
+    ) -> list[Any]:
         """
         Batch processing asíncrono con observabilidad.
 
@@ -95,9 +103,9 @@ class ObservableLLM(Runnable):
             Lista de respuestas
         """
         handler = self._create_handler(config)
-        config = self._add_handler_to_config(config, handler)
-
-        return await self.llm.abatch(inputs, config, **kwargs)
+        return await self.llm.with_config({"callbacks": [handler]}).abatch(
+            inputs, config, **kwargs
+        )
 
     def _create_handler(self, config: dict[str, Any] | None) -> LLMObservabilityHandler:
         """Crea handler de observabilidad."""
@@ -111,9 +119,7 @@ class ObservableLLM(Runnable):
         return self.default_call_type
 
     def _add_handler_to_config(
-        self,
-        config: dict[str, Any] | None,
-        handler: LLMObservabilityHandler
+        self, config: dict[str, Any] | None, handler: LLMObservabilityHandler
     ) -> dict[str, Any]:
         """Agrega handler a la configuración."""
         if config is None:
