@@ -8,7 +8,7 @@ componentes de memoria híbrida Redis + ChromaDB.
 
 import logging
 
-from src.core.vector_memory_manager import VectorMemoryManager
+from src.memory.vector_memory_manager import VectorMemoryManager
 from src.memory.consistency_manager import ConsistencyLevel, ConsistencyManager
 from src.memory.hybrid_coordinator import HybridMemoryCoordinator
 from src.memory.redis_fallback import RedisFallbackManager

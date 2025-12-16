@@ -1,6 +1,6 @@
 # src/core/interfaces/modular_agent.py
 from abc import ABC, abstractmethod
-from typing import Any, Protocol
+from typing import Any, Protocol, runtime_checkable
 
 from src.core.schemas import (
     AgentCapability,
@@ -10,6 +10,7 @@ from src.core.schemas import (
 )
 
 
+@runtime_checkable
 class BaseModularAgent(Protocol):
     """Interface estable para agentes modulares componibles."""
 

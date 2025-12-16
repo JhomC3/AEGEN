@@ -13,37 +13,36 @@ from typing import Any
 
 from langchain_core.tools import tool
 
-from src.tools.document_processing import DocumentProcessor
+from src.tools.document_processing import process_document
 from src.tools.image_processing import ImageToText
 from src.tools.speech_processing import transcribe_audio
 
 logger = logging.getLogger(__name__)
 
 # Instancias de procesadores existentes
-_document_processor = DocumentProcessor()
 _image_processor = ImageToText()
 
 
 # Registry de procesadores multimodales por extensión
-PROCESSOR_REGISTRY: dict[str, Callable[[str, str], Awaitable[dict[str, Any]]]] = {
-    # Documentos (delega a DocumentProcessor)
-    ".pdf": _document_processor.process_document,
-    ".docx": _document_processor.process_document,
-    ".txt": _document_processor.process_document,
-    ".md": _document_processor.process_document,
-    ".pptx": _document_processor.process_document,
-    ".xlsx": _document_processor.process_document,
-    ".csv": _document_processor.process_document,
+PROCESSOR_REGISTRY: dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any]]]] = {
+    # Documentos (delega a process_document)
+    ".pdf": lambda args: process_document.ainvoke(args),
+    ".docx": lambda args: process_document.ainvoke(args),
+    ".txt": lambda args: process_document.ainvoke(args),
+    ".md": lambda args: process_document.ainvoke(args),
+    ".pptx": lambda args: process_document.ainvoke(args),
+    ".xlsx": lambda args: process_document.ainvoke(args),
+    ".csv": lambda args: process_document.ainvoke(args),
     # Imágenes (delega a ImageToText)
-    ".png": lambda path, name: _image_processor.image_to_text_tool(file_path=path),
-    ".jpg": lambda path, name: _image_processor.image_to_text_tool(file_path=path),
-    ".jpeg": lambda path, name: _image_processor.image_to_text_tool(file_path=path),
-    ".webp": lambda path, name: _image_processor.image_to_text_tool(file_path=path),
+    ".png": lambda args: _image_processor.image_to_text_tool.ainvoke(args),
+    ".jpg": lambda args: _image_processor.image_to_text_tool.ainvoke(args),
+    ".jpeg": lambda args: _image_processor.image_to_text_tool.ainvoke(args),
+    ".webp": lambda args: _image_processor.image_to_text_tool.ainvoke(args),
     # Audio (delega a transcribe_audio)
-    ".mp3": lambda path, name: transcribe_audio.ainvoke({"audio_path": path}),
-    ".wav": lambda path, name: transcribe_audio.ainvoke({"audio_path": path}),
-    ".ogg": lambda path, name: transcribe_audio.ainvoke({"audio_path": path}),
-    ".m4a": lambda path, name: transcribe_audio.ainvoke({"audio_path": path}),
+    ".mp3": lambda args: transcribe_audio.ainvoke(args),
+    ".wav": lambda args: transcribe_audio.ainvoke(args),
+    ".ogg": lambda args: transcribe_audio.ainvoke(args),
+    ".m4a": lambda args: transcribe_audio.ainvoke(args),
 }
 
 logger.info(
@@ -75,7 +74,8 @@ async def process_multimodal_file(file_path: str, file_name: str) -> dict[str, A
 
     try:
         logger.info(f"Delegating to processor for '{file_extension}'")
-        result = await processor_func(file_path, file_name)
+        # Corregir la llamada para pasar un diccionario
+        result = await processor_func({"file_path": file_path, "file_name": file_name})
 
         # Normalizar formato de salida
         if "transcript" in result:

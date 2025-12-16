@@ -92,7 +92,7 @@ class FileHandlerAgent(ModularAgentBase):
             return self._create_success_result(
                 data=result_data,
                 message=f"Successfully processed {file_name}",
-                next_agents=["chat_specialist"] if content else [],
+                next_agents=["NLPParserAgent"] if content else [],
             )
 
         except (FileNotFoundError, PermissionError, ValueError) as e:

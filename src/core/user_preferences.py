@@ -2,7 +2,7 @@
 import logging
 from typing import Any
 
-from src.core.vector_memory_manager import MemoryType, VectorMemoryManager
+from src.memory.vector_memory_manager import MemoryType, VectorMemoryManager
 
 logger = logging.getLogger(__name__)
 

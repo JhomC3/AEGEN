@@ -7,7 +7,7 @@ Valida compliance con filosofía del proyecto y contratos establecidos.
 import pytest
 
 from src.agents.modular import ExampleModularAgent
-from src.core.interfaces.modular import (
+from src.core.interfaces.modular_agent import (
     AgentCapability,
     AgentContext,
     AgentResult,
