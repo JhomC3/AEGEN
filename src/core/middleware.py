@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 import uuid
 from collections.abc import Awaitable, Callable
 from contextvars import ContextVar
@@ -22,7 +23,7 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         self, request: Request, call_next: Callable[[Request], Awaitable[Response]]
     ) -> Response:
         """
-        Dispatches the request, adding a correlation ID.
+        Dispatches the request, adding a correlation ID and timing metrics.
 
         Args:
             request: The incoming request.
@@ -40,10 +41,17 @@ class CorrelationIdMiddleware(BaseHTTPMiddleware):
         # Establece el ID de correlación en la ContextVar.
         correlation_id.set(correlation_id_value)
 
+        # Medir tiempo total del request
+        start_time = time.time()
+
         # Procesa la solicitud y obtén la respuesta.
         response = await call_next(request)
 
-        # Añade el ID de correlación a las cabeceras de la respuesta.
+        # Calcular latencia total
+        total_latency_ms = (time.time() - start_time) * 1000
+
+        # Añade headers de trazabilidad y timing
         response.headers["X-Correlation-ID"] = correlation_id_value
+        response.headers["X-Response-Time"] = f"{total_latency_ms:.2f}ms"
 
         return response

@@ -7,7 +7,7 @@ Extraído del MasterOrchestrator monolítico para cumplir SRP.
 """
 
 import logging
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 from langgraph.graph import StateGraph
 
@@ -41,7 +41,7 @@ class OrchestratorGraphBuilder(GraphBuilder):
         """
         self._specialist_registry = specialist_registry
 
-    def build(self, routing_functions: Dict[str, Any]) -> Any:
+    def build(self, routing_functions: dict[str, Any]) -> Any:
         """
         Construye dinámicamente el grafo de enrutamiento principal.
 
@@ -99,7 +99,7 @@ class OrchestratorGraphBuilder(GraphBuilder):
 
         return compiled_graph
 
-    def _validate_routing_functions(self, routing_functions: Dict[str, Any]) -> None:
+    def _validate_routing_functions(self, routing_functions: dict[str, Any]) -> None:
         """
         Valida que todas las funciones de routing requeridas estén presentes.
 

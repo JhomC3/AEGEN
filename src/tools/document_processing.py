@@ -10,6 +10,8 @@ import pptx
 import pypdf
 from langchain_core.tools import tool
 
+logger = logging.getLogger(__name__)
+
 # --- Registry for Document Readers ---
 READER_REGISTRY: dict[str, Callable[[str], str]] = {}
 
@@ -92,43 +94,33 @@ def read_csv(file_path: str) -> str:
     return "\n".join(content)
 
 
-# --- Main Processor Class ---
+# --- Main Processing Tool ---
 
 
-class DocumentProcessor:
+@tool
+async def process_document(file_path: str, file_name: str) -> dict:
     """
-    Servicio para procesar diferentes tipos de documentos y extraer su contenido
-    utilizando un registro de lectores dinámico.
+    Procesa un archivo de documento para extraer su contenido de forma asíncrona.
+    Selecciona el lector adecuado según la extensión del archivo.
     """
+    logger.info(f"Processing document: {file_name} at {file_path}")
+    file_extension = Path(file_name).suffix.lower()
+    reader_func = READER_REGISTRY.get(file_extension)
 
-    def __init__(self):
-        self.logger = logging.getLogger(__name__)
-        self.logger.info(
-            f"DocumentProcessor initialized with readers for: {list(READER_REGISTRY.keys())}"
+    if not reader_func:
+        error_message = (
+            f"El procesamiento para archivos '{file_extension}' no está implementado."
         )
+        logger.warning(error_message)
+        return {"error": error_message}
 
-    @tool
-    async def process_document(self, file_path: str, file_name: str) -> dict:
-        """
-        Procesa un archivo de documento para extraer su contenido de forma asíncrona.
-        Selecciona el lector adecuado según la extensión del archivo.
-        """
-        self.logger.info(f"Processing document: {file_name} at {file_path}")
-        file_extension = Path(file_name).suffix.lower()
-        reader_func = READER_REGISTRY.get(file_extension)
-
-        if not reader_func:
-            error_message = f"El procesamiento para archivos '{file_extension}' no está implementado."
-            self.logger.warning(error_message)
-            return {"error": error_message}
-
-        try:
-            self.logger.info(f"Using reader for '{file_extension}'")
-            # Ejecuta la función de lectura (que es I/O-bound) en un hilo separado
-            content = await asyncio.to_thread(reader_func, file_path)
-            self.logger.info(f"Successfully processed document: {file_name}")
-            return {"content": content}
-        except Exception as e:
-            error_message = f"Error processing document {file_path}: {e}"
-            self.logger.error(error_message, exc_info=True)
-            return {"error": str(e)}
+    try:
+        logger.info(f"Using reader for '{file_extension}'")
+        # Ejecuta la función de lectura (que es I/O-bound) en un hilo separado
+        content = await asyncio.to_thread(reader_func, file_path)
+        logger.info(f"Successfully processed document: {file_name}")
+        return {"content": content}
+    except Exception as e:
+        error_message = f"Error processing document {file_path}: {e}"
+        logger.error(error_message, exc_info=True)
+        return {"error": str(e)}

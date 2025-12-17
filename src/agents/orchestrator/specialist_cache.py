@@ -7,7 +7,7 @@ Extraído del MasterOrchestrator para cumplir SRP y facilitar testing.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from src.core.engine import llm
 from src.core.registry import SpecialistRegistry
@@ -35,9 +35,9 @@ class OptimizedSpecialistCache(SpecialistCache):
 
     def __init__(self):
         """Initialize cache con estado limpio."""
-        self._routable_specialists: List[Any] = []
-        self._routable_tools: List[Any] = []
-        self._tool_to_specialist_map: Dict[str, str] = {}
+        self._routable_specialists: list[Any] = []
+        self._routable_tools: list[Any] = []
+        self._tool_to_specialist_map: dict[str, str] = {}
         self._llm_with_tools: Any = None
         self._is_initialized = False
 
@@ -53,11 +53,8 @@ class OptimizedSpecialistCache(SpecialistCache):
         """
         logger.info("Inicializando cache de especialistas...")
 
-        # Obtener especialistas enrutables (excluyendo ChatBot)
-        all_specialists = specialist_registry.get_all_specialists()
-        self._routable_specialists = [
-            s for s in all_specialists if s.name != CHAT_SPECIALIST_NODE
-        ]
+        # Obtener todos los especialistas, incluyendo el de chat
+        self._routable_specialists = specialist_registry.get_all_specialists()
 
         # Cache de herramientas
         self._routable_tools = [s.tool for s in self._routable_specialists]
@@ -85,7 +82,7 @@ class OptimizedSpecialistCache(SpecialistCache):
             f"{len(self._routable_tools)} herramientas"
         )
 
-    def get_routable_specialists(self) -> List[Any]:
+    def get_routable_specialists(self) -> list[Any]:
         """
         Retorna lista de especialistas enrutables (cached).
 
@@ -98,7 +95,7 @@ class OptimizedSpecialistCache(SpecialistCache):
         self._ensure_initialized()
         return self._routable_specialists.copy()
 
-    def get_routable_tools(self) -> List[Any]:
+    def get_routable_tools(self) -> list[Any]:
         """
         Retorna lista de herramientas enrutables (cached).
 
@@ -108,7 +105,7 @@ class OptimizedSpecialistCache(SpecialistCache):
         self._ensure_initialized()
         return self._routable_tools.copy()
 
-    def get_tool_to_specialist_map(self) -> Dict[str, str]:
+    def get_tool_to_specialist_map(self) -> dict[str, str]:
         """
         Retorna mapeo tool_name -> specialist_name (O(1) lookup).
 
@@ -138,7 +135,7 @@ class OptimizedSpecialistCache(SpecialistCache):
         self._ensure_initialized()
         return len(self._routable_tools) > 0
 
-    def get_cache_stats(self) -> Dict[str, Any]:
+    def get_cache_stats(self) -> dict[str, Any]:
         """
         Retorna estadísticas del cache para debugging/monitoring.
 
