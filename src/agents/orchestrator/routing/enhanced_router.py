@@ -50,11 +50,11 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
 
         # Solo procesar eventos de texto
         if event.event_type != "text":
-            return self._route_to_chat(state)
+            return route_to_chat(state)
 
         # Verificar herramientas disponibles
         if not self._cache.has_routable_tools():
-            return self._route_to_chat(state)
+            return route_to_chat(state)
 
         try:
             # Análisis integrado con componentes especializados

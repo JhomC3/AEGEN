@@ -1,7 +1,7 @@
 import logging
 import mimetypes
 import os
-from typing import Any
+from typing import Any, cast
 
 import google.generativeai as genai
 from langchain_core.tools import tool
@@ -54,7 +54,7 @@ async def transcribe_audio(audio_path: str) -> dict[str, Any]:
 
         logger.info("Solicitando transcripción a Gemini 1.5 Flash...")
         response = model.generate_content(
-            [prompt, audio_file],
+            cast(list[Any], [prompt, audio_file]),
             generation_config={"response_mime_type": "application/json"},
         )
 

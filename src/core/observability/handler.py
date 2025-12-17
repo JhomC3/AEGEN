@@ -158,7 +158,7 @@ class LLMObservabilityHandler(BaseCallbackHandler):
         metrics: LLMCallMetrics,
         response: LLMResult | None,
         success: bool,
-        error: Exception | None,
+        error: BaseException | None = None,
     ) -> None:
         """Actualiza métricas con resultado de la llamada."""
         metrics.success = success
@@ -229,12 +229,12 @@ class LLMObservabilityHandler(BaseCallbackHandler):
         if metrics.input_tokens:
             llm_tokens_total.labels(
                 provider=metrics.provider, model=metrics.model, token_type="input"
-            ).inc(metrics.input_tokens)
+            ).inc(metrics.input_tokens)  # nosec B106
 
         if metrics.output_tokens:
             llm_tokens_total.labels(
                 provider=metrics.provider, model=metrics.model, token_type="output"
-            ).inc(metrics.output_tokens)
+            ).inc(metrics.output_tokens)  # nosec B106
 
     def _update_latency_histogram(self, metrics: LLMCallMetrics) -> None:
         """Actualiza histograma de latencia."""

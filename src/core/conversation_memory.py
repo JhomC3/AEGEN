@@ -22,7 +22,7 @@ class ConversationMemory:
         include_session: bool = True,
     ) -> dict[str, Any]:
         """Obtiene contexto conversacional (Solo Redis)."""
-        context = {
+        context: dict[str, Any] = {
             "user_id": user_id,
             "chat_id": chat_id,
             "vector_context": [],  # Empty as vector DB is removed

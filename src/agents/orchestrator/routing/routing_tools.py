@@ -25,10 +25,10 @@ async def route_user_message(
     ],
     confidence: float,
     target_specialist: str,
-    entities: list[str] = None,
+    entities: list[str] | None = None,
     requires_tools: bool = False,
     subintent: str | None = None,
-    next_actions: list[str] = None,
+    next_actions: list[str] | None = None,
 ) -> dict[str, Any]:
     """
     Fast routing decision using function calling instead of structured output.

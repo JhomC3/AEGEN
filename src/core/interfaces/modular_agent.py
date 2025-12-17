@@ -77,6 +77,7 @@ class ModularAgentBase(ABC):
             data=data,
             message=message,
             next_suggested_agents=next_agents or [],
+            error_details=None,
         )
 
     def _create_error_result(

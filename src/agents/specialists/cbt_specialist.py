@@ -14,19 +14,20 @@ Keywords activadores: ansiedad, depresión, terapia, emociones, estrés,
                      pensamientos, sentimientos, miedos, autoestima
 """
 
+import json
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 from langgraph.graph import END, StateGraph
 
-from src.core.dependencies import get_global_collection_manager
 from src.core.engine import create_observable_config, llm
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
-from src.core.schemas import GraphStateV2
+from src.core.schemas import GraphStateV2, V2ChatMessage
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +105,9 @@ CBT_KEYWORDS = {
         "loneliness",
         "trauma",
         "grief",
+        "loneliness",
+        "trauma",
+        "grief",
     ],
 }
 
@@ -129,7 +133,7 @@ async def cbt_therapeutic_guidance_tool(
     logger.info(f"CBT Therapeutic Tool procesando: '{user_message[:50]}...'")
 
     try:
-        # Consultar knowledge base global para contexto CBT
+        # Consultar knowledge base local (JSON) para contexto CBT
         knowledge_context = await _get_cbt_knowledge_context(user_message)
 
         # Generar respuesta terapéutica
@@ -153,7 +157,8 @@ async def cbt_therapeutic_guidance_tool(
 
 async def _get_cbt_knowledge_context(user_message: str, max_results: int = 3) -> str:
     """
-    Consulta la knowledge base global para obtener contexto relevante de CBT.
+    Consulta la knowledge base local (JSON) para obtener contexto relevante de CBT.
+    Simula búsqueda semántica básica por coincidencia de palabras clave.
 
     Args:
         user_message: Mensaje para buscar contexto relevante
@@ -163,36 +168,47 @@ async def _get_cbt_knowledge_context(user_message: str, max_results: int = 3) ->
         Contexto de conocimiento CBT formateado
     """
     try:
-        global_manager = get_global_collection_manager()
+        # Cargar conocimiento base desde JSON local
+        # Asumimos que data/cbt_knowledge.json existe relativo a este archivo
+        knowledge_path = Path(__file__).parent / "data" / "cbt_knowledge.json"
 
-        # Consultar global_knowledge_base con query relacionado a CBT
-        cbt_query = f"CBT therapy cognitive behavioral {user_message}"
-        results = await global_manager.query_global_collection(
-            collection_name="global_knowledge_base",
-            query_text=cbt_query,
-            user_id="cbt_specialist",
-            n_results=max_results,
-        )
+        if not knowledge_path.exists():
+            logger.warning(f"CBT Knowledge file not found at {knowledge_path}")
+            return "Aplicar principios generales de CBT."
 
-        if not results:
-            logger.info("No CBT knowledge context found, using general guidance")
-            return "Aplicar principios generales de CBT: identificar pensamientos automáticos, examinar evidencias, desarrollar pensamientos alternativos más balanceados."
+        content = knowledge_path.read_text(encoding="utf-8")
+        knowledge_base = json.loads(content)
 
-        # Formatear contexto de conocimiento
+        # Búsqueda simple por palabras clave
+        relevant_entries = []
+        user_terms = set(user_message.lower().split())
+
+        for entry in knowledge_base.get("entries", []):
+            entry_keywords = set(entry.get("keywords", []))
+            if user_terms & entry_keywords:
+                relevant_entries.append(entry)
+
+        if not relevant_entries:
+            # Si no hay coincidencias exactas, devolver entradas generales
+            relevant_entries = [
+                e
+                for e in knowledge_base.get("entries", [])
+                if "general" in e.get("keywords", [])
+            ]
+
+        # Formatear contexto
         context_parts = []
-        for i, result in enumerate(results[:max_results], 1):
-            document = result.get("document", "")
-            context_parts.append(f"Fuente {i}: {document[:200]}...")
+        for i, entry in enumerate(relevant_entries[:max_results], 1):
+            title = entry.get("title", "Concepto CBT")
+            description = entry.get("content", "")
+            context_parts.append(f"Concepto {i} ({title}): {description}")
 
         context = "\n".join(context_parts)
-        logger.info(
-            f"CBT knowledge context retrieved: {len(context)} chars from {len(results)} sources"
-        )
-        return context
+        return context if context else "Principios básicos de CBT."
 
     except Exception as e:
         logger.error(f"Error retrieving CBT knowledge context: {e}", exc_info=True)
-        return "Usar técnicas CBT fundamentales: reestructuración cognitiva, registro de pensamientos, técnicas de relajación."
+        return "Usar técnicas CBT fundamentales: reestructuración cognitiva."
 
 
 async def _generate_therapeutic_response(
@@ -228,7 +244,9 @@ async def _generate_therapeutic_response(
         if analysis_context:
             prompt_input["analysis_context"] = analysis_context
 
-        response = await chain.ainvoke(prompt_input, config=config)
+        response = await chain.ainvoke(
+            prompt_input, config=cast(RunnableConfig, config)
+        )
 
         therapeutic_response = str(response.content).strip()
 
@@ -301,7 +319,7 @@ async def _cbt_node(state: GraphStateV2) -> dict[str, Any]:
         }
 
 
-def _format_conversation_history(conversation_history: list[dict[str, Any]]) -> str:
+def _format_conversation_history(conversation_history: list[V2ChatMessage]) -> str:
     """
     Formatea historial conversacional para contexto terapéutico.
 

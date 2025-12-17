@@ -175,7 +175,9 @@ class HybridMemoryCoordinator:
         redis_success = await self.redis_manager.cache_context(user_id, content, ttl)
         if redis_success:
             # Almacenar también en ChromaDB para persistencia
-            await self.vector_manager.store_context(user_id, content, context_type, metadata={})
+            await self.vector_manager.store_context(
+                user_id, content, context_type, metadata={}
+            )
         return redis_success
 
     async def _store_chroma_first(

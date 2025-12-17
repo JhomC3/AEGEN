@@ -18,8 +18,6 @@ logger = logging.getLogger(__name__)
 CHAT_SPECIALIST_NODE = "chat_specialist"
 
 
-
-
 def route_to_chat(state: GraphStateV2) -> str:
     """
     Routing fallback a ChatBot specialist.
@@ -75,7 +73,7 @@ def extract_context_from_state(state: GraphStateV2) -> dict[str, Any]:
     Returns:
         Dict: Contexto estructurado para análisis LLM
     """
-    event = state.get("event", {})
+    event = state["event"]
     history = state.get("conversation_history", [])
 
     context = {}

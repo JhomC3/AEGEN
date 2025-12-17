@@ -25,7 +25,7 @@ class Message:
     user_id: str
     content: str
     timestamp: datetime
-    metadata: dict[str, Any] = None
+    metadata: dict[str, Any] | None = None
     target_agent: str | None = None
 
     @classmethod

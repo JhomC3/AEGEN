@@ -14,25 +14,30 @@ Key features restored:
 """
 
 import logging
+import uuid
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal, cast
 
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 from langgraph.graph import END, StateGraph
 
 # Import Google API exceptions with fallback
 try:
-    from google.api_core.exceptions import ResourceExhaustedError
-    from langchain_google_genai.common import GoogleAPICallError
+    from google.api_core import exceptions as google_exceptions
+
+    # Use generic alias to avoid mypy confusion if specific class differs inside lib versions
+    ResourceExhaustedError = google_exceptions.ResourceExhausted
+    GoogleAPICallError = google_exceptions.GoogleAPICallError
 except ImportError:
     # Fallback para entornos donde google.api_core no está disponible
-    class ResourceExhaustedError(Exception):
+    class ResourceExhaustedError(Exception):  # type: ignore
         """Fallback ResourceExhausted exception"""
 
         pass
 
-    class GoogleAPICallError(Exception):
+    class GoogleAPICallError(Exception):  # type: ignore
         """Fallback GoogleAPICallError exception"""
 
         pass
@@ -40,7 +45,7 @@ except ImportError:
 
 # ✅ ARCHITECTURE FIX: Use src.core.engine instead of hardcoded LLM
 # ✅ FUNCTIONALITY RESTORATION: Re-import MasterOrchestrator for delegation
-from src.agents.orchestrator import master_orchestrator
+from src.agents.orchestrator.factory import master_orchestrator
 from src.core.engine import create_observable_config, llm
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
@@ -200,7 +205,7 @@ async def _optimized_delegation_analysis(
                 "user_message": user_message,
                 "conversation_history": recent_history,
             },
-            config=config,
+            config=cast(RunnableConfig, config),
         )
 
         decision = str(response.content).strip().upper()
@@ -254,7 +259,7 @@ async def _enhanced_conversational_response(
             "knowledge_context": knowledge_context,  # Siempre incluir, aunque esté vacío
         }
 
-        response = await chain.ainvoke(prompt_input, config=config)
+        response = await chain.ainvoke(prompt_input, config=cast(RunnableConfig, config))
 
         result = str(response.content).strip()
         logger.info(f"Enhanced conversational response generated: {len(result)} chars")
@@ -282,11 +287,14 @@ async def _optimized_delegate_and_translate(
     try:
         # ✅ RESTORATION: Create canonical event for MasterOrchestrator
         event = CanonicalEventV1(
-            event_id="chat_delegation_optimized",
+            event_id=uuid.uuid4(),  # Fixed to use UUID
             event_type="text",
+            source="chat_agent",
+            chat_id="unknown_chat",  # Required field
             content=user_message,
             user_id="system",  # Will be overridden by actual user context
-            timestamp=None,
+            file_id=None,
+            timestamp=datetime.now().isoformat(),  # Fixed validation error
         )
 
         # ✅ RESTORATION: Create initial state for MasterOrchestrator
@@ -294,6 +302,8 @@ async def _optimized_delegate_and_translate(
             event=event,
             payload={"user_message": user_message},
             conversation_history=_parse_conversation_history(conversation_history),
+            error_message=None,  # Required by TypedDict
+            session_id=str(uuid.uuid4()),  # Required by TypedDict
         )
 
         # ✅ OPTIMIZATION: Direct call to MasterOrchestrator with timeout handling
@@ -367,7 +377,7 @@ async def _translate_specialist_response(
                 "summary": summary,
                 "suggestions": suggestions,
             },
-            config=config,
+            config=cast(RunnableConfig, config),
         )
 
         translated = str(response.content).strip()
@@ -393,7 +403,7 @@ def _get_recent_history_summary(
 
     # Take last part of conversation history
     lines = conversation_history.split("\n")
-    summary_lines = []
+    summary_lines: list[str] = []
     current_length = 0
 
     # Take recent lines until we hit length limit
@@ -405,45 +415,6 @@ def _get_recent_history_summary(
 
     result = "\n".join(summary_lines)
     return result if result else "Sin historial previo"
-
-
-def _parse_conversation_history(conversation_history: str) -> list[dict[str, Any]]:
-    """
-    ✅ RESTORATION: Parses string conversation history to structured format.
-
-    Converts conversation history string to structured list for MasterOrchestrator.
-    """
-    if not conversation_history:
-        return []
-
-    history_list = []
-    lines = conversation_history.split("\n")
-
-    for line in lines:
-        line = line.strip()
-        if not line:
-            continue
-
-        # Parse "Role: Content" format
-        if ":" in line:
-            parts = line.split(":", 1)
-            if len(parts) == 2:
-                role = parts[0].strip().lower()
-                content = parts[1].strip()
-
-                # Map roles to expected format
-                if role in ["user", "usuario"]:
-                    role = "user"
-                elif role in ["assistant", "asistente", "aegen"]:
-                    role = "assistant"
-
-                history_list.append({
-                    "role": role,
-                    "content": content,
-                    "timestamp": datetime.now().isoformat(),
-                })
-
-    return history_list
 
 
 # ============================================================================
@@ -568,7 +539,7 @@ def _update_conversation_history_enhanced(
     user_message: str,
     response_text: str,
     used_delegation: bool,
-) -> list[dict[str, Any]]:
+) -> list[V2ChatMessage]:
     """
     ✅ RESTORATION: Enhanced conversation history update with rich metadata.
 
@@ -580,16 +551,19 @@ def _update_conversation_history_enhanced(
 
     # ✅ ENHANCEMENT: Add user message with metadata
     if user_message:
-        updated_history.append({
+        # Create typed message
+        user_msg: V2ChatMessage = {
             "role": "user",
             "content": user_message,
             "timestamp": current_time,
             "message_length": len(user_message),
             "message_type": "user_input",
-        })
+            # Optional fields omitted or set to None implicitly if total=False
+        }
+        updated_history.append(user_msg)
 
     # ✅ ENHANCEMENT: Add assistant response with delegation metadata
-    response_metadata = {
+    response_msg: V2ChatMessage = {
         "role": "assistant",
         "content": str(response_text),
         "timestamp": current_time,
@@ -599,7 +573,7 @@ def _update_conversation_history_enhanced(
         "processing_type": "delegated" if used_delegation else "direct",
     }
 
-    updated_history.append(response_metadata)
+    updated_history.append(response_msg)
 
     # ✅ OPTIMIZATION: Maintain reasonable history size (last 20 messages)
     if len(updated_history) > 20:
@@ -611,6 +585,51 @@ def _update_conversation_history_enhanced(
 # ============================================================================
 # ENHANCED CHATSPECIALIST WITH FULL FUNCTIONALITY RESTORED
 # ============================================================================
+
+
+def _parse_conversation_history(
+    conversation_history: str | list[Any],
+) -> list[V2ChatMessage]:
+    """
+    Parses conversation history from string or list to structured format.
+    Handles legacy string format "Role: Content" and raw list of dicts.
+    """
+    if isinstance(conversation_history, list):
+        # Already a list? Check items.
+        # Assuming list of dicts or V2ChatMessage
+        return cast(list[V2ChatMessage], conversation_history)
+
+    if not isinstance(conversation_history, str) or not conversation_history:
+        return []
+
+    history_list: list[V2ChatMessage] = []
+    lines = conversation_history.split("\n")
+
+    for line in lines:
+        line = line.strip()
+        if not line:
+            continue
+
+        role = "assistant"
+        content = line
+
+        # Parse "Role: Content"
+        if ": " in line:
+            role_str, content_part = line.split(": ", 1)
+            if "Usuario" in role_str or "User" in role_str:
+                role = "user"
+            content = content_part
+
+        msg: V2ChatMessage = {
+            "role": cast(Literal["user", "assistant", "system", "tool"], role),
+            "content": content,
+            "timestamp": None,
+            "message_type": "text",
+            "message_length": len(content),
+        }
+        history_list.append(msg)
+
+    return history_list
 
 
 class ChatSpecialist(SpecialistInterface):

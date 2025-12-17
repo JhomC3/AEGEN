@@ -10,9 +10,11 @@ para eliminar bottleneck de 36+ segundos a <2 segundos (ADR-0009).
 """
 
 import logging
-from typing import Any
+from collections.abc import Sequence
+from typing import Any, cast
 
 from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.runnables import RunnableConfig
 
 # Import Google API exceptions with fallback
 try:
@@ -24,7 +26,7 @@ except ImportError:
 
         pass
 
-    class GoogleAPICallError(Exception):
+    class GoogleAPICallError(Exception):  # type: ignore
         """Fallback GoogleAPICallError exception"""
 
         pass
@@ -63,7 +65,7 @@ class RoutingAnalyzer:
         # ✅ PERFORMANCE FIX: Function calling en lugar de structured output
         # Elimina bottleneck de 36+ segundos a <2 segundos
         routing_tools = [route_user_message]
-        self._chain = routing_prompt | llm.bind_tools(routing_tools)
+        self._chain = routing_prompt | llm.bind_tools(cast(Sequence, routing_tools))
 
         # Mantiene componentes de post-processing existentes
         self._pattern_extractor = PatternExtractor()
@@ -100,7 +102,7 @@ class RoutingAnalyzer:
                     "available_tools": available_tools,
                     "context": self._format_context_for_llm(context),
                 },
-                config=config,
+                config=cast(RunnableConfig, config),
             )
 
             # Extraer resultado del function call
@@ -202,6 +204,7 @@ class RoutingAnalyzer:
             target_specialist="chat_specialist",
             requires_tools=False,
             entities=[],
+            subintent=None,
             next_actions=[],  # Add required field
             processing_metadata={
                 "fallback_reason": "LLM analysis failed",
@@ -268,6 +271,7 @@ class RoutingAnalyzer:
                         type="extracted",
                         value=entity_str,
                         confidence=0.8,  # Default confidence para function call entities
+                        position=None,
                     )
                 )
 

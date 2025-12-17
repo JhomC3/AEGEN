@@ -154,6 +154,8 @@ async def telegram_webhook(
             message="Event received but no processable content found.",
         )
 
+    from datetime import datetime
+
     event = schemas.CanonicalEventV1(
         event_id=uuid4(),
         event_type=event_type,
@@ -162,6 +164,7 @@ async def telegram_webhook(
         user_id=request.message.chat.id,
         file_id=file_id,
         content=content,
+        timestamp=datetime.now().isoformat(),
         metadata={"trace_id": trace_id, "update_id": request.update_id},
     )
     logger.info(

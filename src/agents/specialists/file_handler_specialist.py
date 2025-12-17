@@ -34,13 +34,15 @@ async def file_processing_tool(file_path: str, file_name: str = "") -> str:
         "file_path": file_path,
         "file_name": file_name or file_path.split("/")[-1],
     }
-    context = AgentContext(user_id="system", session_id="file_processing")
+    context = AgentContext(
+        user_id="system", session_id="file_processing", request_id=None
+    )
 
     try:
         result = await handler.execute(input_data, context)
 
-        if not result.success:
-            error_msg = f"File processing failed: {result.error_message}"
+        if not result.is_success:
+            error_msg = f"File processing failed: {result.message}"
             logger.error(error_msg)
             return error_msg
 

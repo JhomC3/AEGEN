@@ -444,9 +444,14 @@ class CanonicalEventV1(BaseModel):
     content: Any | None = Field(
         None, description="Contenido principal del mensaje (ej. texto, URL)."
     )
+    timestamp: str | None = Field(
+        None, description="Timestamp del evento (ISO format)."
+    )
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Metadatos adicionales de la fuente."
     )
+
+    model_config = {"extra": "allow"}
 
 
 class GraphStateV1(TypedDict):
@@ -466,14 +471,21 @@ class GraphStateV1(TypedDict):
 # --- Esquemas para Fase 3B: Memoria Conversacional ---
 
 
-class V2ChatMessage(TypedDict):
+class V2ChatMessage(TypedDict, total=False):
     """
     Mensaje de chat Redis-safe, JSON-serializable para historial conversacional.
     Evita la complejidad de serialización de objetos LangChain BaseMessage.
+    Usa total=False para permitir campos opcionales.
     """
 
     role: Literal["user", "assistant", "system", "tool"]
     content: str
+    timestamp: str | None
+    message_length: int
+    message_type: str | None
+    agent_type: str | None
+    delegation_used: bool
+    processing_type: str | None
 
 
 class GraphStateV2(TypedDict):

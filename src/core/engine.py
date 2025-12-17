@@ -1,5 +1,6 @@
 # src/core/engine.py
 import logging
+from typing import Any
 
 import psutil
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -20,7 +21,9 @@ llm = ChatGoogleGenerativeAI(
 )
 
 
-def create_observable_config(call_type: str = "general", config: dict = None):
+def create_observable_config(
+    call_type: str = "general", config: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """
     Crea configuración con observabilidad automática.
 
