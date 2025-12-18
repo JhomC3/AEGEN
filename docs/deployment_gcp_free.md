@@ -169,3 +169,81 @@ sudo apt-get install python3-requests
     sudo systemctl status aegen-polling
     ```
 
+---
+
+## 5. Operaciones y Gestión del Ciclo de Vida
+
+Aquí tienes qué hacer en las situaciones más comunes.
+
+### 5.1. Actualizar la Aplicación (Nueva Versión)
+Si has hecho cambios en el código y quieres aplicarlos en el servidor:
+
+```bash
+# 1. Entrar al directorio
+cd AEGEN
+
+# 2. Descargar los últimos cambios
+git pull
+
+# 3. Reconstruir la imagen (importante si cambiaron dependencias)
+docker compose build
+
+# 4. Reiniciar los contenedores
+docker compose up -d
+
+# 5. Reiniciar el servicio de polling (por si acaso)
+sudo systemctl restart aegen-polling
+```
+
+### 5.2. Pausar la Aplicación (Detener Temporalmente)
+Si quieres "apagar" el bot un tiempo sin borrar nada:
+
+```bash
+# 1. Detener el servicio de polling
+sudo systemctl stop aegen-polling
+
+# 2. Detener los contenedores docker
+docker compose stop
+```
+
+> [!WARNING]
+> **RIESGO DE COSTO CON IP ESTÁTICA**
+> Si tienes una IP Estática reservada y **detienes** la instancia VM por mucho tiempo, Google te cobrará (~$0.01/hora) por tener la IP reservada sin usar.
+> **Solución:** Si vas a pausar por días, ve a la consola de GCP > Red de VPC > Direcciones IP > "Liberar dirección estática". (Cuando vuelvas, tendrás que reservar una nueva o usar una efímera).
+
+### 5.3. Reanudar la Aplicación
+Para volver a encender todo después de una pausa:
+
+1.  Si detuviste la VM desde Google Cloud Console, iníciala de nuevo.
+2.  Entra por SSH.
+3.  Ejecuta:
+
+```bash
+cd AEGEN
+docker compose up -d
+sudo systemctl start aegen-polling
+```
+
+### 5.4. Eliminar la Aplicación (Borrado Total)
+Si quieres eliminar todo rastro del proyecto del servidor:
+
+```bash
+# 1. Detener y deshabilitar el servicio de polling
+sudo systemctl stop aegen-polling
+sudo systemctl disable aegen-polling
+sudo rm /etc/systemd/system/aegen-polling.service
+sudo systemctl daemon-reload
+
+# 2. Detener y borrar contenedores y volúmenes de Docker
+cd AEGEN
+docker compose down -v
+
+# 3. Borrar la carpeta del código
+cd ..
+rm -rf AEGEN
+```
+
+**Para eliminar la infraestructura también:**
+1.  Ve a la consola de Google Cloud.
+2.  Compute Engine > Instancias de VM > Selecciona la instancia > **Borrar**.
+3.  **Importante:** Verifica en Red de VPC > Direcciones IP que no queden IPs estáticas reservadas. Si hay alguna, libérala.
