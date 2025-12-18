@@ -3,6 +3,16 @@ import time
 import os
 import signal
 import sys
+from pathlib import Path
+
+# Cargar variables de entorno desde .env si existe
+try:
+    from dotenv import load_dotenv
+    # Subir dos niveles desde src/tools/polling.py para encontrar .env
+    dotenv_path = Path(__file__).resolve().parent.parent.parent / ".env"
+    load_dotenv(dotenv_path=dotenv_path)
+except ImportError:
+    pass
 
 # Configuración
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
@@ -36,14 +46,14 @@ def get_updates(offset=None):
 def forward_update(update):
     try:
         # Reenviar el update tal cual lo recibe a nuestra API local
-        # Nuestra API espera el JSON del update en el body
+        # La API de AEGEN devuelve 202 (Accepted) para procesos en segundo plano
         response = requests.post(API_URL, json=update)
-        if response.status_code != 200:
-            print(f"Error reenviando a API local: {response.text}")
+        if response.status_code not in [200, 202]:
+            print(f"Error reenviando a API local (Status {response.status_code}): {response.text}")
         else:
-            print(f"Update procesado: {update.get('update_id')}")
+            print(f"Update procesado exitosamente: {update.get('update_id')} (Status {response.status_code})")
     except Exception as e:
-        print(f"Error conectando a API local: {e}")
+        print(f"Error conectando a API local en {API_URL}: {e}")
 
 def main():
     print(f"Iniciando Long Polling para el bot...")
