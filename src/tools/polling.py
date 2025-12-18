@@ -6,7 +6,7 @@ import sys
 
 # Configuración
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-API_URL = "http://localhost:8000/webhook/telegram"
+API_URL = "http://localhost:8000/api/v1/webhooks/telegram"
 TELEGRAM_API = f"https://api.telegram.org/bot{TOKEN}"
 
 if not TOKEN:
