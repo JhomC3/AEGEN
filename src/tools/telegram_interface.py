@@ -40,7 +40,7 @@ class TelegramToolManager:
         """
         Obtiene la ruta de un archivo a partir de su file_id.
         """
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             try:
                 url = f"{self.base_url}/getFile"
                 response = await client.post(url, data={"file_id": file_id})
@@ -79,7 +79,7 @@ class TelegramToolManager:
         local_filename = Path(file_path_suffix).name
         destination_path = destination_folder / local_filename
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=30.0) as client:
             try:
                 logger.info(f"Descargando archivo de Telegram: {download_url}")
                 async with client.stream("GET", download_url) as response:
@@ -101,11 +101,14 @@ class TelegramToolManager:
                 )
                 return None
 
+    from src.core.resilience import retry_on_failure
+
+    @retry_on_failure(retries=3, delay=2.0, backoff=2.0)
     async def send_message(self, chat_id: str, text: str) -> bool:
         """
-        Envía un mensaje de texto a un chat de Telegram.
+        Envía un mensaje de texto a un chat de Telegram con reintentos.
         """
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=15.0) as client:
             try:
                 url = f"{self.base_url}/sendMessage"
                 payload = {"chat_id": chat_id, "text": text}
