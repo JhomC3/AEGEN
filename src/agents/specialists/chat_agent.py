@@ -409,6 +409,10 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
         f"[{session_id}] Enhanced ChatAgent Node ejecutándose: '{user_message[:50]}...'"
     )
 
+    # ✅ RESTORATION: Properly obtain and format conversation history
+    conversation_history = state.get("conversation_history", [])
+    history_text = _format_conversation_history(conversation_history)
+
     # ✅ TURBO OPTIMIZATION: Skip internal delegation analysis if routed by Master
     # Si venimos del router con alta confianza, no perdemos tiempo re-analizando
     intent_type = state.get("intent", "unknown")

@@ -60,8 +60,11 @@ def main():
     print(f"Reenviando mensajes a: {API_URL}")
     
     # Primero, limpiar cualquier webhook existente para evitar conflictos
-    requests.post(f"{TELEGRAM_API}/deleteWebhook")
-    print("Webhook eliminado (pasando a modo polling).")
+    try:
+        requests.post(f"{TELEGRAM_API}/deleteWebhook", timeout=10)
+        print("Webhook eliminado (pasando a modo polling).")
+    except Exception as e:
+        print(f"Aviso: No se pudo eliminar el webhook (puede que ya esté libre o no haya red): {e}")
 
     offset = None
     while True:
