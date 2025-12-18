@@ -67,17 +67,18 @@ DELEGATION_ANALYSIS_TEMPLATE = """Eres un clasificador rápido de intenciones qu
 
 DELEGAR a especialistas si el mensaje incluye:
 - Planificación de tareas complejas o cronogramas
-- Análisis técnico, de datos, o de archivos
-- Procesamiento de documentos, audio, o multimedia
-- Solicitudes que requieren herramientas específicas
-- Tareas que requieren múltiples pasos o workflows
+- Análisis técnico profundo de datos o archivos específicos
+- Procesamiento de documentos complejos, audio largo, o multimedia
+- Solicitudes que requieren herramientas de software específicas (ej. calculadoras, APIs externas)
+- Tareas que requieren múltiples pasos técnicos o workflows definidos
 
 CONVERSACIÓN DIRECTA para:
 - Saludos, agradecimientos, despedidas
 - Preguntas simples sobre el sistema o capacidades
-- Conversación casual o social
+- Conversación casual, social o emocional
 - Clarificaciones sencillas o confirmaciones
 - Respuestas de seguimiento conversacional
+- Relatos de experiencias personales o situaciones cotidianas
 
 Historial reciente: {conversation_history}
 
@@ -274,7 +275,9 @@ async def _enhanced_conversational_response(
 
 
 async def _optimized_delegate_and_translate(
-    user_message: str, conversation_history: str
+    user_message: str,
+    conversation_history: str,
+    original_event: CanonicalEventV1,
 ) -> str:
     """
     ✅ FUNCTIONALITY RESTORATION: Intelligent delegation with performance optimization.
@@ -286,15 +289,21 @@ async def _optimized_delegate_and_translate(
 
     try:
         # ✅ RESTORATION: Create canonical event for MasterOrchestrator
+        # Usamos los IDs del evento original para no perder el chat
         event = CanonicalEventV1(
-            event_id=uuid.uuid4(),  # Fixed to use UUID
+            event_id=uuid.uuid4(),
             event_type="text",
             source="chat_agent",
-            chat_id="unknown_chat",  # Required field
+            chat_id=original_event.chat_id,
             content=user_message,
-            user_id="system",  # Will be overridden by actual user context
+            user_id=original_event.user_id,
             file_id=None,
-            timestamp=datetime.now().isoformat(),  # Fixed validation error
+            timestamp=datetime.now().isoformat(),
+            metadata={
+                **original_event.metadata,
+                "is_delegated": True,
+                "delegated_by": "chat_agent",
+            },
         )
 
         # ✅ RESTORATION: Create initial state for MasterOrchestrator
@@ -302,8 +311,8 @@ async def _optimized_delegate_and_translate(
             event=event,
             payload={"user_message": user_message},
             conversation_history=_parse_conversation_history(conversation_history),
-            error_message=None,  # Required by TypedDict
-            session_id=str(uuid.uuid4()),  # Required by TypedDict
+            error_message=None,
+            session_id=str(original_event.chat_id),
         )
 
         # ✅ OPTIMIZATION: Direct call to MasterOrchestrator with timeout handling
@@ -449,9 +458,14 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
     history_text = _format_conversation_history(conversation_history)
 
     # ✅ PERFORMANCE + FUNCTIONALITY: Intelligent delegation with optimization
-    requires_delegation = await _optimized_delegation_analysis(
-        user_message, history_text
-    )
+    # Solo intentamos delegar si NO es ya una llamada delegada (evitar bucles)
+    is_delegated = event_obj.metadata.get("is_delegated", False) if event_obj.metadata else False
+
+    requires_delegation = False
+    if not is_delegated:
+        requires_delegation = await _optimized_delegation_analysis(
+            user_message, history_text
+        )
 
     if not requires_delegation:
         # ✅ PERFORMANCE: Direct conversational response (<1s)
@@ -461,7 +475,7 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
     else:
         # ✅ RESTORATION: Intelligent delegation with translation (<3s)
         response_text = await _optimized_delegate_and_translate(
-            user_message, history_text
+            user_message, history_text, event_obj
         )
 
     # ✅ RESTORATION: Advanced conversation history update with metadata
