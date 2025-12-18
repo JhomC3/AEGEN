@@ -62,61 +62,17 @@ logger = logging.getLogger(__name__)
 # PERFORMANCE-OPTIMIZED DELEGATION ANALYSIS
 # ============================================================================
 
-# ✅ OPTIMIZATION: Fast delegation decision prompt (optimized for <200ms response)
-DELEGATION_ANALYSIS_TEMPLATE = """Eres un clasificador rápido de intenciones que determina si un mensaje requiere delegación a especialistas.
-
-DELEGAR a especialistas si el mensaje incluye:
-- Planificación de tareas complejas o cronogramas
-- Análisis técnico profundo de datos o archivos específicos
-- Procesamiento de documentos complejos, audio largo, o multimedia
-- Solicitudes que requieren herramientas de software específicas (ej. calculadoras, APIs externas)
-- Tareas que requieren múltiples pasos técnicos o workflows definidos
-
-CONVERSACIÓN DIRECTA para:
-- Saludos, agradecimientos, despedidas
-- Preguntas simples sobre el sistema o capacidades
-- Conversación casual, social o emocional
-- Clarificaciones sencillas o confirmaciones
-- Respuestas de seguimiento conversacional
-- Relatos de experiencias personales o situaciones cotidianas
-
-Historial reciente: {conversation_history}
-
-Responde SOLO con: "DELEGAR" o "DIRECTO" sin explicaciones adicionales.
-
+DELEGATION_ANALYSIS_TEMPLATE = """Analiza si el mensaje requiere un especialista técnico (archivos, datos, planes complejos).
+Historial: {conversation_history}
+Responde SOLO: "DELEGAR" o "DIRECTO".
 Mensaje: {user_message}"""
 
 # ✅ RESTORATION: Enhanced conversational template with personality
-CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres AEGEN, un asistente de IA conversacional, inteligente y amigable.
-
-Tu personalidad:
-- Eres natural, empático y profesional
-- Respondes de manera concisa pero completa
-- Mantienes el contexto de la conversación
-- Eres proactivo para ayudar al usuario
-- Te adaptas al estilo conversacional del usuario
-
-Capacidades avanzadas:
-- Puedes acceder a herramientas especializadas cuando es necesario
-- Mantienes memoria conversacional rica
-- Proporcionas sugerencias contextual relevantes
-
-Contexto conversacional previo:
-{conversation_history}
-
-Conocimiento relevante disponible:
-{knowledge_context}
-
-Instrucciones:
-- Sé natural y conversacional
-- Usa el contexto para respuestas más relevantes
-- Integra el conocimiento relevante cuando esté disponible
-- Ofrece ayuda proactiva cuando sea apropiado
-- Si detectas que el usuario necesita algo complejo, sugiere cómo puedo ayudar
-
-Responde de manera natural y contextualmente relevante.
-
-Mensaje del usuario: {user_message}"""
+CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres AEGEN, un asistente amigable.
+Contexto: {conversation_history}
+Conocimiento: {knowledge_context}
+Responde de forma natural y empática.
+Mensaje: {user_message}"""
 
 # ✅ RESTORATION: Specialist response translation template
 TRANSLATION_TEMPLATE = """Eres AEGEN, un asistente conversacional que traduce respuestas técnicas a lenguaje natural.
@@ -453,16 +409,14 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
         f"[{session_id}] Enhanced ChatAgent Node ejecutándose: '{user_message[:50]}...'"
     )
 
-    # ✅ RESTORATION: Build rich conversation history context
-    conversation_history = state.get("conversation_history", [])
-    history_text = _format_conversation_history(conversation_history)
-
-    # ✅ PERFORMANCE + FUNCTIONALITY: Intelligent delegation with optimization
-    # Solo intentamos delegar si NO es ya una llamada delegada (evitar bucles)
+    # ✅ TURBO OPTIMIZATION: Skip internal delegation analysis if routed by Master
+    # Si venimos del router con alta confianza, no perdemos tiempo re-analizando
+    intent_type = state.get("intent", "unknown")
     is_delegated = event_obj.metadata.get("is_delegated", False) if event_obj.metadata else False
 
     requires_delegation = False
-    if not is_delegated:
+    # Solo re-analizamos si el router no estaba seguro o si es una entrada directa al tool
+    if intent_type == "unknown" and not is_delegated:
         requires_delegation = await _optimized_delegation_analysis(
             user_message, history_text
         )
