@@ -32,7 +32,7 @@ class BaseAppSettings(BaseSettings):
     # LangSmith Configuration
     LANGCHAIN_API_KEY: SecretStr | None = None
     LANGCHAIN_TRACING_V2: bool = False
-    LANGCHAIN_PROJECT: str = "AEGEN-Phase3B"
+    LANGCHAIN_PROJECT: str = "AEGEN"
 
     # ... otros secretos
 
@@ -42,7 +42,7 @@ class BaseAppSettings(BaseSettings):
     REDIS_SESSION_TTL: int = 3600  # 1 hour session timeout
 
     # Configs generales
-    DEFAULT_LLM_MODEL: str = "gemini-3-flash-preview"
+    DEFAULT_LLM_MODEL: str = "gemini-2.5-flash-lite"
     DEFAULT_TEMPERATURE: float = 0.3
     DEFAULT_WHISPER_MODEL: str = "small"
     DEBUG_MODE: bool = False
