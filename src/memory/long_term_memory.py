@@ -15,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 # Configuración del directorio de almacenamiento local
 STORAGE_DIR = Path("storage/memory")
-STORAGE_DIR.mkdir(parents=True, exist_ok=True)
 
 class LongTermMemoryManager:
     """
@@ -30,6 +29,15 @@ class LongTermMemoryManager:
         
         # Reutilizamos el LLM global configurado en el sistema
         self.llm = llm
+        
+        # Asegurar que el directorio de almacenamiento existe
+        try:
+            STORAGE_DIR.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Directorio de memoria verificado: {STORAGE_DIR}")
+        except PermissionError:
+            logger.error(f"FATAL: Sin permisos para crear '{STORAGE_DIR}'.")
+        except Exception as e:
+            logger.error(f"Error inesperado creando '{STORAGE_DIR}': {e}")
         
         self.summary_prompt = ChatPromptTemplate.from_messages([
             ("system", "Eres un experto en síntesis de memoria. Tu tarea es actualizar el 'Perfil Histórico' de un usuario basado en nuevos mensajes. "
