@@ -49,6 +49,10 @@ class LongTermMemoryManager:
     def _get_buffer_path(self, chat_id: str) -> Path:
         return STORAGE_DIR / f"{chat_id}_buffer.json"
 
+    def _get_local_path(self, chat_id: str) -> Path:
+        """Devuelve la ruta al archivo de resumen de memoria del usuario."""
+        return STORAGE_DIR / f"{chat_id}_summary.json"
+
     async def get_summary(self, chat_id: str) -> dict[str, str]:
         """Recupera el resumen histórico y los mensajes en el búfer."""
         local_path = self._get_local_path(chat_id)
