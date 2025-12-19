@@ -43,7 +43,7 @@ async def read_root() -> StatusResponse:
     """Endpoint raíz simple."""
     logger.debug("Root endpoint '/' called")
     return StatusResponse(
-        status=f"{settings.APP_NAME} API is running!",
+        status="MAGI API is running!",
         environment=AppEnvironment(settings.APP_ENV.value),
         version=settings.APP_VERSION,
     )
