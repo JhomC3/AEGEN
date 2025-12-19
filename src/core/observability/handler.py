@@ -76,6 +76,8 @@ class LLMObservabilityHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Callback ejecutado al finalizar llamada LLM exitosa."""
+        # Aseguramos que 'response' no esté en kwargs para evitar duplicados
+        kwargs.pop("response", None)
         self._finalize_call(run_id, response=response, success=True, **kwargs)
 
     def on_llm_error(
@@ -87,6 +89,8 @@ class LLMObservabilityHandler(BaseCallbackHandler):
         **kwargs: Any,
     ) -> None:
         """Callback ejecutado cuando falla llamada LLM."""
+        # Aseguramos que 'response' no esté en kwargs para evitar duplicados
+        kwargs.pop("response", None)
         self._finalize_call(run_id, response=None, success=False, error=error, **kwargs)
 
     def _extract_model_info(self, serialized: dict[str, Any]) -> tuple[str, str]:
