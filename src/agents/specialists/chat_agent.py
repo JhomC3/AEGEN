@@ -46,7 +46,6 @@ except ImportError:
 # ✅ ARCHITECTURE FIX: Use src.core.engine instead of hardcoded LLM
 # ✅ FUNCTIONALITY RESTORATION: Re-import MasterOrchestrator for delegation
 from src.agents.orchestrator.factory import master_orchestrator
-from src.memory.long_term_memory import long_term_memory
 from src.core.engine import create_observable_config, llm
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
@@ -56,6 +55,7 @@ from src.core.schemas import (
     InternalDelegationResponse,
     V2ChatMessage,
 )
+from src.memory.long_term_memory import long_term_memory
 
 logger = logging.getLogger(__name__)
 
@@ -215,7 +215,7 @@ async def _enhanced_conversational_response(
         # ✅ LONG-TERM MEMORY: Recuperar perfil histórico y búfer de respaldo
         memory_data = await long_term_memory.get_summary(chat_id)
         history_summary = memory_data["summary"]
-        
+
         # Si el historial de Redis está vacío pero el búfer tiene datos, los usamos
         # Esto sucede cuando la sesión de Redis expira después de 1 hora
         if not conversation_history and memory_data["buffer"]:
@@ -246,7 +246,7 @@ async def _enhanced_conversational_response(
 async def _optimized_delegate_and_translate(
     user_message: str,
     conversation_history: str,
-    original_event: CanonicalEventV1,
+    original_event: CanonicalEventV1 | None = None,
 ) -> str:
     """
     ✅ FUNCTIONALITY RESTORATION: Intelligent delegation with performance optimization.
@@ -258,18 +258,22 @@ async def _optimized_delegate_and_translate(
 
     try:
         # ✅ RESTORATION: Create canonical event for MasterOrchestrator
-        # Usamos los IDs del evento original para no perder el chat
+        # Usamos los IDs del evento original para no perder el chat, o generamos nuevos si no hay
+        chat_id = original_event.chat_id if original_event else str(uuid.uuid4())
+        user_id = original_event.user_id if original_event else "anonymous"
+        event_metadata = original_event.metadata if original_event else {}
+
         event = CanonicalEventV1(
             event_id=uuid.uuid4(),
             event_type="text",
             source="chat_agent",
-            chat_id=original_event.chat_id,
+            chat_id=chat_id,
             content=user_message,
-            user_id=original_event.user_id,
+            user_id=user_id,
             file_id=None,
             timestamp=datetime.now().isoformat(),
             metadata={
-                **original_event.metadata,
+                **event_metadata,
                 "is_delegated": True,
                 "delegated_by": "chat_agent",
             },
@@ -281,7 +285,7 @@ async def _optimized_delegate_and_translate(
             payload={"user_message": user_message},
             conversation_history=_parse_conversation_history(conversation_history),
             error_message=None,
-            session_id=str(original_event.chat_id),
+            session_id=str(chat_id),
         )
 
         # ✅ OPTIMIZATION: Direct call to MasterOrchestrator with timeout handling
@@ -433,7 +437,7 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
     is_delegated = event_obj.metadata.get("is_delegated", False) if event_obj.metadata else False
 
     requires_delegation = False
-    
+
     # ✅ OPTIMIZACIÓN DE CUOTA: Heurística simple para mensajes cortos/conversacionales
     conversational_keywords = ["hola", "buenos días", "quién eres", "gracias", "chau", "adiós", "ok", "vale", "responde"]
     is_simple_query = len(user_message.split()) < 4 or any(kw in user_message.lower() for kw in conversational_keywords)
