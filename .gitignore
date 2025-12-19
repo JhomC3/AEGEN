@@ -282,3 +282,7 @@ node_modules/
 # tasks/ 
 .claude/
 .taskmaster/
+
+# User scripts
+scripts/test_*.py
+scripts/list_models.py
