@@ -195,7 +195,7 @@ class RedisFallbackManager:
 
     def _build_cache_key(self, user_id: str, key: str) -> str:
         """Construye clave de cache con namespace."""
-        return f"aegen:user:{user_id}:{key}"
+        return f"magi:user:{user_id}:{key}"
 
     def _is_expired(self, cache_entry: dict[str, Any]) -> bool:
         """Verifica si entrada de cache ha expirado."""

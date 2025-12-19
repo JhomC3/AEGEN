@@ -1,1 +1,1 @@
-"""Core components for AEGEN."""
+"""Core components for MAGI."""

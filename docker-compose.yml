@@ -3,14 +3,14 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: aegen_app_prod
+    container_name: magi_app_prod
     ports:
       - "8000:8000"
     volumes:
       - .env:/app/.env
       - ./storage:/app/storage
     networks:
-      - aegen_network
+      - magi_network
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/system/status" ]
@@ -24,9 +24,9 @@ services:
 
   redis:
     image: redis:alpine3.21
-    container_name: aegen_redis
+    container_name: magi_redis
     networks:
-      - aegen_network
+      - magi_network
     volumes:
       - redis_data:/data
     healthcheck:
@@ -41,5 +41,5 @@ volumes:
 
 
 networks:
-  aegen_network:
+  magi_network:
     driver: bridge

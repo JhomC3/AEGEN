@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
 
     if redis_client and settings.REDIS_URL:
         try:
-            FastAPICache.init(RedisBackend(redis_client), prefix="aegen-cache")
+            FastAPICache.init(RedisBackend(redis_client), prefix="magi-cache")
             logger.info(
                 f"Lifespan: FastAPI Cache initialized with Redis backend (URL: {settings.REDIS_URL})."
             )

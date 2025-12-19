@@ -432,11 +432,18 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
     is_delegated = event_obj.metadata.get("is_delegated", False) if event_obj.metadata else False
 
     requires_delegation = False
-    # Solo re-analizamos si el router no estaba seguro o si es una entrada directa al tool
-    if intent_type == "unknown" and not is_delegated:
+    
+    # ✅ OPTIMIZACIÓN DE CUOTA: Heurística simple para mensajes cortos/conversacionales
+    conversational_keywords = ["hola", "buenos días", "quién eres", "gracias", "chau", "adiós", "ok", "vale", "responde"]
+    is_simple_query = len(user_message.split()) < 4 or any(kw in user_message.lower() for kw in conversational_keywords)
+
+    # Solo re-analizamos si el router no estaba seguro, no es una entrada directa y NO es una consulta simple
+    if intent_type == "unknown" and not is_delegated and not is_simple_query:
         requires_delegation = await _optimized_delegation_analysis(
             user_message, history_text
         )
+    elif is_simple_query:
+        logger.info(f"[{session_id}] Mensaje detectado como simple/conversacional. Saltando análisis de delegación.")
 
     if not requires_delegation:
         # ✅ PERFORMANCE: Direct conversational response (<1s)
