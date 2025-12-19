@@ -32,7 +32,7 @@ class BaseAppSettings(BaseSettings):
     # LangSmith Configuration
     LANGCHAIN_API_KEY: SecretStr | None = None
     LANGCHAIN_TRACING_V2: bool = False
-    LANGCHAIN_PROJECT: str = "MAGI"
+    LANGCHAIN_PROJECT: str = "AEGEN"
 
     # ... otros secretos
 
