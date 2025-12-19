@@ -212,8 +212,15 @@ async def _enhanced_conversational_response(
         config = create_observable_config(call_type="conversational_response")
         chain = prompt | llm
 
-        # ✅ LONG-TERM MEMORY: Recuperar perfil histórico
-        history_summary = await long_term_memory.get_summary(chat_id)
+        # ✅ LONG-TERM MEMORY: Recuperar perfil histórico y búfer de respaldo
+        memory_data = await long_term_memory.get_summary(chat_id)
+        history_summary = memory_data["summary"]
+        
+        # Si el historial de Redis está vacío pero el búfer tiene datos, los usamos
+        # Esto sucede cuando la sesión de Redis expira después de 1 hora
+        if not conversation_history and memory_data["buffer"]:
+            buffer_text = "\n".join([f"{m['role']}: {m['content']}" for m in memory_data["buffer"]])
+            conversation_history = f"[Recuperado de Búfer]\n{buffer_text}"
 
         prompt_input = {
             "user_message": user_message,
@@ -442,11 +449,17 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
             user_message, history_text, event_obj
         )
 
-    # ✅ INFINITE MEMORY: Trigger background summarization if history is getting long
-    # Si tenemos más de 12 mensajes, comprimimos los antiguos al perfil permanente
-    if len(conversation_history) >= 12:
+    # ✅ INFINITE MEMORY: Persistencia inmediata y trigger de resumen
+    # 1. Guardamos el turno actual en el búfer de disco (independiente de Redis)
+    await long_term_memory.store_raw_message(chat_id, "user", user_message)
+    await long_term_memory.store_raw_message(chat_id, "assistant", response_text)
+
+    # 2. Si el búfer acumulado es largo (ej. 20 mensajes / 10 turnos), consolidamos
+    # Esto ahorra cuota de API (RPM) enormemente
+    memory_data = await long_term_memory.get_summary(chat_id)
+    if len(memory_data.get("buffer", [])) >= 20:
         import asyncio
-        asyncio.create_task(long_term_memory.update_memory(chat_id, history_text))
+        asyncio.create_task(long_term_memory.update_memory(chat_id))
 
     # ✅ RESTORATION: Advanced conversation history update with metadata
     updated_history = _update_conversation_history_enhanced(
