@@ -7,6 +7,7 @@ y centralizando lógica de gestión de estado.
 """
 
 import logging
+import re
 from typing import Any
 
 from src.core.routing_models import RoutingDecision
@@ -34,6 +35,46 @@ def route_to_chat(state: GraphStateV2) -> str:
     state["payload"]["next_node"] = CHAT_SPECIALIST_NODE
     logger.debug("Routing fallback a ChatBot")
     return CHAT_SPECIALIST_NODE
+
+
+def is_conversational_only(text: str) -> bool:
+    """
+    Detecta si un mensaje es puramente conversacional (saludo/despedida/gratitud)
+    para evitar costo de LLM Router.
+    """
+    text = text.strip().lower()
+
+    # Patrones de saludos simples y cortesía
+    patterns = [
+        r"^(hola|buenos\s*dias|buenas\s*tardes|buenas\s*noches|hey|hi|hello)$",
+        r"^(gracias|muchas\s*gracias|ok|vale|listo|entendido|grx|thx)$",
+        r"^(adios|chau|hasta\s*luego|nos\s*vemos|bye)$",
+        r"^(como\s*estas|que\s*tal|todo\s*bien)$",
+    ]
+
+    # Mensajes muy cortos (< 4 palabras) suelen ser conversacionales si no tienen keywords de acción
+    is_short = len(text.split()) < 4
+
+    # Verificar Regex
+    if any(re.match(p, text) for p in patterns):
+        return True
+
+    # Si es corto y no tiene palabras clave de acción, asumir conversacional
+    action_keywords = [
+        "analiza",
+        "busca",
+        "investiga",
+        "crea",
+        "resume",
+        "plan",
+        "youtube",
+        "archivo",
+        "transcribe",
+    ]
+    if is_short and not any(k in text for k in action_keywords):
+        return True
+
+    return False
 
 
 def update_state_with_decision(state: GraphStateV2, decision: RoutingDecision) -> None:

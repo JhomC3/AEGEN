@@ -5,6 +5,12 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [Unreleased]
 
+## [v0.1.3] - 2025-12-19
+### Optimización de Consumo y Modelo
+- **Configuración:** Actualizado modelo por defecto a `gemini-flash-lite-latest`.
+- **Fast Path Routing:** Implementado sistema de detección Regex para saludos (ahorro 50% de consumo).
+- **UX:** Mensajes de error de cuota específicos.
+
 ## [0.1.2] - 2025-12-19
 ### Fixed
 - **Memory:** Refactorized `LongTermMemoryManager` to use `aiofiles` for non-blocking I/O.
