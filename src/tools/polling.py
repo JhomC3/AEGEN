@@ -1,16 +1,14 @@
+import asyncio
 import os
 import signal
 import sys
-import time
 from pathlib import Path
 
-import requests  # type: ignore[import-untyped]
+import httpx
+from dotenv import load_dotenv
 
-# Cargar variables de entorno desde .env si existe
+# Cargar variables de entorno
 try:
-    from dotenv import load_dotenv
-
-    # Subir dos niveles desde src/tools/polling.py para encontrar .env
     dotenv_path = Path(__file__).resolve().parent.parent.parent / ".env"
     load_dotenv(dotenv_path=dotenv_path)
 except ImportError:
@@ -22,73 +20,71 @@ API_URL = "http://localhost:8000/api/v1/webhooks/telegram"
 TELEGRAM_API = f"https://api.telegram.org/bot{TOKEN}"
 
 if not TOKEN:
-    print(
-        "Error: TELEGRAM_BOT_TOKEN no encontrado. Ejecuta 'export TELEGRAM_BOT_TOKEN=...' primero."
-    )
+    print("Error: TELEGRAM_BOT_TOKEN no encontrado.")
     sys.exit(1)
 
 
-def signal_handler(sig, frame):
-    print("\nDeteniendo polling...")
-    sys.exit(0)
+async def delete_webhook():
+    async with httpx.AsyncClient() as client:
+        try:
+            await client.post(f"{TELEGRAM_API}/deleteWebhook", timeout=10.0)
+            print("Webhook eliminado (pasando a modo polling).")
+        except Exception as e:
+            print(f"Aviso: No se pudo eliminar el webhook: {e}")
 
 
-signal.signal(signal.SIGINT, signal_handler)
-
-
-def get_updates(offset=None):
+async def get_updates(offset=None):
     url = f"{TELEGRAM_API}/getUpdates"
     params = {"timeout": 30, "allowed_updates": ["message", "edited_message"]}
     if offset:
         params["offset"] = offset
-    try:
-        response = requests.get(url, params=params, timeout=35)
-        response.raise_for_status()
-        return response.json()
-    except Exception as e:
-        print(f"Error conectando a Telegram: {e}")
-        time.sleep(5)
-        return None
+    
+    async with httpx.AsyncClient(timeout=35.0) as client:
+        try:
+            response = await client.get(url, params=params)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            print(f"Error conectando a Telegram: {e}")
+            await asyncio.sleep(5)
+            return None
 
 
-def forward_update(update):
-    try:
-        # Reenviar el update tal cual lo recibe a nuestra API local
-        # La API de MAGI devuelve 202 (Accepted) para procesos en segundo plano
-        response = requests.post(API_URL, json=update, timeout=10)
-        if response.status_code not in [200, 202]:
-            print(
-                f"Error reenviando a API local (Status {response.status_code}): {response.text}"
-            )
-        else:
-            print(
-                f"Update procesado exitosamente: {update.get('update_id')} (Status {response.status_code})"
-            )
-    except Exception as e:
-        print(f"Error conectando a API local en {API_URL}: {e}")
+async def forward_update(update):
+    async with httpx.AsyncClient(timeout=10.0) as client:
+        try:
+            response = await client.post(API_URL, json=update)
+            if response.status_code not in [200, 202]:
+                print(f"Error reenviando (Status {response.status_code}): {response.text}")
+            else:
+                print(f"Update procesado: {update.get('update_id')}")
+        except Exception as e:
+            print(f"Error reenviando a API local: {e}")
 
 
-def main():
-    print("Iniciando Long Polling para el bot...")
+async def main_loop():
+    print("Iniciando Long Polling (Async) para el bot...")
     print(f"Reenviando mensajes a: {API_URL}")
 
-    # Primero, limpiar cualquier webhook existente para evitar conflictos
-    try:
-        requests.post(f"{TELEGRAM_API}/deleteWebhook", timeout=10)
-        print("Webhook eliminado (pasando a modo polling).")
-    except Exception as e:
-        print(
-            f"Aviso: No se pudo eliminar el webhook (puede que ya esté libre o no haya red): {e}"
-        )
+    await delete_webhook()
 
     offset = None
     while True:
-        updates = get_updates(offset)
+        updates = await get_updates(offset)
         if updates and updates.get("ok"):
             for update in updates.get("result", []):
-                forward_update(update)
+                await forward_update(update)
                 offset = update["update_id"] + 1
-        time.sleep(0.1)
+        else:
+            await asyncio.sleep(0.1)
+
+
+def main():
+    try:
+        asyncio.run(main_loop())
+    except KeyboardInterrupt:
+        print("\nDeteniendo polling...")
+        sys.exit(0)
 
 
 if __name__ == "__main__":

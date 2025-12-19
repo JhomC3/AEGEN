@@ -5,6 +5,10 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [Unreleased]
 
+## [v0.1.4] - 2025-12-19
+### Fixed
+- **Polling:** Refactorizado `src/tools/polling.py` para usar `httpx` (asíncrono) en lugar de `requests`, alineando dependencias y resolviendo problemas de ejecución en entornos sin `requests` instalado.
+
 ## [v0.1.3] - 2025-12-19
 ### Optimización de Consumo y Modelo
 - **Configuración:** Actualizado modelo por defecto a `gemini-flash-lite-latest`.
