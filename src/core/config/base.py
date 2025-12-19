@@ -14,7 +14,7 @@ class BaseAppSettings(BaseSettings):
         extra="ignore",
     )
 
-    APP_NAME: str = "AEGEN"
+    APP_NAME: str = "MAGI"
     APP_ENV: Environment = APP_ENV  # Carga la variable de entorno
     APP_VERSION: str = "0.1.0"
     LOG_LEVEL: str = "INFO"

@@ -1,6 +1,6 @@
 # src/agents/specialists/cbt_specialist.py
 """
-CBT (Cognitive Behavioral Therapy) Specialist para AEGEN.
+CBT (Cognitive Behavioral Therapy) Specialist para MAGI.
 
 Responsabilidad única: proporcionar apoyo terapéutico basado en técnicas
 de Terapia Cognitivo Conductual usando knowledge base global especializada.
@@ -373,7 +373,7 @@ def _contains_cbt_keywords(text: str) -> bool:
 
 class CBTSpecialist(SpecialistInterface):
     """
-    Especialista en Terapia Cognitivo Conductual (CBT) para AEGEN.
+    Especialista en Terapia Cognitivo Conductual (CBT) para MAGI.
 
     Proporciona apoyo terapéutico basado en técnicas CBT validadas,
     integrando knowledge base global especializada en terapia.

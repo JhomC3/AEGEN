@@ -46,7 +46,7 @@ def get_updates(offset=None):
 def forward_update(update):
     try:
         # Reenviar el update tal cual lo recibe a nuestra API local
-        # La API de AEGEN devuelve 202 (Accepted) para procesos en segundo plano
+        # La API de MAGI devuelve 202 (Accepted) para procesos en segundo plano
         response = requests.post(API_URL, json=update)
         if response.status_code not in [200, 202]:
             print(f"Error reenviando a API local (Status {response.status_code}): {response.text}")
