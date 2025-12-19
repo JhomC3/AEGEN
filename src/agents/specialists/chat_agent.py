@@ -212,15 +212,8 @@ async def _enhanced_conversational_response(
         config = create_observable_config(call_type="conversational_response")
         chain = prompt | llm
 
-        # ✅ LONG-TERM MEMORY: Recuperar perfil histórico y búfer de respaldo
-        memory_data = await long_term_memory.get_summary(chat_id)
-        history_summary = memory_data["summary"]
-        
-        # Si el historial de Redis está vacío pero el búfer tiene datos, los usamos
-        # Esto sucede cuando la sesión de Redis expira después de 1 hora
-        if not conversation_history and memory_data["buffer"]:
-            buffer_text = "\n".join([f"{m['role']}: {m['content']}" for m in memory_data["buffer"]])
-            conversation_history = f"[Recuperado de Búfer]\n{buffer_text}"
+        # ✅ LONG-TERM MEMORY: Recuperar perfil histórico
+        history_summary = await long_term_memory.get_summary(chat_id)
 
         prompt_input = {
             "user_message": user_message,
@@ -417,7 +410,6 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
 
     session_id = state.get("session_id", "unknown-session")
     user_message = event_obj.content or ""
-    chat_id = str(event_obj.chat_id)
 
     logger.info(
         f"[{session_id}] Enhanced ChatAgent Node ejecutándose: '{user_message[:50]}...'"
@@ -433,18 +425,11 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
     is_delegated = event_obj.metadata.get("is_delegated", False) if event_obj.metadata else False
 
     requires_delegation = False
-    
-    # ✅ OPTIMIZACIÓN DE CUOTA: Heurística simple para mensajes cortos/conversacionales
-    conversational_keywords = ["hola", "buenos días", "quién eres", "gracias", "chau", "adiós", "ok", "vale", "responde"]
-    is_simple_query = len(user_message.split()) < 4 or any(kw in user_message.lower() for kw in conversational_keywords)
-
-    # Solo re-analizamos si el router no estaba seguro, no es una entrada directa y NO es una consulta simple
-    if intent_type == "unknown" and not is_delegated and not is_simple_query:
+    # Solo re-analizamos si el router no estaba seguro o si es una entrada directa al tool
+    if intent_type == "unknown" and not is_delegated:
         requires_delegation = await _optimized_delegation_analysis(
             user_message, history_text
         )
-    elif is_simple_query:
-        logger.info(f"[{session_id}] Mensaje detectado como simple/conversacional. Saltando análisis de delegación.")
 
     if not requires_delegation:
         # ✅ PERFORMANCE: Direct conversational response (<1s)
@@ -457,17 +442,11 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
             user_message, history_text, event_obj
         )
 
-    # ✅ INFINITE MEMORY: Persistencia inmediata y trigger de resumen
-    # 1. Guardamos el turno actual en el búfer de disco (independiente de Redis)
-    await long_term_memory.store_raw_message(chat_id, "user", user_message)
-    await long_term_memory.store_raw_message(chat_id, "assistant", response_text)
-
-    # 2. Si el búfer acumulado es largo (ej. 20 mensajes / 10 turnos), consolidamos
-    # Esto ahorra cuota de API (RPM) enormemente
-    memory_data = await long_term_memory.get_summary(chat_id)
-    if len(memory_data.get("buffer", [])) >= 20:
+    # ✅ INFINITE MEMORY: Trigger background summarization if history is getting long
+    # Si tenemos más de 12 mensajes, comprimimos los antiguos al perfil permanente
+    if len(conversation_history) >= 12:
         import asyncio
-        asyncio.create_task(long_term_memory.update_memory(chat_id))
+        asyncio.create_task(long_term_memory.update_memory(chat_id, history_text))
 
     # ✅ RESTORATION: Advanced conversation history update with metadata
     updated_history = _update_conversation_history_enhanced(
@@ -609,6 +588,7 @@ def _parse_conversation_history(
 
     history_list: list[V2ChatMessage] = []
     lines = conversation_history.split("\n")
+
     for line in lines:
         line = line.strip()
         if not line:
