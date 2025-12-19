@@ -27,7 +27,9 @@ class LongTermMemoryManager:
     def __init__(self):
         # Configurar SDK nativo por si se usa File API directamente
         api_key_str = (
-            settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else ""
+            settings.GOOGLE_API_KEY.get_secret_value()
+            if settings.GOOGLE_API_KEY
+            else ""
         )
         genai.configure(api_key=api_key_str)
 
@@ -45,20 +47,18 @@ class LongTermMemoryManager:
 
         logger.info("LongTermMemoryManager initialized (Hotfix v0.1.2: Async I/O)")
 
-        self.summary_prompt = ChatPromptTemplate.from_messages(
-            [
-                (
-                    "system",
-                    "Eres un experto en síntesis de memoria. Tu tarea es actualizar el 'Perfil Histórico' de un usuario basado en nuevos mensajes. "
-                    "Mantén detalles críticos como nombres, preferencias, hechos importantes y el estado de proyectos actuales. "
-                    "Sé conciso pero preciso. No borres información antigua a menos que haya sido corregida por el usuario.",
-                ),
-                (
-                    "user",
-                    "PERFIL ACTUAL:\n{current_summary}\n\nNUEVOS MENSAJES:\n{new_messages}\n\nActualiza el perfil integrando los nuevos mensajes:",
-                ),
-            ]
-        )
+        self.summary_prompt = ChatPromptTemplate.from_messages([
+            (
+                "system",
+                "Eres un experto en síntesis de memoria. Tu tarea es actualizar el 'Perfil Histórico' de un usuario basado en nuevos mensajes. "
+                "Mantén detalles críticos como nombres, preferencias, hechos importantes y el estado de proyectos actuales. "
+                "Sé conciso pero preciso. No borres información antigua a menos que haya sido corregida por el usuario.",
+            ),
+            (
+                "user",
+                "PERFIL ACTUAL:\n{current_summary}\n\nNUEVOS MENSAJES:\n{new_messages}\n\nActualiza el perfil integrando los nuevos mensajes:",
+            ),
+        ])
 
     def _get_buffer_path(self, chat_id: str) -> Path:
         return STORAGE_DIR / f"{chat_id}_buffer.json"
@@ -105,7 +105,9 @@ class LongTermMemoryManager:
                     content_json = await f.read()
                     raw_buffer = json.loads(content_json)
             except Exception as e:
-                logger.debug(f"No se pudo leer el búfer previo (normal en primera ejecución): {e}")
+                logger.debug(
+                    f"No se pudo leer el búfer previo (normal en primera ejecución): {e}"
+                )
 
         raw_buffer.append({"role": role, "content": content})
 
@@ -128,16 +130,17 @@ class LongTermMemoryManager:
             return
 
         # Convertir búfer a texto para el resumen
-        new_messages_text = "\n".join(
-            [f"{m['role']}: {m['content']}" for m in raw_buffer]
-        )
+        new_messages_text = "\n".join([
+            f"{m['role']}: {m['content']}" for m in raw_buffer
+        ])
 
         try:
             # Generar nuevo resumen incremental
             chain = self.summary_prompt | self.llm
-            response = await chain.ainvoke(
-                {"current_summary": current_summary, "new_messages": new_messages_text}
-            )
+            response = await chain.ainvoke({
+                "current_summary": current_summary,
+                "new_messages": new_messages_text,
+            })
 
             new_summary = str(response.content).strip()
 
@@ -157,7 +160,10 @@ class LongTermMemoryManager:
             logger.info(f"Memoria de largo plazo consolidada para {chat_id}")
 
         except Exception as e:
-            logger.error(f"Error consolidando memoria para {chat_id}: {e}", exc_info=True)
+            logger.error(
+                f"Error consolidando memoria para {chat_id}: {e}", exc_info=True
+            )
+
 
 
 # Instancia singleton

@@ -219,7 +219,9 @@ async def _enhanced_conversational_response(
         # Si el historial de Redis está vacío pero el búfer tiene datos, los usamos
         # Esto sucede cuando la sesión de Redis expira después de 1 hora
         if not conversation_history and memory_data["buffer"]:
-            buffer_text = "\n".join([f"{m['role']}: {m['content']}" for m in memory_data["buffer"]])
+            buffer_text = "\n".join([
+                f"{m['role']}: {m['content']}" for m in memory_data["buffer"]
+            ])
             conversation_history = f"[Recuperado de Búfer]\n{buffer_text}"
 
         prompt_input = {
@@ -229,7 +231,9 @@ async def _enhanced_conversational_response(
             "knowledge_context": knowledge_context,
         }
 
-        response = await chain.ainvoke(prompt_input, config=cast(RunnableConfig, config))
+        response = await chain.ainvoke(
+            prompt_input, config=cast(RunnableConfig, config)
+        )
 
         result = str(response.content).strip()
         logger.info(f"Enhanced conversational response generated: {len(result)} chars")
@@ -237,7 +241,7 @@ async def _enhanced_conversational_response(
 
     except ResourceExhaustedError as e:
         logger.error(f"API Quota Exceeded: {e}", exc_info=True)
-        return "Actualmente estoy experimentando un alto volumen de solicitudes y no puedo procesar tu mensaje. Por favor, inténtalo de nuevo en unos minutos."
+        return "Lo siento, la API de Google Gemini ha alcanzado su límite de cuota gratuita temporalmente. Intenta de nuevo en unos momentos."
     except Exception as e:
         logger.error(f"Error en respuesta conversacional enhanced: {e}", exc_info=True)
         return "Disculpa, tuve un problema técnico. ¿Podrías intentar de nuevo?"
@@ -434,13 +438,27 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
     # ✅ TURBO OPTIMIZATION: Skip internal delegation analysis if routed by Master
     # Si venimos del router con alta confianza, no perdemos tiempo re-analizando
     intent_type = state.get("intent", "unknown")
-    is_delegated = event_obj.metadata.get("is_delegated", False) if event_obj.metadata else False
+    is_delegated = (
+        event_obj.metadata.get("is_delegated", False) if event_obj.metadata else False
+    )
 
     requires_delegation = False
 
     # ✅ OPTIMIZACIÓN DE CUOTA: Heurística simple para mensajes cortos/conversacionales
-    conversational_keywords = ["hola", "buenos días", "quién eres", "gracias", "chau", "adiós", "ok", "vale", "responde"]
-    is_simple_query = len(user_message.split()) < 4 or any(kw in user_message.lower() for kw in conversational_keywords)
+    conversational_keywords = [
+        "hola",
+        "buenos días",
+        "quién eres",
+        "gracias",
+        "chau",
+        "adiós",
+        "ok",
+        "vale",
+        "responde",
+    ]
+    is_simple_query = len(user_message.split()) < 4 or any(
+        kw in user_message.lower() for kw in conversational_keywords
+    )
 
     # Solo re-analizamos si el router no estaba seguro, no es una entrada directa y NO es una consulta simple
     if intent_type == "unknown" and not is_delegated and not is_simple_query:
@@ -448,7 +466,9 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
             user_message, history_text
         )
     elif is_simple_query:
-        logger.info(f"[{session_id}] Mensaje detectado como simple/conversacional. Saltando análisis de delegación.")
+        logger.info(
+            f"[{session_id}] Mensaje detectado como simple/conversacional. Saltando análisis de delegación."
+        )
 
     if not requires_delegation:
         # ✅ PERFORMANCE: Direct conversational response (<1s)
@@ -471,6 +491,7 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
     memory_data = await long_term_memory.get_summary(chat_id)
     if len(memory_data.get("buffer", [])) >= 20:
         import asyncio
+
         asyncio.create_task(long_term_memory.update_memory(chat_id))
 
     # ✅ RESTORATION: Advanced conversation history update with metadata

@@ -18,7 +18,9 @@ llm = ChatGoogleGenerativeAI(
     model=settings.DEFAULT_LLM_MODEL,
     temperature=settings.DEFAULT_TEMPERATURE,
     convert_system_message_to_human=True,  # Necesario para algunos modelos de Google
-    google_api_key=settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None,  # type: ignore[call-arg]
+    google_api_key=settings.GOOGLE_API_KEY.get_secret_value()
+    if settings.GOOGLE_API_KEY
+    else None,  # type: ignore[call-arg]
 )
 
 

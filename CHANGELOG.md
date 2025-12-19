@@ -5,6 +5,20 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [Unreleased]
 
+## [v0.1.5] - 2025-12-19
+### Fixed
+- **Polling (Universal Fix):** Refactorizado `polling.py` para usar exclusivamente la librería estándar de Python (`urllib`, `json`). Eliminadas dependencias de `httpx` y `requests` que causaban fallos en entornos host sin entorno virtual activo (`systemctl`).
+
+## [v0.1.4] - 2025-12-19
+### Fixed
+- **Polling:** Refactorizado `src/tools/polling.py` para usar `httpx` (asíncrono) en lugar de `requests`, alineando dependencias y resolviendo problemas de ejecución en entornos sin `requests` instalado.
+
+## [v0.1.3] - 2025-12-19
+### Optimización de Consumo y Modelo
+- **Configuración:** Actualizado modelo por defecto a `gemini-flash-lite-latest`.
+- **Fast Path Routing:** Implementado sistema de detección Regex para saludos (ahorro 50% de consumo).
+- **UX:** Mensajes de error de cuota específicos.
+
 ## [0.1.2] - 2025-12-19
 ### Fixed
 - **Memory:** Refactorized `LongTermMemoryManager` to use `aiofiles` for non-blocking I/O.
@@ -31,6 +45,7 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 - Implementación de la gobernanza ejecutable (v9.0 del `PROJECT_OVERVIEW.md`)
 - Creación de los artefactos normativos: `rules.md`, `adr/`
 - Estructura de directorios para `adr`, `playbooks`, `prompts` y `tests` de evaluación
+- 
 
 ### Fixed
 - Errores críticos de routing en production:

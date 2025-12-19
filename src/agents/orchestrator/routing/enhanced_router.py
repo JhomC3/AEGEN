@@ -15,7 +15,11 @@ from src.core.schemas import GraphStateV2
 
 from .routing_analyzer import RoutingAnalyzer
 from .routing_prompts import build_routing_prompt
-from .routing_utils import route_to_chat, update_state_with_decision
+from .routing_utils import (
+    is_conversational_only,
+    route_to_chat,
+    update_state_with_decision,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +58,13 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
 
         # Verificar herramientas disponibles
         if not self._cache.has_routable_tools():
+            return route_to_chat(state)
+
+        # ✅ FAST PATH: Detección de charla simple sin costo LLM
+        if is_conversational_only(user_message):
+            logger.info(
+                "Fast Path: Mensaje puramente conversacional detectado -> ChatDirecto"
+            )
             return route_to_chat(state)
 
         try:
