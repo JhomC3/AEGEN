@@ -1,4 +1,4 @@
-# AEGEN: Sistema de Agentes Evolutivo
+# MAGI: Sistema de Agentes Evolutivo
 
 > **Versión:** 10.0 (Edición "Contexto Dinámico y Pragmático")
 > **Estado:** Activo y Evolutivo
@@ -53,7 +53,7 @@ Estas reglas son mandatorias y forzadas por herramientas automatizadas.
 
 ### Componentes Implementados
 ```
-AEGEN/
+MAGI/
 ├── 🎯 Punto de Entrada
 │   ├── main.py              # ✅ FastAPI + middleware
 │   └── api/routers/         # ✅ Webhooks, status, analysis

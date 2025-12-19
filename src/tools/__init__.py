@@ -1,1 +1,1 @@
-"""Tools and utilities for AEGEN."""
+"""Tools and utilities for MAGI."""

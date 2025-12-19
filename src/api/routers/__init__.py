@@ -1,1 +1,1 @@
-"""API routers module for AEGEN."""
+"""API routers module for MAGI."""

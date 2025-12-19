@@ -1,6 +1,6 @@
 # src/core/security/__init__.py
 """
-Módulo de seguridad para AEGEN.
+Módulo de seguridad para MAGI.
 
 Contiene componentes de autorización y control de acceso.
 """

@@ -3,7 +3,7 @@ from typing import Any
 
 
 class AppBaseError(Exception):
-    """Base exception para la aplicación AEGEN."""
+    """Base exception para la aplicación MAGI."""
 
     def __init__(self, message: str, status_code: int = 500, detail: Any = None):
         self.message = message

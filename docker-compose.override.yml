@@ -1,9 +1,8 @@
 # docker-compose.override.yml (Solo para desarrollo)
 
-
 services:
   app:
-    container_name: aegen_app_dev # Nombre distinto para dev
+    container_name: magi_app_dev # Nombre distinto para dev
     ports:
       - "8000:8000" # Mapear puerto para acceso local
     volumes:
@@ -20,5 +19,5 @@ services:
     restart: "no"
     # No necesita el healthcheck tan estricto en dev, el del Dockerfile base está bien
 
-  # Los servicios redis y vector_db usarán la definición base,
-  # pero serán accesibles desde el contenedor 'app' de desarrollo.
+    # Los servicios redis y vector_db usarán la definición base,
+    # pero serán accesibles desde el contenedor 'app' de desarrollo.
