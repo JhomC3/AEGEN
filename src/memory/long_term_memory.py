@@ -39,6 +39,8 @@ class LongTermMemoryManager:
         except Exception as e:
             logger.error(f"Error inesperado creando '{STORAGE_DIR}': {e}")
         
+        logger.info("LongTermMemoryManager initialized (Fix v2: with _get_local_path)")
+        
         self.summary_prompt = ChatPromptTemplate.from_messages([
             ("system", "Eres un experto en síntesis de memoria. Tu tarea es actualizar el 'Perfil Histórico' de un usuario basado en nuevos mensajes. "
                        "Mantén detalles críticos como nombres, preferencias, hechos importantes y el estado de proyectos actuales. "
