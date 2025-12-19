@@ -417,6 +417,7 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
 
     session_id = state.get("session_id", "unknown-session")
     user_message = event_obj.content or ""
+    chat_id = str(event_obj.chat_id)
 
     logger.info(
         f"[{session_id}] Enhanced ChatAgent Node ejecutándose: '{user_message[:50]}...'"
@@ -608,7 +609,6 @@ def _parse_conversation_history(
 
     history_list: list[V2ChatMessage] = []
     lines = conversation_history.split("\n")
-
     for line in lines:
         line = line.strip()
         if not line:
