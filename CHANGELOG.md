@@ -5,6 +5,17 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [Unreleased]
 
+## [v0.1.5] - 2025-12-19
+### Fix de Conectividad (v0.1.4)
+- [x] Refactorizar `polling.py` a `httpx` (async)
+- [x] Desplegar v0.1.4 en servidor
+
+## Universal Polling Fix (v0.1.5)
+- [x] Refactorizar `polling.py` a StdLib (sin dependencias)
+- [ ] Desplegar v0.1.5
+### Fixed
+- **Polling (Universal Fix):** Refactorizado `polling.py` para usar exclusivamente la librería estándar de Python (`urllib`, `json`). Eliminadas dependencias de `httpx` y `requests` que causaban fallos en entornos host sin entorno virtual activo (`systemctl`).
+
 ## [v0.1.4] - 2025-12-19
 ### Fixed
 - **Polling:** Refactorizado `src/tools/polling.py` para usar `httpx` (asíncrono) en lugar de `requests`, alineando dependencias y resolviendo problemas de ejecución en entornos sin `requests` instalado.
