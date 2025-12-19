@@ -16,6 +16,7 @@ import httpx
 from langchain_core.tools import tool
 
 from src.core.config import settings
+from src.core.resilience import retry_on_failure
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +102,6 @@ class TelegramToolManager:
                 )
                 return None
 
-    from src.core.resilience import retry_on_failure
 
     @retry_on_failure(retries=3, delay=2.0, backoff=2.0)
     async def send_message(self, chat_id: str, text: str) -> bool:

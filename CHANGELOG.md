@@ -5,6 +5,14 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [Unreleased]
 
+## [0.1.2] - 2025-12-19
+### Fixed
+- **Memory:** Refactorized `LongTermMemoryManager` to use `aiofiles` for non-blocking I/O.
+- **Agents:** Fixed missing `original_event` argument in `ChatAgent` delegation logic.
+- **Engine:** Resolved Mypy type discrepancies in `ChatGoogleGenerativeAI` initialization.
+- **Security:** Added timeouts to network requests in `polling.py` and improved exception handling.
+- **Quality:** Achieved 100% compliance with Ruff, Mypy, and Bandit.
+
 ### Added
 - **Message Bundling System - Intelligent Message Grouping (Task #23)**
   - Solución crítica para mensajes fuera de orden en sistema asíncrono
