@@ -106,7 +106,7 @@ class AnalyzeQuery(BaseModel):
 
 # --- Esquemas para Respuestas API ---
 class StatusResponse(BaseModel):
-    status: str = Field(..., examples=["AEGEN API is running!"])
+    status: str = Field(..., examples=["MAGI API is running!"])
     environment: AppEnvironment = Field(
         ...,
         description="Current running environment (local, dev, prod).",
