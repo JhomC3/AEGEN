@@ -165,5 +165,6 @@ class LongTermMemoryManager:
             )
 
 
+
 # Instancia singleton
 long_term_memory = LongTermMemoryManager()

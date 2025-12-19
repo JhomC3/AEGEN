@@ -19,6 +19,8 @@ def load_env_file():
         with open(env_path, "r") as f:
             for line in f:
                 line = line.strip()
+                if not line or line.startswith("#") or "=" in line and line.startswith("export "):
+                    line = line.replace("export ", "", 1) # Remove 'export ' prefix
                 if not line or line.startswith("#") or "=" not in line:
                     continue
                 key, value = line.split("=", 1)

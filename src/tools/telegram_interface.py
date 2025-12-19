@@ -102,6 +102,7 @@ class TelegramToolManager:
                 )
                 return None
 
+
     @retry_on_failure(retries=3, delay=2.0, backoff=2.0)
     async def send_message(self, chat_id: str, text: str) -> bool:
         """
