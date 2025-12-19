@@ -117,6 +117,14 @@ docker stats
 
 Deberías ver que el contenedor `app` consume menos de 500MB de RAM.
 
+### 3.5. Solución de Problemas Comunes
+
+**Error: `DefaultCredentialsError`**
+Si la aplicación falla al iniciar con un error sobre "Default Credentials", verifica que tu archivo `.env` tenga configurada correctamente la variable `GOOGLE_API_KEY`. El sistema ahora la requiere explícitamente para evitar conflictos de autenticación en la nube.
+
+**Error: `LongTermMemoryManager` sin atributo**
+Indica que el código en el servidor está desactualizado. Ejecuta `git pull` y reconstruye la imagen con `docker compose up --build -d`.
+
 ---
 
 ## 4. Conectar con Telegram (Modo Polling)

@@ -33,6 +33,11 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 - Sistema de routing completamente estabilizado y operativo
 - Performance optimizada: respuestas en ~2.3s (target <3s cumplido)
 
+### Fixed (Hotfixes v0.1.1 - 2025-12-19)
+- **CRÍTICO:** Corrección de `DefaultCredentialsError` en arranque. Se inyecta explícitamente `GOOGLE_API_KEY` en `ChatGoogleGenerativeAI` para evitar fallback erróneo a Application Default Credentials (ADC).
+- **CRÍTICO:** Solución a `AttributeError` en `LongTermMemoryManager`. Se forzó actualización de código para resolver mismatch de versiones en despliegues (método `_get_local_path` faltante).
+- Estabilización de despliegue en GCP Free Tier.
+
 ## [1.0.0] - 2025-08-13
 
 ### Added
