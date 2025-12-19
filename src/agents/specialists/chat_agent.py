@@ -46,6 +46,7 @@ except ImportError:
 # ✅ ARCHITECTURE FIX: Use src.core.engine instead of hardcoded LLM
 # ✅ FUNCTIONALITY RESTORATION: Re-import MasterOrchestrator for delegation
 from src.agents.orchestrator.factory import master_orchestrator
+from src.memory.long_term_memory import long_term_memory
 from src.core.engine import create_observable_config, llm
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
@@ -68,14 +69,15 @@ Responde SOLO: "DELEGAR" o "DIRECTO".
 Mensaje: {user_message}"""
 
 # ✅ RESTORATION: Enhanced conversational template with personality
-CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres AEGEN, un asistente amigable.
-Contexto: {conversation_history}
+CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres MAGI, un asistente amigable.
+Resumen Histórico: {history_summary}
+Contexto Reciente: {conversation_history}
 Conocimiento: {knowledge_context}
 Responde de forma natural y empática.
 Mensaje: {user_message}"""
 
 # ✅ RESTORATION: Specialist response translation template
-TRANSLATION_TEMPLATE = """Eres AEGEN, un asistente conversacional que traduce respuestas técnicas a lenguaje natural.
+TRANSLATION_TEMPLATE = """Eres MAGI, un asistente conversacional que traduce respuestas técnicas a lenguaje natural.
 
 Tu trabajo es tomar la respuesta de un especialista interno y convertirla en una respuesta conversacional amigable para el usuario.
 
@@ -192,7 +194,7 @@ async def _get_knowledge_context(user_message: str, max_results: int = 3) -> str
 
 
 async def _enhanced_conversational_response(
-    user_message: str, conversation_history: str
+    user_message: str, conversation_history: str, chat_id: str = "unknown"
 ) -> str:
     """
     ✅ RESTORATION + INTEGRATION: Enhanced conversational response with global knowledge base.
@@ -210,10 +212,14 @@ async def _enhanced_conversational_response(
         config = create_observable_config(call_type="conversational_response")
         chain = prompt | llm
 
+        # ✅ LONG-TERM MEMORY: Recuperar perfil histórico
+        history_summary = await long_term_memory.get_summary(chat_id)
+
         prompt_input = {
             "user_message": user_message,
             "conversation_history": conversation_history,
-            "knowledge_context": knowledge_context,  # Siempre incluir, aunque esté vacío
+            "history_summary": history_summary,
+            "knowledge_context": knowledge_context,
         }
 
         response = await chain.ainvoke(prompt_input, config=cast(RunnableConfig, config))
@@ -428,13 +434,19 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
     if not requires_delegation:
         # ✅ PERFORMANCE: Direct conversational response (<1s)
         response_text = await _enhanced_conversational_response(
-            user_message, history_text
+            user_message, history_text, chat_id=chat_id
         )
     else:
         # ✅ RESTORATION: Intelligent delegation with translation (<3s)
         response_text = await _optimized_delegate_and_translate(
             user_message, history_text, event_obj
         )
+
+    # ✅ INFINITE MEMORY: Trigger background summarization if history is getting long
+    # Si tenemos más de 12 mensajes, comprimimos los antiguos al perfil permanente
+    if len(conversation_history) >= 12:
+        import asyncio
+        asyncio.create_task(long_term_memory.update_memory(chat_id, history_text))
 
     # ✅ RESTORATION: Advanced conversation history update with metadata
     updated_history = _update_conversation_history_enhanced(
@@ -499,7 +511,7 @@ def _format_conversation_history(conversation_history: list[V2ChatMessage]) -> s
 
         formatted_role = role.capitalize()
         if role == "assistant":
-            formatted_role = "AEGEN"
+            formatted_role = "MAGI"
 
         history_parts.append(f"{formatted_role}{context}: {content}")
 
