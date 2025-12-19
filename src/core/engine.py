@@ -1,5 +1,6 @@
 # src/core/engine.py
 import logging
+from typing import Any
 
 import psutil
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -10,20 +11,50 @@ from src.core.schemas import SystemState, SystemStatus
 logger = logging.getLogger(__name__)
 
 
-# --- INICIO DE LA SOLUCIÓN ---
+# --- INICIO DE LA SOLUCIÓN CON OBSERVABILIDAD ---
 
-# Crear una única instancia del LLM para ser usada en toda la aplicación.
-# Se carga la configuración desde el objeto `settings` centralizado.
-# La API key se carga automáticamente desde la variable de entorno GOOGLE_API_KEY.
+# Crear instancia base del LLM
 llm = ChatGoogleGenerativeAI(
     model=settings.DEFAULT_LLM_MODEL,
     temperature=settings.DEFAULT_TEMPERATURE,
     convert_system_message_to_human=True,  # Necesario para algunos modelos de Google
+    google_api_key=settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None,
 )
 
-logger.info(f"LLM Engine initialized with model: {settings.DEFAULT_LLM_MODEL}")
 
-# --- FIN DE LA SOLUCIÓN ---
+def create_observable_config(
+    call_type: str = "general", config: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    """
+    Crea configuración con observabilidad automática.
+
+    Args:
+        call_type: Tipo de llamada para métricas
+        config: Configuración base existente
+
+    Returns:
+        Configuración con handler de observabilidad
+    """
+    from src.core.observability.handler import LLMObservabilityHandler
+
+    if config is None:
+        config = {}
+
+    if "callbacks" not in config:
+        config["callbacks"] = []
+
+    # Agregar handler de observabilidad
+    observability_handler = LLMObservabilityHandler(call_type=call_type)
+    config["callbacks"].append(observability_handler)
+
+    return config
+
+
+logger.info(
+    f"LLM Engine initialized with observability support: {settings.DEFAULT_LLM_MODEL}"
+)
+
+# --- FIN DE LA SOLUCIÓN CON OBSERVABILIDAD ---
 
 
 class MigrationDecisionEngine:

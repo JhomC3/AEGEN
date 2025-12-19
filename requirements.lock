@@ -19,44 +19,20 @@ anyio==4.9.0
 apscheduler==3.11.0
     # via python-telegram-bot
 attrs==25.3.0
-    # via
-    #   aiohttp
-    #   jsonschema
-    #   referencing
-av==15.0.0
-    # via faster-whisper
-backoff==2.2.1
-    # via posthog
-bcrypt==4.3.0
-    # via chromadb
+    # via aiohttp
 beautifulsoup4==4.13.4
     # via google
-build==1.2.2.post1
-    # via chromadb
 cachetools==5.5.2
     # via google-auth
 certifi==2025.4.26
     # via
     #   httpcore
     #   httpx
-    #   kubernetes
     #   requests
 charset-normalizer==3.4.2
     # via requests
-chromadb==1.0.15
-    # via aegen (pyproject.toml)
 click==8.1.8
-    # via
-    #   typer
-    #   uvicorn
-coloredlogs==15.0.1
-    # via onnxruntime
-ctranslate2==4.6.0
-    # via faster-whisper
-distro==1.9.0
-    # via posthog
-durationpy==0.10
-    # via kubernetes
+    # via uvicorn
 et-xmlfile==2.0.0
     # via openpyxl
 fastapi==0.115.12
@@ -65,20 +41,12 @@ fastapi==0.115.12
     #   fastapi-cache2
 fastapi-cache2==0.2.2
     # via aegen (pyproject.toml)
-faster-whisper==1.2.0
-    # via aegen (pyproject.toml)
-filelock==3.18.0
-    # via huggingface-hub
 filetype==1.2.0
     # via langchain-google-genai
-flatbuffers==25.2.10
-    # via onnxruntime
 frozenlist==1.7.0
     # via
     #   aiohttp
     #   aiosignal
-fsspec==2025.5.1
-    # via huggingface-hub
 google==3.0.0
     # via aegen (pyproject.toml)
 google-ai-generativelanguage==0.6.15
@@ -100,7 +68,6 @@ google-auth==2.39.0
     #   google-auth-httplib2
     #   google-genai
     #   google-generativeai
-    #   kubernetes
 google-auth-httplib2==0.2.0
     # via google-api-python-client
 google-genai==1.21.1
@@ -113,21 +80,16 @@ googleapis-common-protos==1.70.0
     # via
     #   google-api-core
     #   grpcio-status
-    #   opentelemetry-exporter-otlp-proto-grpc
 grpcio==1.71.0
     # via
-    #   chromadb
     #   google-api-core
     #   grpcio-status
-    #   opentelemetry-exporter-otlp-proto-grpc
 grpcio-status==1.71.0
     # via google-api-core
 h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
-hf-xet==1.1.5
-    # via huggingface-hub
 hiredis==3.1.0
     # via redis
 httpcore==1.0.9
@@ -141,37 +103,20 @@ httptools==0.6.4
 httpx==0.28.1
     # via
     #   aegen (pyproject.toml)
-    #   chromadb
     #   google-genai
     #   langgraph-sdk
     #   langsmith
     #   python-telegram-bot
-huggingface-hub==0.33.2
-    # via
-    #   faster-whisper
-    #   tokenizers
-humanfriendly==10.0
-    # via coloredlogs
 idna==3.10
     # via
     #   anyio
     #   httpx
     #   requests
     #   yarl
-importlib-metadata==8.7.0
-    # via opentelemetry-api
-importlib-resources==6.5.2
-    # via chromadb
 jsonpatch==1.33
     # via langchain-core
 jsonpointer==3.0.0
     # via jsonpatch
-jsonschema==4.24.0
-    # via chromadb
-jsonschema-specifications==2025.4.1
-    # via jsonschema
-kubernetes==33.1.0
-    # via chromadb
 langchain==0.3.25
     # via
     #   aegen (pyproject.toml)
@@ -210,14 +155,6 @@ lxml==6.0.0
     # via
     #   python-docx
     #   python-pptx
-markdown-it-py==3.0.0
-    # via rich
-mdurl==0.1.2
-    # via markdown-it-py
-mmh3==5.1.0
-    # via chromadb
-mpmath==1.3.0
-    # via sympy
 multidict==6.5.1
     # via
     #   aiohttp
@@ -229,56 +166,19 @@ mypy-extensions==1.1.0
 numpy==2.2.5
     # via
     #   aegen (pyproject.toml)
-    #   chromadb
-    #   ctranslate2
-    #   onnxruntime
     #   pandas
-oauthlib==3.3.1
-    # via
-    #   kubernetes
-    #   requests-oauthlib
-onnxruntime==1.22.0
-    # via
-    #   chromadb
-    #   faster-whisper
 openpyxl==3.1.5
     # via aegen (pyproject.toml)
-opentelemetry-api==1.34.1
-    # via
-    #   chromadb
-    #   opentelemetry-exporter-otlp-proto-grpc
-    #   opentelemetry-sdk
-    #   opentelemetry-semantic-conventions
-opentelemetry-exporter-otlp-proto-common==1.34.1
-    # via opentelemetry-exporter-otlp-proto-grpc
-opentelemetry-exporter-otlp-proto-grpc==1.34.1
-    # via chromadb
-opentelemetry-proto==1.34.1
-    # via
-    #   opentelemetry-exporter-otlp-proto-common
-    #   opentelemetry-exporter-otlp-proto-grpc
-opentelemetry-sdk==1.34.1
-    # via
-    #   chromadb
-    #   opentelemetry-exporter-otlp-proto-grpc
-opentelemetry-semantic-conventions==0.55b1
-    # via opentelemetry-sdk
 orjson==3.10.18
     # via
-    #   chromadb
     #   langgraph-sdk
     #   langsmith
 ormsgpack==1.10.0
     # via langgraph-checkpoint
-overrides==7.7.0
-    # via chromadb
 packaging==24.2
     # via
-    #   build
-    #   huggingface-hub
     #   langchain-core
     #   langsmith
-    #   onnxruntime
     #   pytesseract
 pandas==2.2.3
     # via aegen (pyproject.toml)
@@ -291,8 +191,6 @@ pillow==11.3.0
     #   aegen (pyproject.toml)
     #   pytesseract
     #   python-pptx
-posthog==5.4.0
-    # via chromadb
 prometheus-client==0.22.1
     # via prometheus-fastapi-instrumentator
 prometheus-fastapi-instrumentator==7.1.0
@@ -312,8 +210,6 @@ protobuf==5.29.4
     #   google-generativeai
     #   googleapis-common-protos
     #   grpcio-status
-    #   onnxruntime
-    #   opentelemetry-proto
     #   proto-plus
 psutil==7.0.0
     # via aegen (pyproject.toml)
@@ -323,11 +219,8 @@ pyasn1==0.6.1
     #   rsa
 pyasn1-modules==0.4.2
     # via google-auth
-pybase64==1.4.1
-    # via chromadb
 pydantic==2.11.4
     # via
-    #   chromadb
     #   fastapi
     #   google-genai
     #   google-generativeai
@@ -341,24 +234,16 @@ pydantic-core==2.33.2
     # via pydantic
 pydantic-settings==2.9.1
     # via aegen (pyproject.toml)
-pygments==2.19.2
-    # via rich
 pyparsing==3.2.3
     # via httplib2
 pypdf==5.9.0
     # via aegen (pyproject.toml)
-pypika==0.48.9
-    # via chromadb
-pyproject-hooks==1.2.0
-    # via build
 pytesseract==0.3.13
     # via aegen (pyproject.toml)
 python-dateutil==2.9.0.post0
     # via
-    #   kubernetes
     #   pandas
     #   pendulum
-    #   posthog
 python-docx==1.2.0
     # via aegen (pyproject.toml)
 python-dotenv==1.1.0
@@ -376,54 +261,25 @@ pytz==2025.2
     # via pandas
 pyyaml==6.0.2
     # via
-    #   chromadb
-    #   ctranslate2
-    #   huggingface-hub
-    #   kubernetes
     #   langchain
     #   langchain-core
     #   uvicorn
 redis==6.0.0
     # via aegen (pyproject.toml)
-referencing==0.36.2
-    # via
-    #   jsonschema
-    #   jsonschema-specifications
 requests==2.32.3
     # via
     #   google-api-core
     #   google-genai
-    #   huggingface-hub
-    #   kubernetes
     #   langchain
     #   langchain-tavily
     #   langsmith
-    #   posthog
-    #   requests-oauthlib
     #   requests-toolbelt
-requests-oauthlib==2.0.0
-    # via kubernetes
 requests-toolbelt==1.0.0
     # via langsmith
-rich==14.0.0
-    # via
-    #   chromadb
-    #   typer
-rpds-py==0.26.0
-    # via
-    #   jsonschema
-    #   referencing
 rsa==4.9.1
     # via google-auth
-setuptools==80.9.0
-    # via ctranslate2
-shellingham==1.5.4
-    # via typer
 six==1.17.0
-    # via
-    #   kubernetes
-    #   posthog
-    #   python-dateutil
+    # via python-dateutil
 sniffio==1.3.1
     # via anyio
 soupsieve==2.7
@@ -436,46 +292,26 @@ starlette==0.46.2
     #   prometheus-fastapi-instrumentator
 structlog==25.3.0
     # via aegen (pyproject.toml)
-sympy==1.14.0
-    # via onnxruntime
 tenacity==8.5.0
     # via
-    #   chromadb
     #   google-genai
     #   langchain-core
-tokenizers==0.21.2
-    # via
-    #   chromadb
-    #   faster-whisper
 tqdm==4.67.1
-    # via
-    #   chromadb
-    #   faster-whisper
-    #   google-generativeai
-    #   huggingface-hub
-typer==0.16.0
-    # via chromadb
+    # via google-generativeai
 typing-extensions==4.13.2
     # via
     #   beautifulsoup4
-    #   chromadb
     #   fastapi
     #   fastapi-cache2
     #   google-genai
     #   google-generativeai
-    #   huggingface-hub
     #   langchain-core
     #   mypy
-    #   opentelemetry-api
-    #   opentelemetry-exporter-otlp-proto-grpc
-    #   opentelemetry-sdk
-    #   opentelemetry-semantic-conventions
     #   pydantic
     #   pydantic-core
     #   python-docx
     #   python-pptx
     #   sqlalchemy
-    #   typer
     #   typing-inspection
 typing-inspection==0.4.0
     # via
@@ -490,20 +326,15 @@ tzlocal==5.3.1
 uritemplate==4.1.1
     # via google-api-python-client
 urllib3==2.4.0
-    # via
-    #   kubernetes
-    #   requests
+    # via requests
 uvicorn==0.29.0
     # via
     #   aegen (pyproject.toml)
-    #   chromadb
     #   fastapi-cache2
 uvloop==0.21.0
     # via uvicorn
 watchfiles==1.0.5
     # via uvicorn
-websocket-client==1.8.0
-    # via kubernetes
 websockets==15.0.1
     # via
     #   google-genai
@@ -516,7 +347,5 @@ yarl==1.20.1
     # via aiohttp
 yt-dlp==2025.6.30
     # via aegen (pyproject.toml)
-zipp==3.23.0
-    # via importlib-metadata
 zstandard==0.23.0
     # via langsmith

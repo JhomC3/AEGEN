@@ -7,7 +7,7 @@ Extraído del MasterOrchestrator para cumplir SRP y hacer configurable las regla
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from src.agents.orchestrator.strategies import RoutingStrategy
 from src.core.schemas import GraphStateV2
@@ -26,7 +26,7 @@ class ConfigurableChainRouter(RoutingStrategy):
     - Decisión de finalización de chains
     """
 
-    def __init__(self, chaining_config: Dict[str, Any]):
+    def __init__(self, chaining_config: dict[str, Any]):
         """
         Initialize router con configuración de chaining.
 
@@ -161,7 +161,7 @@ class ConfigurableChainRouter(RoutingStrategy):
         return self._fallback_action
 
     def _rule_conditions_met(
-        self, rule: Dict[str, Any], payload: Dict[str, Any], specialists_history: list
+        self, rule: dict[str, Any], payload: dict[str, Any], specialists_history: list
     ) -> bool:
         """
         Verifica si las condiciones de una regla se cumplen.

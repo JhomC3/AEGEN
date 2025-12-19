@@ -106,7 +106,7 @@ class AnalyzeQuery(BaseModel):
 
 # --- Esquemas para Respuestas API ---
 class StatusResponse(BaseModel):
-    status: str = Field(..., examples=["AEGEN API is running!"])
+    status: str = Field(..., examples=["MAGI API is running!"])
     environment: AppEnvironment = Field(
         ...,
         description="Current running environment (local, dev, prod).",
@@ -444,9 +444,14 @@ class CanonicalEventV1(BaseModel):
     content: Any | None = Field(
         None, description="Contenido principal del mensaje (ej. texto, URL)."
     )
+    timestamp: str | None = Field(
+        None, description="Timestamp del evento (ISO format)."
+    )
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Metadatos adicionales de la fuente."
     )
+
+    model_config = {"extra": "allow"}
 
 
 class GraphStateV1(TypedDict):
@@ -466,14 +471,21 @@ class GraphStateV1(TypedDict):
 # --- Esquemas para Fase 3B: Memoria Conversacional ---
 
 
-class V2ChatMessage(TypedDict):
+class V2ChatMessage(TypedDict, total=False):
     """
     Mensaje de chat Redis-safe, JSON-serializable para historial conversacional.
     Evita la complejidad de serialización de objetos LangChain BaseMessage.
+    Usa total=False para permitir campos opcionales.
     """
 
     role: Literal["user", "assistant", "system", "tool"]
     content: str
+    timestamp: str | None
+    message_length: int
+    message_type: str | None
+    agent_type: str | None
+    delegation_used: bool
+    processing_type: str | None
 
 
 class GraphStateV2(TypedDict):
@@ -488,6 +500,7 @@ class GraphStateV2(TypedDict):
     event: CanonicalEventV1
     payload: dict[str, Any]
     error_message: str | None
+    session_id: str  # ID de sesión para tracking y memoria
     # Nuevo campo para memoria conversacional
     conversation_history: list[V2ChatMessage]
 
@@ -560,3 +573,98 @@ class TaskContext(BaseModel):
     preferences: dict[str, Any] = Field(
         default_factory=dict, description="Preferencias del usuario"
     )
+
+
+# --- Sistema de Roles y Permisos (Fase 3C) ---
+
+
+class UserRole(str, Enum):
+    """Roles disponibles en el sistema multi-tenant."""
+
+    USER = "user"
+    ADMIN = "admin"
+    SUPER_ADMIN = "super_admin"
+
+
+class Permission(str, Enum):
+    """Permisos específicos para control de acceso."""
+
+    READ_OWN = "read_own"
+    WRITE_OWN = "write_own"
+    READ_GLOBAL = "read_global"
+    WRITE_GLOBAL = "write_global"
+    MANAGE_USERS = "manage_users"
+
+
+# --- Contratos para Agentes Modulares (Fase 3C) ---
+
+
+class AgentCapability(str, Enum):
+    """Capacidades estándar que puede tener un agente modular."""
+
+    FILE_PROCESSING = "file_processing"
+    NLP_ANALYSIS = "nlp_analysis"
+    DATA_TRANSFORMATION = "data_transformation"
+    CONTENT_GENERATION = "content_generation"
+    MEMORY_MANAGEMENT = "memory_management"
+    VALIDATION = "validation"
+
+
+class AgentResultStatus(str, Enum):
+    """Estados posibles del resultado de ejecución de un agente."""
+
+    SUCCESS = "success"
+    PARTIAL_SUCCESS = "partial_success"
+    FAILURE = "failure"
+    ERROR = "error"
+
+
+class AgentContext(BaseModel):
+    """
+    Contexto de ejecución compartido entre agentes modulares.
+    Contiene información necesaria para la ejecución y coordinación.
+    """
+
+    user_id: str = Field(..., description="ID único del usuario")
+    session_id: str | None = Field(None, description="ID de sesión opcional")
+    request_id: str | None = Field(None, description="ID de request para tracking")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Metadata adicional"
+    )
+    previous_results: list[dict[str, Any]] = Field(
+        default_factory=list, description="Resultados de agentes anteriores"
+    )
+
+    def get_metadata(self, key: str, default: Any = None) -> Any:
+        """Obtiene metadata específica con valor por defecto."""
+        return self.metadata.get(key, default)
+
+
+class AgentResult(BaseModel):
+    """
+    Resultado estandarizado de la ejecución de un agente modular.
+    Proporciona información estructurada sobre el resultado y próximos pasos.
+    """
+
+    status: AgentResultStatus = Field(..., description="Estado del resultado")
+    data: Any = Field(..., description="Datos resultado de la ejecución")
+    message: str | None = Field(None, description="Mensaje descriptivo opcional")
+    error_details: str | None = Field(None, description="Detalles del error si aplica")
+    metadata: dict[str, Any] = Field(
+        default_factory=dict, description="Metadata del resultado"
+    )
+    next_suggested_agents: list[str] = Field(
+        default_factory=list, description="Agentes sugeridos para siguiente paso"
+    )
+
+    @property
+    def is_success(self) -> bool:
+        """Indica si la ejecución fue exitosa (completa o parcial)."""
+        return self.status in [
+            AgentResultStatus.SUCCESS,
+            AgentResultStatus.PARTIAL_SUCCESS,
+        ]
+
+    def get_metadata(self, key: str, default: Any = None) -> Any:
+        """Obtiene metadata específica con valor por defecto."""
+        return self.metadata.get(key, default)

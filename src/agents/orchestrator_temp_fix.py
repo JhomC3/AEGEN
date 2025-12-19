@@ -4,7 +4,7 @@ Temporary fix para testing del refactor.
 """
 
 import logging
-from typing import Any, Dict
+from typing import Any
 
 from src.core.schemas import GraphStateV2
 
@@ -17,7 +17,7 @@ class TempMasterOrchestrator:
     def __init__(self):
         logger.info("TempMasterOrchestrator inicializado para debugging")
 
-    async def run(self, initial_state: GraphStateV2) -> Dict[str, Any]:
+    async def run(self, initial_state: GraphStateV2) -> dict[str, Any]:
         """
         Implementación temporal de run method.
         """

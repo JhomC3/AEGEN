@@ -8,11 +8,10 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict, Optional
 
 
 # Fallback YAML parser simple para evitar dependencia externa
-def simple_yaml_load(file_path: Path) -> Dict:
+def simple_yaml_load(file_path: Path) -> dict:
     """Parser YAML simple para el archivo quality_gates.yml."""
     # Este es un parser muy básico que funciona para nuestro caso específico
     # En producción usaríamos PyYAML, pero para este demo evitamos la dependencia
@@ -114,9 +113,9 @@ def get_current_phase() -> str:
     return "Fase_3A"  # Default
 
 
-def load_quality_gates() -> Dict:
+def load_quality_gates() -> dict:
     """Carga la configuración de quality gates."""
-    gates_file = Path("quality_gates.yml")
+    gates_file = Path("config/quality_gates.yml")
     if not gates_file.exists():
         print("⚠️  quality_gates.yml no encontrado, usando configuración por defecto")
         return simple_yaml_load(gates_file)
@@ -130,7 +129,7 @@ def load_quality_gates() -> Dict:
         return simple_yaml_load(gates_file)
 
 
-def run_quality_gates(phase: Optional[str] = None, verbose: bool = False):  # noqa: C901
+def run_quality_gates(phase: str | None = None, verbose: bool = False):  # noqa: C901
     """Ejecuta los quality gates para la fase especificada."""
 
     # Determinar fase
@@ -263,7 +262,7 @@ def main():
     args = parser.parse_args()
 
     # Verificar que estamos en el directorio correcto
-    if not Path("quality_gates.yml").exists():
+    if not Path("config/quality_gates.yml").exists():
         print("❌ Error: Ejecutar desde el directorio raíz del proyecto AEGEN")
         sys.exit(1)
 

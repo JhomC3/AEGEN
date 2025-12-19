@@ -8,7 +8,7 @@ from langgraph.graph import StateGraph
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV2
-from src.tools.speech_processing import transcribe_with_whisper
+from src.tools.speech_processing import transcribe_audio
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ async def transcription_tool(audio_file_path: str) -> str:
     """
     logger.info(f"Herramienta de transcripción procesando: {audio_file_path}")
     try:
-        result = await transcribe_with_whisper.ainvoke({"audio_path": audio_file_path})
+        result = await transcribe_audio.ainvoke({"audio_path": audio_file_path})
         transcription = result.get("transcript")
         if not isinstance(transcription, str):
             raise ValueError("La transcripción no devolvió un string válido.")

@@ -1,1 +1,1 @@
-"""API module for AEGEN."""
+"""API module for MAGI."""

@@ -1,5 +1,5 @@
 """
-Configuración del sistema de logging para AEGEN.
+Configuración del sistema de logging para MAGI.
 Implementa las mejores prácticas de logging incluyendo:
 - Rotación de archivos de log
 - Formateo detallado de mensajes (texto y JSON)
@@ -197,7 +197,7 @@ def setup_logging() -> logging.Logger:
             "propagate": False,
         }
 
-    log_file = log_dir / f"AEGEN_{settings.APP_ENV.value}.log"
+    log_file = log_dir / f"MAGI_{settings.APP_ENV.value}.log"
 
     config: LoggingDictConfiguration = {
         "version": 1,

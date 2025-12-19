@@ -7,9 +7,10 @@ from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, status
 
-from src.agents.orchestrator import master_orchestrator
+from src.agents.orchestrator.factory import master_orchestrator
 from src.core import schemas
 from src.core.middleware import correlation_id
+from src.core.schemas import GraphStateV2
 from src.core.session_manager import session_manager
 from src.tools import telegram_interface
 
@@ -27,7 +28,7 @@ async def process_event_task(event: schemas.CanonicalEventV1):
     chat_id = str(event.chat_id)
     logger.info(f"[TaskID: {task_id}] Iniciando orquestación para chat {chat_id}.")
 
-    # Load existing session or create new state
+    # Cargar sesión existente o inicializar historial vacío
     existing_session = await session_manager.get_session(chat_id)
     if existing_session:
         logger.info(
@@ -38,12 +39,14 @@ async def process_event_task(event: schemas.CanonicalEventV1):
         logger.info(f"[TaskID: {task_id}] Nueva sesión conversacional")
         conversation_history = []
 
-    initial_state: schemas.GraphStateV2 = {
-        "event": event,
-        "payload": {},
-        "error_message": None,
-        "conversation_history": conversation_history,
-    }
+    # Crear el estado inicial del grafo con el historial correcto
+    initial_state = GraphStateV2(
+        event=event,
+        payload={},
+        error_message=None,
+        conversation_history=conversation_history,
+        session_id=str(event.chat_id),  # Propagar session_id
+    )
     final_state: dict
 
     try:
@@ -92,7 +95,7 @@ async def process_event_task(event: schemas.CanonicalEventV1):
         "message": message,
     })
 
-    # Save updated session state to Redis
+    # Guardar el estado actualizado de la sesión en Redis
     session_saved = await session_manager.save_session(chat_id, final_state)
     if session_saved:
         history_len = len(final_state.get("conversation_history", []))
@@ -151,6 +154,8 @@ async def telegram_webhook(
             message="Event received but no processable content found.",
         )
 
+    from datetime import datetime
+
     event = schemas.CanonicalEventV1(
         event_id=uuid4(),
         event_type=event_type,
@@ -159,6 +164,7 @@ async def telegram_webhook(
         user_id=request.message.chat.id,
         file_id=file_id,
         content=content,
+        timestamp=datetime.now().isoformat(),
         metadata={"trace_id": trace_id, "update_id": request.update_id},
     )
     logger.info(

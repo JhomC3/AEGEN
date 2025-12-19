@@ -1,0 +1,45 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: magi_app_prod
+    ports:
+      - "8000:8000"
+    volumes:
+      - .env:/app/.env
+      - ./storage:/app/storage
+    networks:
+      - magi_network
+    restart: unless-stopped
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/system/status" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:alpine3.21
+    container_name: magi_redis
+    networks:
+      - magi_network
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+
+
+networks:
+  magi_network:
+    driver: bridge

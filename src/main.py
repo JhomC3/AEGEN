@@ -10,9 +10,10 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 # Importar los especialistas para asegurar que se registren al inicio
 from src import agents  # noqa: F401
-from src.api.routers import analysis, status, webhooks
+from src.api.routers import analysis, llm_metrics, status, webhooks
 from src.core.config import settings
 from src.core.dependencies import (
+    initialize_global_collections,
     initialize_global_resources,
     prime_dependencies,
     shutdown_global_resources,
@@ -38,7 +39,7 @@ async def lifespan(app: FastAPI):
 
     if redis_client and settings.REDIS_URL:
         try:
-            FastAPICache.init(RedisBackend(redis_client), prefix="aegen-cache")
+            FastAPICache.init(RedisBackend(redis_client), prefix="magi-cache")
             logger.info(
                 f"Lifespan: FastAPI Cache initialized with Redis backend (URL: {settings.REDIS_URL})."
             )
@@ -54,6 +55,10 @@ async def lifespan(app: FastAPI):
     # "Calienta" las dependencias singleton
     prime_dependencies()
 
+    # Inicializar collections globales reservadas
+    logger.info("Lifespan: Initializing global collections...")
+    await initialize_global_collections()
+
     logger.info("Lifespan: Application startup complete.")
     yield
     logger.info(f"Lifespan: Shutting down {settings.APP_NAME}...")
@@ -65,7 +70,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="API para análisis blockchain multi-agente, impulsada por IA.",
+    description="API para análisis blockchain multi-agente MAGI, impulsada por IA.",
     lifespan=lifespan,
     debug=settings.DEBUG_MODE,
     openapi_tags=[
@@ -109,6 +114,7 @@ register_exception_handlers(app)
 
 # --- Routers ---
 app.include_router(status.router, prefix="/system", tags=["System"])
+app.include_router(llm_metrics.router, prefix="/system/llm", tags=["LLM Metrics"])
 app.include_router(analysis.router, prefix="/api/v1/analysis", tags=["Analysis"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
 

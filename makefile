@@ -36,28 +36,23 @@ lock: venv ## Genera/Actualiza los archivos requirements.lock
 lint: ## Ejecuta linters (ruff, black check, mypy, bandit, safety)
 	@echo "Running linters..."
 	$(PYTHON) -m ruff check .
-	$(PYTHON) -m black --check .
+##	$(PYTHON) -m black --check . # Deshabilitado para evitar conflictos con ruff format # Deshabilitado para evitar conflictos con ruff format
 	$(PYTHON) -m mypy src tests
 	$(PYTHON) -m bandit -c pyproject.toml -r src
 
-verify: ## Ejecuta quality gates baseline (Fase 3A mínimo)
-	@echo "🎯 Running baseline quality gates (Fase_3A)..."
-	$(PYTHON) scripts/quality_gates.py --phase Fase_3A
+verify: ## Validación completa: linting + tests + architecture simple
+	@echo "🎯 AEGEN Verification Suite..."
+	@echo "1/3 Linting..."
+	@$(MAKE) lint
+	@echo "2/3 Testing..."  
+	@$(MAKE) test
+	@echo "3/3 Architecture..."
+	@$(PYTHON) scripts/simple_check.py
+	@echo "✅ All checks passed!"
 
-verify-next: ## Ejecuta quality gates para la siguiente fase (Fase 3B)
-	@echo "🎯 Running next-phase quality gates (Fase_3B)..."
-	$(PYTHON) scripts/quality_gates.py --phase Fase_3B
-
-verify-phase: ## Ejecuta quality gates para una fase específica (uso: make verify-phase PHASE=Fase_3A)
-	@echo "🎯 Running quality gates for phase: $(PHASE)"
+verify-phase: ## Ejecuta quality gates para fase específica (LEGACY)
+	@echo "🎯 Running phase quality gates: $(PHASE)"
 	$(PYTHON) scripts/quality_gates.py --phase $(PHASE)
-
-verify-verbose: ## Ejecuta quality gates con output detallado
-	@echo "🎯 Running quality gates (verbose)..."
-	$(PYTHON) scripts/quality_gates.py --phase Fase_3A -v
-
-verify-legacy: lint test ## Suite de verificación legacy (linting y testing básico)
-	@echo "✅ Legacy checks passed!"
 
 format: ## Formatea el código usando ruff
 	@echo "Formatting code..."
@@ -109,24 +104,45 @@ doctor: ## Diagnóstico completo de consistencia docs vs código
 	$(MAKE) verify
 	@echo "✅ Project health check complete"
 
-status: ## Estado completo del proyecto (git + testing + métricas)
-	@echo "📊 AEGEN Project Status"
-	@echo "======================"
+dev-check: ## Quick check durante desarrollo (solo architecture)
+	@echo "⚡ Quick development check..."
+	$(PYTHON) scripts/simple_check.py
+
+status: ## Estado completo del proyecto - 3-2-1 model
+	@echo "📊 AEGEN Project Status (3-2-1 Documentation Model)"
+	@echo "==================================================="
 	@echo "Git Branch: $$(git rev-parse --abbrev-ref HEAD)"
 	@echo "Last Commit: $$(git log -1 --pretty=format:'%h - %s (%cr)')"
 	@echo "Modified Files: $$(git diff --name-only | wc -l | tr -d ' ')"
 	@echo ""
-	@echo "📋 Testing Status:"
-	@find tests -name "test_*.py" | wc -l | xargs echo "Test Files:"
+	@echo "📚 Documentation (3 files only):"
+	@echo "   ✅ PROJECT_OVERVIEW.md - Vision & roadmap"
+	@echo "   ✅ DEVELOPMENT.md - Technical guide"  
+	@echo "   ✅ Makefile - Commands"
 	@echo ""
-	@echo "📚 Documentation Status:"
+	@echo "🏗️ Architecture Status:"
+	$(PYTHON) scripts/simple_check.py
+	@echo ""
+	@echo "📋 Test Files: $$(find tests -name 'test_*.py' 2>/dev/null | wc -l | tr -d ' ')"
+	@echo ""
+	@echo "📚 Documentation Sync:"
 	$(PYTHON) scripts/sync_docs.py
-	@echo ""
-	@echo "🎯 Quality Gates:"
-	$(PYTHON) scripts/quality_gates.py --list-phases
 
-list-phases: ## Lista las fases disponibles en quality gates
-	$(PYTHON) scripts/quality_gates.py --list-phases
+help-dev: ## Muestra comandos de desarrollo esenciales
+	@echo "🚀 AEGEN Development Commands (3-2-1 Model)"
+	@echo "==========================================="
+	@echo "📖 Read: DEVELOPMENT.md for technical guide"
+	@echo "📖 Read: PROJECT_OVERVIEW.md for vision/roadmap"
+	@echo ""
+	@echo "⚡ Development:"
+	@echo "   make verify     - Full validation (lint+test+arch)"  
+	@echo "   make dev-check  - Quick architecture check"
+	@echo "   make format     - Auto-fix code style"
+	@echo "   make dev        - Start development server"
+	@echo ""
+	@echo "📊 Status:"
+	@echo "   make status     - Complete project status"
+	@echo "   make sync-docs  - Update documentation"
 
 clean: ## Elimina archivos generados (cache, venv, etc.)
 	@echo "Cleaning up project..."

@@ -35,6 +35,7 @@ async def test_conversational_flow():
             chat_id=chat_id,
             user_id=chat_id,
             content="Hola, mi nombre es Juan y me gusta la tecnología",
+            timestamp="2023-01-01T00:00:00",
         )
 
         # Simular carga de sesión existente (debería ser None)
@@ -43,6 +44,7 @@ async def test_conversational_flow():
             "event": event1,
             "payload": {},
             "error_message": None,
+            "session_id": str(chat_id),
             "conversation_history": existing_session["conversation_history"]
             if existing_session
             else [],
@@ -74,6 +76,7 @@ async def test_conversational_flow():
             chat_id=chat_id,
             user_id=chat_id,
             content="¿Recuerdas mi nombre?",
+            timestamp="2023-01-01T00:01:00",
         )
 
         # Cargar sesión existente
@@ -82,6 +85,7 @@ async def test_conversational_flow():
             "event": event2,
             "payload": {},
             "error_message": None,
+            "session_id": str(chat_id),
             "conversation_history": existing_session2["conversation_history"]
             if existing_session2
             else [],
