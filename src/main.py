@@ -70,7 +70,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="API para análisis blockchain multi-agente, impulsada por IA.",
+    description="API para análisis blockchain multi-agente MAGI, impulsada por IA.",
     lifespan=lifespan,
     debug=settings.DEBUG_MODE,
     openapi_tags=[

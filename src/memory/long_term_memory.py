@@ -38,27 +38,68 @@ class LongTermMemoryManager:
             ("user", "PERFIL ACTUAL:\n{current_summary}\n\nNUEVOS MENSAJES:\n{new_messages}\n\nActualiza el perfil integrando los nuevos mensajes:")
         ])
 
-    def _get_local_path(self, chat_id: str) -> Path:
-        return STORAGE_DIR / f"{chat_id}_memory.json"
+    def _get_buffer_path(self, chat_id: str) -> Path:
+        return STORAGE_DIR / f"{chat_id}_buffer.json"
 
-    async def get_summary(self, chat_id: str) -> str:
-        """Recupera el resumen histórico del usuario."""
+    async def get_summary(self, chat_id: str) -> dict[str, str]:
+        """Recupera el resumen histórico y los mensajes en el búfer."""
         local_path = self._get_local_path(chat_id)
+        buffer_path = self._get_buffer_path(chat_id)
+        
+        summary = "Sin historial previo profesional."
+        raw_buffer = []
+
         if local_path.exists():
             try:
                 with open(local_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
-                    return data.get("summary", "Sin historial previo.")
+                    summary = data.get("summary", summary)
             except Exception as e:
                 logger.error(f"Error leyendo memoria local para {chat_id}: {e}")
-        
-        return "Sin historial previo profesional."
 
-    async def update_memory(self, chat_id: str, new_messages_text: str):
+        if buffer_path.exists():
+            try:
+                with open(buffer_path, "r", encoding="utf-8") as f:
+                    raw_buffer = json.load(f)
+            except Exception as e:
+                logger.error(f"Error leyendo búfer para {chat_id}: {e}")
+        
+        return {"summary": summary, "buffer": raw_buffer}
+
+    async def store_raw_message(self, chat_id: str, role: str, content: str):
+        """Guarda un mensaje en el búfer persistente inmediatamente."""
+        buffer_path = self._get_buffer_path(chat_id)
+        raw_buffer = []
+        
+        if buffer_path.exists():
+            try:
+                with open(buffer_path, "r", encoding="utf-8") as f:
+                    raw_buffer = json.load(f)
+            except Exception:
+                pass
+        
+        raw_buffer.append({"role": role, "content": content})
+        
+        # Limitar el búfer a los últimos 20 mensajes antes de forzar resumen
+        if len(raw_buffer) > 20:
+            raw_buffer = raw_buffer[-20:]
+
+        with open(buffer_path, "w", encoding="utf-8") as f:
+            json.dump(raw_buffer, f, ensure_ascii=False)
+
+    async def update_memory(self, chat_id: str):
         """
-        Analiza nuevos mensajes, actualiza el resumen y lo persiste.
+        Analiza el búfer de mensajes, actualiza el resumen y limpia el búfer.
         """
-        current_summary = await self.get_summary(chat_id)
+        data = await self.get_summary(chat_id)
+        current_summary = data["summary"]
+        raw_buffer = data["buffer"]
+        
+        if not raw_buffer:
+            return
+
+        # Convertir búfer a texto para el resumen
+        new_messages_text = "\n".join([f"{m['role']}: {m['content']}" for m in raw_buffer])
         
         try:
             # Generar nuevo resumen incremental
@@ -70,18 +111,20 @@ class LongTermMemoryManager:
             
             new_summary = str(response.content).strip()
             
-            # Persistir localmente
+            # Persistir resumen localmente
             local_path = self._get_local_path(chat_id)
             with open(local_path, "w", encoding="utf-8") as f:
                 json.dump({"summary": new_summary, "chat_id": chat_id}, f, ensure_ascii=False)
             
-            logger.info(f"Memoria de largo plazo actualizada para {chat_id}")
-            
-            # Sincronización opcional con Gemini File API (Shadow upload para backup)
-            # Por ahora mantenemos local para velocidad, pero la estructura está lista.
+            # Limpiar el búfer ya que ha sido consolidado en el resumen
+            buffer_path = self._get_buffer_path(chat_id)
+            if buffer_path.exists():
+                buffer_path.unlink()
+                
+            logger.info(f"Memoria de largo plazo consolidada para {chat_id}")
             
         except Exception as e:
-            logger.error(f"Error actualizando memoria para {chat_id}: {e}", exc_info=True)
+            logger.error(f"Error consolidando memoria para {chat_id}: {e}", exc_info=True)
 
 # Instancia singleton
 long_term_memory = LongTermMemoryManager()
