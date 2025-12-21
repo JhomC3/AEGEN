@@ -15,7 +15,8 @@ from src.core.engine import llm
 logger = logging.getLogger(__name__)
 
 # Configuración del directorio de almacenamiento local
-STORAGE_DIR = Path("storage/memory")
+# Configuración del directorio de almacenamiento local (Absoluta para evitar errores de CWD)
+STORAGE_DIR = Path(__file__).resolve().parent.parent.parent / "storage" / "memory"
 
 
 class LongTermMemoryManager:
@@ -115,8 +116,12 @@ class LongTermMemoryManager:
         if len(raw_buffer) > 20:
             raw_buffer = raw_buffer[-20:]
 
-        async with aiofiles.open(buffer_path, mode="w", encoding="utf-8") as f:
-            await f.write(json.dumps(raw_buffer, ensure_ascii=False))
+        try:
+            async with aiofiles.open(buffer_path, mode="w", encoding="utf-8") as f:
+                await f.write(json.dumps(raw_buffer, ensure_ascii=False))
+            logger.info(f"💾 Memoria guardada en {buffer_path} ({len(raw_buffer)} msgs)")
+        except Exception as e:
+            logger.error(f"❌ Error escribiendo memoria en {buffer_path}: {e}")
 
     async def update_memory(self, chat_id: str):
         """
