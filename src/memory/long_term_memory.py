@@ -11,6 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate
 
 from src.core.config import settings
 from src.core.engine import llm
+from src.tools.google_file_search import file_search_tool
 
 logger = logging.getLogger(__name__)
 
@@ -161,6 +162,24 @@ class LongTermMemoryManager:
             buffer_path = self._get_buffer_path(chat_id)
             if buffer_path.exists():
                 os.remove(buffer_path)
+
+            # --- EXTENSIÓN: Google File Search (Híbrido) ---
+            try:
+                # Creamos un archivo temporal con el resumen para subirlo
+                user_memory_file = STORAGE_DIR / f"{chat_id}_vault.txt"
+                async with aiofiles.open(user_memory_file, mode="w", encoding="utf-8") as f:
+                    await f.write(f"Historial consolidado del usuario {chat_id}:\n\n{new_summary}")
+                
+                # Subir/Actualizar en la Google File API
+                # Nota: En una implementación de producción, aquí buscaríamos si ya existe 
+                # para borrar el anterior o simplemente confiar en el naming.
+                await file_search_tool.upload_file(
+                    str(user_memory_file), 
+                    display_name=f"User_Vault_{chat_id}"
+                )
+                logger.info(f"Bóveda en la nube actualizada para {chat_id}")
+            except Exception as fe:
+                logger.warning(f"No se pudo sincronizar con Google File API: {fe}")
 
             logger.info(f"Memoria de largo plazo consolidada para {chat_id}")
 

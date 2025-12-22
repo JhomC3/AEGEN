@@ -69,37 +69,33 @@ Responde SOLO: "DELEGAR" o "DIRECTO".
 Mensaje: {user_message}"""
 
 # ✅ RESTORATION: Enhanced conversational template with personality
-CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres MAGI, un asistente amigable.
-Resumen Histórico: {history_summary}
-Contexto Reciente: {conversation_history}
-Conocimiento: {knowledge_context}
-Responde de forma natural y empática.
-Mensaje: {user_message}"""
+CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres MAGI, un compañero cercano y directo. 
+HOY ES: {current_date}
+PERFIL DE TU AMIGO: {history_summary}
+LO que han hablado recientemente: {conversation_history}
+CONOCIMIENTO EXTRA: {knowledge_context}
+
+REGLAS DE ORO:
+1. Sé breve. No uses introducciones como "Entiendo perfectamente" o "Soy MAGI".
+2. Habla como un amigo: relajado pero inteligente. Sin rodeos.
+3. Si la respuesta es obvia, dila directamente.
+4. No menciones que eres una IA a menos que sea vital.
+
+Mensaje de tu amigo: {user_message}"""
 
 # ✅ RESTORATION: Specialist response translation template
-TRANSLATION_TEMPLATE = """Eres MAGI, un asistente conversacional que traduce respuestas técnicas a lenguaje natural.
+TRANSLATION_TEMPLATE = """Eres MAGI. Toma la respuesta técnica del especialista y cuéntasela a tu amigo de forma natural y CORTA.
 
-Tu trabajo es tomar la respuesta de un especialista interno y convertirla en una respuesta conversacional amigable para el usuario.
+FECHA ACTUAL: {current_date}
+HISTORIAL: {conversation_history}
+MENSAJE DEL AMIGO: {original_user_message}
 
-Directrices de traducción:
-- Usa un tono natural y conversacional
-- Evita jerga técnica innecesaria
-- Mantén la información importante del especialista
-- Sé empático y útil
-- Proporciona context sobre lo que se hizo
-- Sugiere próximos pasos si es relevante
-
-Contexto conversacional:
-{conversation_history}
-
-Mensaje original del usuario: {original_user_message}
-
-Respuesta del especialista:
+RESPUESTA TÉCNICA:
 Status: {status}
 Resumen: {summary}
 Sugerencias: {suggestions}
 
-Traduce la respuesta a lenguaje conversacional natural manteniendo toda la información importante."""
+REGLA: Resume lo importante. No seas un loro técnico. Ve al grano."""
 
 
 @tool
@@ -216,9 +212,12 @@ async def _enhanced_conversational_response(
         memory_data = await long_term_memory.get_summary(chat_id)
         history_summary = memory_data["summary"]
 
+        # ✅ TIME AWARENESS: Inyectar fecha y hora actual
+        current_date = datetime.now().strftime("%A, %d de %B de %Y, %H:%M")
+
         # Si el historial de Redis está vacío pero el búfer tiene datos, los usamos
         # Esto sucede cuando la sesión de Redis expira después de 1 hora
-        if not conversation_history and memory_data["buffer"]:
+        if (not conversation_history or conversation_history == "") and memory_data["buffer"]:
             buffer_text = "\n".join([
                 f"{m['role']}: {m['content']}" for m in memory_data["buffer"]
             ])
@@ -229,6 +228,7 @@ async def _enhanced_conversational_response(
             "conversation_history": conversation_history,
             "history_summary": history_summary,
             "knowledge_context": knowledge_context,
+            "current_date": current_date,
         }
 
         response = await chain.ainvoke(
@@ -355,6 +355,10 @@ async def _translate_specialist_response(
         # ✅ ARCHITECTURE: Use src.core.engine with observability
         config = create_observable_config(call_type="response_translation")
         chain = translation_prompt | llm
+        
+        # ✅ TIME AWARENESS: Inyectar fecha y hora actual
+        current_date = datetime.now().strftime("%A, %d de %B de %Y, %H:%M")
+
         response = await chain.ainvoke(
             {
                 "conversation_history": conversation_history,
@@ -362,6 +366,7 @@ async def _translate_specialist_response(
                 "status": status,
                 "summary": summary,
                 "suggestions": suggestions,
+                "current_date": current_date,
             },
             config=cast(RunnableConfig, config),
         )
@@ -526,7 +531,7 @@ def _format_conversation_history(conversation_history: list[V2ChatMessage]) -> s
     performance through intelligent truncation.
     """
     if not conversation_history:
-        return "Sin historial conversacional previo."
+        return ""
 
     # ✅ OPTIMIZATION: Use recent context for better performance (last 8 messages)
     recent_history = (
