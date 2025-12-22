@@ -25,6 +25,7 @@ from langchain_core.tools import BaseTool, tool
 from langgraph.graph import END, StateGraph
 
 from src.core.engine import create_observable_config, llm
+from src.tools.google_file_search import file_search_tool
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV2, V2ChatMessage
@@ -133,8 +134,14 @@ async def cbt_therapeutic_guidance_tool(
     logger.info(f"CBT Therapeutic Tool procesando: '{user_message[:50]}...'")
 
     try:
-        # Consultar knowledge base local (JSON) para contexto CBT
-        knowledge_context = await _get_cbt_knowledge_context(user_message)
+        # Consultar Managed RAG para libros de TCC
+        # Obtenemos el chat_id del contexto si es posible
+        chat_id = "unknown"
+        if isinstance(conversation_history, str) and "[Recuperado" in conversation_history:
+             # Intento de heurística o pasarlo directamente
+             pass
+
+        knowledge_context = await file_search_tool.query_files(user_message, chat_id)
 
         # Generar respuesta terapéutica
         therapeutic_response = await _generate_therapeutic_response(
@@ -330,7 +337,7 @@ def _format_conversation_history(conversation_history: list[V2ChatMessage]) -> s
         Historial formateado como string
     """
     if not conversation_history:
-        return "Sin historial previo."
+        return ""
 
     # Usar últimos 5 mensajes para contexto relevante
     recent_history = (

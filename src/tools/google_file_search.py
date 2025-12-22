@@ -47,6 +47,56 @@ class GoogleFileSearchTool:
         """
         return list(genai.list_files())
 
+    async def get_relevant_files(self, chat_id: str) -> list[Any]:
+        """
+        Identifica qué archivos son relevantes para este chat.
+        Incluye libros generales de TCC y la bóveda específica del usuario.
+        """
+        all_files = await self.list_files()
+        relevant = []
+        user_vault_name = f"User_Vault_{chat_id}"
+        
+        for f in all_files:
+            # Incluir libros de TCC (prefijo o nombre)
+            if "TCC" in f.display_name.upper() or "TERAPIA" in f.display_name.upper():
+                relevant.append(f)
+            # Incluir la bóveda del usuario actual
+            elif f.display_name == user_vault_name:
+                relevant.append(f)
+        
+        return relevant
+
+    async def query_files(self, query: str, chat_id: str) -> str:
+        """
+        Realiza una búsqueda semántica en los archivos relevantes (TCC + Usuario).
+        Usa la propia capacidad de Gemini para extraer información de los archivos.
+        """
+        relevant_files = await self.get_relevant_files(chat_id)
+        if not relevant_files:
+            return ""
+
+        logger.info(f"Realizando consulta RAG en {len(relevant_files)} archivos para {chat_id}")
+        
+        try:
+            # Usamos una instancia ligera del modelo para la extracción
+            model = genai.GenerativeModel("gemini-1.5-flash-latest")
+            
+            # Construimos el prompt con los archivos
+            prompt_parts = [
+                "Actúa como un extractor de información experto.",
+                f"Basándote EXCLUSIVAMENTE en los archivos adjuntos, responde a: {query}",
+                "Si la información no está en los archivos, di simplemente 'Información no encontrada'.",
+                "Sé conciso."
+            ]
+            # Añadimos los archivos a la lista de partes
+            prompt_parts.extend(relevant_files)
+
+            response = model.generate_content(prompt_parts)
+            return response.text.strip()
+        except Exception as e:
+            logger.error(f"Error en query_files: {e}")
+            return ""
+
     async def delete_file(self, file_name: str):
         """
         Elimina un archivo de la File API.
