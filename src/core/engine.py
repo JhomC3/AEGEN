@@ -16,11 +16,11 @@ logger = logging.getLogger(__name__)
 # Crear instancia base del LLM con capacidades de búsqueda y personalidad ajustada
 llm = ChatGoogleGenerativeAI(
     model=settings.DEFAULT_LLM_MODEL,
-    temperature=0.7,  # Subimos a 0.7 para respuestas más naturales y menos robóticas
+    temperature=0.7,
     convert_system_message_to_human=True,
     google_api_key=settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None,
     # Habilitamos búsqueda web nativa (Grounding)
-    # Nota: También podemos habilitar otros tools aquí si se desea globalmente
+    tools=[{"google_search_retrieval": {}}],  # type: ignore[arg-type]
 )
 
 

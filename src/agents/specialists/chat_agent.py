@@ -47,6 +47,7 @@ except ImportError:
 # ✅ FUNCTIONALITY RESTORATION: Re-import MasterOrchestrator for delegation
 from src.agents.orchestrator.factory import master_orchestrator
 from src.core.engine import create_observable_config, llm
+from src.tools.google_file_search import file_search_tool
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
 from src.core.schemas import (
@@ -177,16 +178,19 @@ async def _optimized_delegation_analysis(
         return False
 
 
-async def _get_knowledge_context(user_message: str, max_results: int = 3) -> str:
+async def _get_knowledge_context(user_message: str, chat_id: str, max_results: int = 3) -> str:
     """
-    ✅ INTEGRATION: Consulta simplificada de contexto.
-
-    Nota: La integración con ChromaDB ha sido eliminada.
-    Future: Integrar con Gemini File API o búsqueda unificada.
+    ✅ INTEGRATION: Consulta Managed RAG en Google File API.
+    Busca en libros de TCC y memoria histórica del usuario.
     """
-    # Por ahora retornamos string vacío para no romper funcionalidad
-    # hasta que se integre knowledge_processing.py totalmente
-    return ""
+    try:
+        context = await file_search_tool.query_files(user_message, chat_id)
+        if context and "Información no encontrada" not in context:
+            return context
+        return ""
+    except Exception as e:
+        logger.error(f"Error recuperando contexto de conocimiento: {e}")
+        return ""
 
 
 async def _enhanced_conversational_response(
@@ -201,8 +205,8 @@ async def _enhanced_conversational_response(
     prompt = ChatPromptTemplate.from_template(CONVERSATIONAL_RESPONSE_TEMPLATE)
 
     try:
-        # ✅ INTEGRATION: Obtener contexto de la global knowledge base
-        knowledge_context = await _get_knowledge_context(user_message)
+        # ✅ INTEGRATION: Obtener contexto de la global knowledge base (TCC + Memoria Usuario)
+        knowledge_context = await _get_knowledge_context(user_message, chat_id)
 
         # ✅ ARCHITECTURE: Use src.core.engine instead of hardcoded LLM with observability
         config = create_observable_config(call_type="conversational_response")
