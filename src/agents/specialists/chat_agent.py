@@ -70,17 +70,19 @@ Responde SOLO: "DELEGAR" o "DIRECTO".
 Mensaje: {user_message}"""
 
 # ✅ RESTORATION: Enhanced conversational template with personality
-CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres MAGI, un compañero cercano y directo. 
+CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres MAGI, un compañero cercano, directo y sobre todo EMPÁTICO. 
 HOY ES: {current_date}
 PERFIL DE TU AMIGO: {history_summary}
 LO que han hablado recientemente: {conversation_history}
 CONOCIMIENTO EXTRA: {knowledge_context}
+SEÑAL DE INTENCIÓN: {intent_signal}
 
 REGLAS DE ORO:
-1. Sé breve. No uses introducciones como "Entiendo perfectamente" o "Soy MAGI".
-2. Habla como un amigo: relajado pero inteligente. Sin rodeos.
-3. Si la respuesta es obvia, dila directamente.
-4. No menciones que eres una IA a menos que sea vital.
+1. Sé breve. No uses clichés de IA.
+2. DETECTA EL TONO: Si el usuario está mal, deja TODO de lado (planes, archivos, entrenamiento) y escúchalo como un mejor amigo. La empatía manda sobre la tarea.
+3. ADAPTABILIDAD: Si la señal es 'topic_shift', no menciones el tema anterior. Empieza de cero con lo que el usuario pida.
+4. HONESTIDAD: Si el usuario menciona un archivo pero no lo ves en el contexto o no pudiste procesarlo, DI LA VERDAD. No inventes que lo leíste.
+5. Habla como un amigo: inteligente pero sin rodeos.
 
 Mensaje de tu amigo: {user_message}"""
 
@@ -194,7 +196,7 @@ async def _get_knowledge_context(user_message: str, chat_id: str, max_results: i
 
 
 async def _enhanced_conversational_response(
-    user_message: str, conversation_history: str, chat_id: str = "unknown"
+    user_message: str, conversation_history: str, chat_id: str = "unknown", intent_signal: str = ""
 ) -> str:
     """
     ✅ RESTORATION + INTEGRATION: Enhanced conversational response with global knowledge base.
@@ -233,6 +235,7 @@ async def _enhanced_conversational_response(
             "history_summary": history_summary,
             "knowledge_context": knowledge_context,
             "current_date": current_date,
+            "intent_signal": intent_signal,
         }
 
         response = await chain.ainvoke(
@@ -469,6 +472,14 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
         kw in user_message.lower() for kw in conversational_keywords
     )
 
+    # ✅ REGLA DE HONESTIDAD: Verificar presencia de archivos
+    file_id = event_obj.file_id
+    file_presence_info = ""
+    if file_id:
+        file_presence_info = f"ARCHIVO DETECTADO: El usuario ha enviado un archivo con ID {file_id}. Procesa su consulta teniendo esto en cuenta."
+    elif "archivo" in user_message.lower() or "documento" in user_message.lower() or "pdf" in user_message.lower():
+        file_presence_info = "ALERTA: El usuario menciona un archivo/documento, pero NO se ha detectado ningún archivo adjunto en este turno. Sé honesto al respecto."
+
     # Solo re-analizamos si el router no estaba seguro, no es una entrada directa y NO es una consulta simple
     if intent_type == "unknown" and not is_delegated and not is_simple_query:
         requires_delegation = await _optimized_delegation_analysis(
@@ -481,8 +492,11 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
 
     if not requires_delegation:
         # ✅ PERFORMANCE: Direct conversational response (<1s)
+        # Pasamos la intención detectada al generador de respuesta
+        intent_signal_text = f"Intención detectada: {intent_type}. {file_presence_info}"
+        
         response_text = await _enhanced_conversational_response(
-            user_message, history_text, chat_id=chat_id
+            user_message, history_text, chat_id=chat_id, intent_signal=intent_signal_text
         )
     else:
         # ✅ RESTORATION: Intelligent delegation with translation (<3s)

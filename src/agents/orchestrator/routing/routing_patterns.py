@@ -146,6 +146,28 @@ class IntentValidator:
             "asistencia",
             "apoyo",
         ],
+        IntentType.VULNERABILITY: [
+            "cansado",
+            "agotado",
+            "triste",
+            "deprimido",
+            "mal",
+            "desempleo",
+            "problema",
+            "solo",
+            "ayúdame",
+            "siento",
+        ],
+        IntentType.TOPIC_SHIFT: [
+            "deja",
+            "basta",
+            "para con",
+            "otro tema",
+            "cambia",
+            "olvida",
+            "no quiero hablar de",
+            "suficiente de",
+        ],
     }
 
     def has_clear_intent_evidence(self, text: str, intent: IntentType) -> bool:
@@ -180,6 +202,8 @@ class SpecialistMapper:
         IntentType.SEARCH: ["search_agent", "web_retriever"],
         IntentType.CHAT: ["chat_specialist"],
         IntentType.HELP: ["chat_specialist", "help_agent"],
+        IntentType.VULNERABILITY: ["chat_specialist"],
+        IntentType.TOPIC_SHIFT: ["chat_specialist"],
     }
 
     def map_intent_to_specialist(
