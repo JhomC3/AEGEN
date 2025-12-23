@@ -42,7 +42,7 @@ CONTEXTO CONVERSACIONAL: {context}
 IMPORTANTE: Debes llamar OBLIGATORIAMENTE a la función route_user_message con:
 - intent: una de las opciones válidas (chat, file_analysis, search, help, task_execution, information_request, planning, document_creation, vulnerability, topic_shift)
 - confidence: 0.0-1.0 basado en claridad del mensaje
-- target_specialist: especialista más apropiado (vulnerability y topic_shift suelen ir al chat_specialist para empatía)
+- target_specialist: especialista más apropiado (vulnerability profunda → cbt_specialist; topic_shift → chat_specialist)
 - requires_tools: true si necesita herramientas específicas
 - entities: lista de entidades encontradas (strings)
 - subintent: sub-intención específica si aplica
