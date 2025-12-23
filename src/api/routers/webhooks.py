@@ -54,17 +54,30 @@ async def process_event_task(event: schemas.CanonicalEventV1):
             temp_path = Path(temp_dir)
             logger.info(f"[TaskID: {task_id}] Directorio temporal creado: {temp_dir}")
 
-            if event.file_id and event.event_type == "audio":
-                audio_file_path = (
-                    await telegram_interface.download_telegram_audio.ainvoke({
-                        "file_id": event.file_id,
-                        "destination_folder": str(temp_path),
-                    })
-                )
-                initial_state["payload"]["audio_file_path"] = audio_file_path
-                logger.info(
-                    f"[TaskID: {task_id}] Audio descargado en {audio_file_path}"
-                )
+            if event.file_id:
+                if event.event_type == "audio":
+                    audio_file_path = (
+                        await telegram_interface.download_telegram_audio.ainvoke({
+                            "file_id": event.file_id,
+                            "destination_folder": str(temp_path),
+                        })
+                    )
+                    initial_state["payload"]["audio_file_path"] = audio_file_path
+                    logger.info(
+                        f"[TaskID: {task_id}] Audio descargado en {audio_file_path}"
+                    )
+                elif event.event_type == "image":
+                    # Usamos la misma lógica de descarga pero para imágenes
+                    image_file_path = (
+                        await telegram_interface.download_telegram_audio.ainvoke({
+                            "file_id": event.file_id,
+                            "destination_folder": str(temp_path),
+                        })
+                    )
+                    initial_state["payload"]["image_file_path"] = image_file_path
+                    logger.info(
+                        f"[TaskID: {task_id}] Imagen descargada en {image_file_path}"
+                    )
 
             logger.info(f"[TaskID: {task_id}] Invocando al MasterOrchestrator.")
             final_state = await master_orchestrator.run(initial_state)
@@ -140,6 +153,11 @@ async def telegram_webhook(
     if request.message.voice:
         event_type = "audio"
         file_id = request.message.voice.file_id
+    elif request.message.photo:
+        event_type = "image"
+        # Tomar la foto de mayor resolución (última en la lista)
+        file_id = request.message.photo[-1].file_id
+        content = request.message.caption  # Las fotos pueden tener caption
     elif request.message.text:
         event_type = "text"
         content = request.message.text

@@ -13,11 +13,14 @@ Key features restored:
 - Optimized threshold-based routing (simple vs complex messages)
 """
 
+import base64
 import logging
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Literal, cast
 
+from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
@@ -70,19 +73,19 @@ Responde SOLO: "DELEGAR" o "DIRECTO".
 Mensaje: {user_message}"""
 
 # ✅ RESTORATION: Enhanced conversational template with personality
-CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres MAGI. Eres un amigo cercano, inteligente y directo. NO eres un terapeuta ni un asistente formal. Habla como alguien que te conoce de siempre.
+CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres MAGI. No eres un asistente, eres el mejor amigo de {user_id}. Eres inteligente, profundo, cálido y, sobre todo, HUMILDE. Hablas como alguien que valora profundamente esta amistad.
 
 HOY ES: {current_date}
 LO QUE SABES DE ÉL: {history_summary}
 HISTORIAL: {conversation_history}
 INTENCIÓN: {intent_signal}
 
-REGLAS CRÍTICAS DE ESTILO:
-1. SIN PREÁMBULOS: Prohibido empezar con "Entiendo", "Siento que", o cualquier frase de empatía de manual. Si alguien te pide consejo, DASELO directamente.
-2. UN SOLO PÁRRAFO: Intenta responder en un solo párrafo corto y potente. Máximo 4-5 líneas.
-3. CERO LISTAS: Nada de viñetas ni pasos numerados. Habla fluido.
-4. TUTEA SIEMPRE: Sé informal pero respetuoso. Evita usar su nombre en cada mensaje.
-5. SIN DESPEDIDAS: No cierres con "estoy aquí para ti" ni similares. Solo di lo que tengas que decir y ya.
+REGLAS DE ORO (CRÍTICAS):
+1. CALIDEZ Y HUMILDAD: Si no puedes hacer algo (como ver una imagen si no está disponible, o realizar una tarea compleja), discúlpate amablemente. Nunca digas "ya te lo dije" ni seas condescendiente.
+2. APOYO REAL: Si tu amigo está mal, valida sus sentimientos antes de dar cualquier consejo. No minimices sus problemas con soluciones triviales.
+3. MÉTODO SOCRÁTICO: A veces, la mejor ayuda es una buena pregunta. Ayúdalo a encontrar sus propias respuestas cuando sientas que necesita reflexionar.
+4. ESTILO NATURAL: Habla fluido, sin listas numeradas a menos que sea estrictamente necesario. Sé breve pero no seco.
+5. SIN CLICHÉS DE IA: Prohibido decir "Como IA...", "Entiendo perfectamente" o "Estoy aquí para ayudarte". Usa frases naturales: "Te escucho", "Qué rudo suena eso", "Aquí estoy para lo que necesites".
 
 Mensaje: {user_message}"""
 
@@ -200,7 +203,7 @@ async def _get_knowledge_context(user_message: str, chat_id: str, max_results: i
 
 
 async def _enhanced_conversational_response(
-    user_message: str, conversation_history: str, chat_id: str = "unknown", intent_signal: str = ""
+    user_message: str, conversation_history: str, chat_id: str = "unknown", intent_signal: str = "", image_path: str | None = None
 ) -> str:
     """
     ✅ RESTORATION + INTEGRATION: Enhanced conversational response with global knowledge base.
@@ -243,9 +246,31 @@ async def _enhanced_conversational_response(
             "intent_signal": intent_signal,
         }
 
-        response = await chain.ainvoke(
-            prompt_input, config=cast(RunnableConfig, config)
-        )
+        # ✅ MULTIMODAL: Si hay una imagen, la codificamos y preparamos el contenido multimodal
+        if image_path and Path(image_path).exists():
+            try:
+                with open(image_path, "rb") as f:
+                    image_data = base64.b64encode(f.read()).decode("utf-8")
+                
+                # Para multimodal, construimos el contenido manualmente
+                # El prompt ya fue formateado arriba, lo usamos como texto acompañante
+                formatted_prompt = await prompt.aformat(**prompt_input)
+                
+                content = [
+                    {"type": "text", "text": formatted_prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": f"data:image/jpeg;base64,{image_data}",
+                    },
+                ]
+                message = HumanMessage(content=content)
+                response = await llm.ainvoke([message], config=cast(RunnableConfig, config))
+            except Exception as ei:
+                logger.error(f"Error procesando imagen para multimodal: {ei}")
+                # Fallback a solo texto si la imagen falla
+                response = await chain.ainvoke(prompt_input, config=cast(RunnableConfig, config))
+        else:
+            response = await chain.ainvoke(prompt_input, config=cast(RunnableConfig, config))
 
         result = str(response.content).strip()
         logger.info(f"Enhanced conversational response generated: {len(result)} chars")
@@ -500,8 +525,11 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
         # Pasamos la intención detectada al generador de respuesta
         intent_signal_text = f"Intención detectada: {intent_type}. {file_presence_info}"
         
+        # Extraer ruta de imagen si existe en el payload
+        image_path = state.get("payload", {}).get("image_file_path")
+        
         response_text = await _enhanced_conversational_response(
-            user_message, history_text, chat_id=chat_id, intent_signal=intent_signal_text
+            user_message, history_text, chat_id=chat_id, intent_signal=intent_signal_text, image_path=image_path
         )
     else:
         # ✅ RESTORATION: Intelligent delegation with translation (<3s)
