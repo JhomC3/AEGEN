@@ -398,10 +398,17 @@ class TelegramVoice(BaseModel):
     file_id: str
 
 
+class TelegramPhoto(BaseModel):
+    file_id: str
+    width: int
+    height: int
+
+
 class TelegramMessage(BaseModel):
     chat: TelegramChat
     voice: TelegramVoice | None = None
     text: str | None = None
+    photo: list[TelegramPhoto] | None = None
 
 
 class TelegramUpdate(BaseModel):
@@ -428,7 +435,7 @@ class CanonicalEventV1(BaseModel):
     event_id: UUID = Field(
         default_factory=uuid4, description="Identificador único del evento."
     )
-    event_type: Literal["text", "audio", "document", "unknown"] = Field(
+    event_type: Literal["text", "audio", "document", "image", "unknown"] = Field(
         ..., description="Tipo lógico del contenido principal del evento."
     )
     source: str = Field(..., description="Fuente del evento (ej. 'telegram', 'api').")
