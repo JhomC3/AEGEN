@@ -258,8 +258,8 @@ async def _generate_therapeutic_response(
         therapeutic_response = str(response.content).strip()
 
         # Añadir disclaimer si no está presente
-        if "profesional" not in therapeutic_response.lower():
-            therapeutic_response += "\n\n💡 Recordatorio: Esta guía complementa pero no reemplaza la terapia profesional. Si necesitas apoyo adicional, considera consultar con un psicólogo o terapeuta."
+        if "ayuda adicional" not in therapeutic_response.lower():
+            therapeutic_response += "\n\nOye, como consejo de amigo: si sientes que esto te supera, no dudes en buscar a un profesional de verdad. Aquí te escucho, pero ellos tienen las herramientas completas."
 
         return therapeutic_response
 
@@ -351,7 +351,7 @@ def _format_conversation_history(conversation_history: list[V2ChatMessage]) -> s
         role = msg.get("role", "unknown")
         content = msg.get("content", "")
 
-        formatted_role = "Usuario" if role == "user" else "Terapeuta"
+        formatted_role = "Tú" if role == "user" else "Yo"
         history_parts.append(f"{formatted_role}: {content}")
 
     return "\n".join(history_parts)
