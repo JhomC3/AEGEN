@@ -23,6 +23,8 @@ class IntentType(str, Enum):
     INFORMATION_REQUEST = "information_request"
     PLANNING = "planning"
     DOCUMENT_CREATION = "document_creation"
+    VULNERABILITY = "vulnerability"
+    TOPIC_SHIFT = "topic_shift"
 
 
 class EntityInfo(BaseModel):

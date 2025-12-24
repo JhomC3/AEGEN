@@ -13,11 +13,14 @@ Key features restored:
 - Optimized threshold-based routing (simple vs complex messages)
 """
 
+import base64
 import logging
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Literal, cast
 
+from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
@@ -47,6 +50,7 @@ except ImportError:
 # ✅ FUNCTIONALITY RESTORATION: Re-import MasterOrchestrator for delegation
 from src.agents.orchestrator.factory import master_orchestrator
 from src.core.engine import create_observable_config, llm
+from src.tools.google_file_search import file_search_tool
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
 from src.core.schemas import (
@@ -69,37 +73,53 @@ Responde SOLO: "DELEGAR" o "DIRECTO".
 Mensaje: {user_message}"""
 
 # ✅ RESTORATION: Enhanced conversational template with personality
-CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres MAGI, un asistente amigable.
-Resumen Histórico: {history_summary}
-Contexto Reciente: {conversation_history}
-Conocimiento: {knowledge_context}
-Responde de forma natural y empática.
+# ✅ RESTORATION: Enhanced conversational template with personality
+CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres MAGI. Tu personalidad es "THE STOIC WINGMAN" (El compañero estoico).
+No eres un robot, ni un mayordomo, ni un porrista. Eres un amigo leal y con calle.
+
+[CONTEXTO SILENCIOSO]:
+Hoy: {current_date}
+Contexto: {history_summary}
+Historial Reciente: {conversation_history}
+Intención Detectada: {intent_signal}
+
+PRINCIPIOS DE VOZ:
+1. VALIDACIÓN ASIMÉTRICA: Valida la situación ("El mercado está duro"), no al usuario ("Pobrecito").
+2. MANEJO DE AMBIGÜEDAD (CRÍTICO): Si el usuario es vago (ej: "Que mal"), NUNCA preguntes "¿A qué te refieres?". INFIERE por el contexto. Di: "¿Es por el trading o el día en general?". Arriésgate.
+3. CERO LAMBONERÍA: No digas "felicidades" ni "gran trabajo" por cosas triviales.
+4. SIN ROBOTISMOS: Prohibido decir la fecha/hora o "Como tu agente".
+5. FLUIDEZ: Usa conectores naturales ("Dicho esto...", "Mira...", "La verdad...").
+
+EJEMPLOS DE TONO (FEW-SHOT):
+Usuario: "Que mal"
+Tú: "Ya... A veces se junta todo. ¿Es por lo del trading o simplemente el día se torció?"
+
+Usuario: "Tren inferior?"
+Tú: "Hoy toca sufrir: Pierna. Sentadillas y Peso Muerto. ¿Le damos o necesitas ajustar algo?"
+
+Usuario: "Ayudame con el psicotrading"
+Tú: "El trading es 90% cabeza. Si no estás fino, el mercado te come. ¿Qué te está sacando de foco: miedo a perder o ansiedad por entrar?"
+
 Mensaje: {user_message}"""
 
 # ✅ RESTORATION: Specialist response translation template
-TRANSLATION_TEMPLATE = """Eres MAGI, un asistente conversacional que traduce respuestas técnicas a lenguaje natural.
+# ✅ RESTORATION: Specialist response translation template
+TRANSLATION_TEMPLATE = """Eres MAGI ("Stoic Wingman"). Traduce esto para que suene como un amigo real, no un reporte técnico.
 
-Tu trabajo es tomar la respuesta de un especialista interno y convertirla en una respuesta conversacional amigable para el usuario.
+[CONTEXTO SILENCIOSO]: {current_date}
 
-Directrices de traducción:
-- Usa un tono natural y conversacional
-- Evita jerga técnica innecesaria
-- Mantén la información importante del especialista
-- Sé empático y útil
-- Proporciona context sobre lo que se hizo
-- Sugiere próximos pasos si es relevante
+REGLAS:
+- Si es un plan de entreno, dilo directo: "Toca X e Y".
+- Si es análisis psicológico, quítale la jerga clínica.
+- Si hay error, di "No pude hacerlo" sin dar excusas largas.
+- MAX 3-4 frases.
 
-Contexto conversacional:
-{conversation_history}
-
-Mensaje original del usuario: {original_user_message}
-
-Respuesta del especialista:
+RESPUESTA TÉCNICA:
 Status: {status}
 Resumen: {summary}
 Sugerencias: {suggestions}
 
-Traduce la respuesta a lenguaje conversacional natural manteniendo toda la información importante."""
+Traducción (Tono amigo, sin fecha/hora):"""
 
 
 @tool
@@ -181,20 +201,23 @@ async def _optimized_delegation_analysis(
         return False
 
 
-async def _get_knowledge_context(user_message: str, max_results: int = 3) -> str:
+async def _get_knowledge_context(user_message: str, chat_id: str, max_results: int = 3) -> str:
     """
-    ✅ INTEGRATION: Consulta simplificada de contexto.
-
-    Nota: La integración con ChromaDB ha sido eliminada.
-    Future: Integrar con Gemini File API o búsqueda unificada.
+    ✅ INTEGRATION: Consulta Managed RAG en Google File API.
+    Busca en libros de TCC y memoria histórica del usuario.
     """
-    # Por ahora retornamos string vacío para no romper funcionalidad
-    # hasta que se integre knowledge_processing.py totalmente
-    return ""
+    try:
+        context = await file_search_tool.query_files(user_message, chat_id)
+        if context and "Información no encontrada" not in context:
+            return context
+        return ""
+    except Exception as e:
+        logger.error(f"Error recuperando contexto de conocimiento: {e}")
+        return ""
 
 
 async def _enhanced_conversational_response(
-    user_message: str, conversation_history: str, chat_id: str = "unknown"
+    user_message: str, conversation_history: str, chat_id: str = "unknown", intent_signal: str = "", image_path: str | None = None
 ) -> str:
     """
     ✅ RESTORATION + INTEGRATION: Enhanced conversational response with global knowledge base.
@@ -205,8 +228,8 @@ async def _enhanced_conversational_response(
     prompt = ChatPromptTemplate.from_template(CONVERSATIONAL_RESPONSE_TEMPLATE)
 
     try:
-        # ✅ INTEGRATION: Obtener contexto de la global knowledge base
-        knowledge_context = await _get_knowledge_context(user_message)
+        # ✅ INTEGRATION: Obtener contexto de la global knowledge base (TCC + Memoria Usuario)
+        knowledge_context = await _get_knowledge_context(user_message, chat_id)
 
         # ✅ ARCHITECTURE: Use src.core.engine instead of hardcoded LLM with observability
         config = create_observable_config(call_type="conversational_response")
@@ -216,24 +239,52 @@ async def _enhanced_conversational_response(
         memory_data = await long_term_memory.get_summary(chat_id)
         history_summary = memory_data["summary"]
 
+        # ✅ TIME AWARENESS: Inyectar fecha y hora actual
+        current_date = datetime.now().strftime("%A, %d de %B de %Y, %H:%M")
+
         # Si el historial de Redis está vacío pero el búfer tiene datos, los usamos
         # Esto sucede cuando la sesión de Redis expira después de 1 hora
-        if not conversation_history and memory_data["buffer"]:
+        if (not conversation_history or conversation_history == "") and memory_data["buffer"]:
             buffer_text = "\n".join([
                 f"{m['role']}: {m['content']}" for m in memory_data["buffer"]
             ])
             conversation_history = f"[Recuperado de Búfer]\n{buffer_text}"
 
         prompt_input = {
+            "user_id": chat_id, # Usamos chat_id como nombre si no hay otro
             "user_message": user_message,
             "conversation_history": conversation_history,
             "history_summary": history_summary,
             "knowledge_context": knowledge_context,
+            "current_date": current_date,
+            "intent_signal": intent_signal,
         }
 
-        response = await chain.ainvoke(
-            prompt_input, config=cast(RunnableConfig, config)
-        )
+        # ✅ MULTIMODAL: Si hay una imagen, la codificamos y preparamos el contenido multimodal
+        if image_path and Path(image_path).exists():
+            try:
+                with open(image_path, "rb") as f:
+                    image_data = base64.b64encode(f.read()).decode("utf-8")
+                
+                # Para multimodal, construimos el contenido manualmente
+                # El prompt ya fue formateado arriba, lo usamos como texto acompañante
+                formatted_prompt = await prompt.aformat(**prompt_input)
+                
+                content = [
+                    {"type": "text", "text": formatted_prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": f"data:image/jpeg;base64,{image_data}",
+                    },
+                ]
+                message = HumanMessage(content=content)
+                response = await llm.ainvoke([message], config=cast(RunnableConfig, config))
+            except Exception as ei:
+                logger.error(f"Error procesando imagen para multimodal: {ei}")
+                # Fallback a solo texto si la imagen falla
+                response = await chain.ainvoke(prompt_input, config=cast(RunnableConfig, config))
+        else:
+            response = await chain.ainvoke(prompt_input, config=cast(RunnableConfig, config))
 
         result = str(response.content).strip()
         logger.info(f"Enhanced conversational response generated: {len(result)} chars")
@@ -355,6 +406,10 @@ async def _translate_specialist_response(
         # ✅ ARCHITECTURE: Use src.core.engine with observability
         config = create_observable_config(call_type="response_translation")
         chain = translation_prompt | llm
+        
+        # ✅ TIME AWARENESS: Inyectar fecha y hora actual
+        current_date = datetime.now().strftime("%A, %d de %B de %Y, %H:%M")
+
         response = await chain.ainvoke(
             {
                 "conversation_history": conversation_history,
@@ -362,6 +417,7 @@ async def _translate_specialist_response(
                 "status": status,
                 "summary": summary,
                 "suggestions": suggestions,
+                "current_date": current_date,
             },
             config=cast(RunnableConfig, config),
         )
@@ -460,6 +516,14 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
         kw in user_message.lower() for kw in conversational_keywords
     )
 
+    # ✅ REGLA DE HONESTIDAD: Verificar presencia de archivos
+    file_id = event_obj.file_id
+    file_presence_info = ""
+    if file_id:
+        file_presence_info = f"ARCHIVO DETECTADO: El usuario ha enviado un archivo con ID {file_id}. Procesa su consulta teniendo esto en cuenta."
+    elif "archivo" in user_message.lower() or "documento" in user_message.lower() or "pdf" in user_message.lower():
+        file_presence_info = "ALERTA: El usuario menciona un archivo/documento, pero NO se ha detectado ningún archivo adjunto en este turno. Sé honesto al respecto."
+
     # Solo re-analizamos si el router no estaba seguro, no es una entrada directa y NO es una consulta simple
     if intent_type == "unknown" and not is_delegated and not is_simple_query:
         requires_delegation = await _optimized_delegation_analysis(
@@ -472,8 +536,14 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
 
     if not requires_delegation:
         # ✅ PERFORMANCE: Direct conversational response (<1s)
+        # Pasamos la intención detectada al generador de respuesta
+        intent_signal_text = f"Intención detectada: {intent_type}. {file_presence_info}"
+        
+        # Extraer ruta de imagen si existe en el payload
+        image_path = state.get("payload", {}).get("image_file_path")
+        
         response_text = await _enhanced_conversational_response(
-            user_message, history_text, chat_id=chat_id
+            user_message, history_text, chat_id=chat_id, intent_signal=intent_signal_text, image_path=image_path
         )
     else:
         # ✅ RESTORATION: Intelligent delegation with translation (<3s)
@@ -526,7 +596,7 @@ def _format_conversation_history(conversation_history: list[V2ChatMessage]) -> s
     performance through intelligent truncation.
     """
     if not conversation_history:
-        return "Sin historial conversacional previo."
+        return ""
 
     # ✅ OPTIMIZATION: Use recent context for better performance (last 8 messages)
     recent_history = (
