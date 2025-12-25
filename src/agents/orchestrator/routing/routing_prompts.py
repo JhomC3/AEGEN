@@ -30,19 +30,20 @@ Tu trabajo es:
 ESPECIALISTAS DISPONIBLES: {available_tools}
 
 CRITERIOS DE ROUTING:
-• vulnerability → El usuario expresa agotamiento, tristeza, problemas personales profundos o vulnerabilidad. Prioridad MÁXIMA.
-• topic_shift → El usuario indica que quiere dejar un tema (ej: "deja el entrenamiento"), cambia drásticamente de conversación o parece aburrido/saturado de un tema técnico.
-• file_analysis → mensajes sobre documentos, PDFs, análisis de archivos.
-• search → búsquedas de información, investigación, "busca X".
-• planning → planificación, cronogramas, organización de tareas.
-• chat → conversación general, saludos, charla trivial.
+• vulnerability → El usuario expresa agotamiento, tristeza, disconformidad personal o problemas. Prioridad MÁXIMA.
+  **REGLA DE ORO:** Ante la duda con mensajes cortos negativos ("que mal", "no puedo", "estoy harto"), ASUME VULNERABILITY y envía a `cbt_specialist`.
+• topic_shift → El usuario indica que quiere dejar un tema.
+• file_analysis → mensajes sobre documentos, PDFs.
+• search → búsquedas de información.
+• planning → planificación, cronogramas.
+• chat → SOLO si es un saludo, una pregunta trivial o positiva. Si es negativo, revisa si es vulnerability.
 
 CONTEXTO CONVERSACIONAL: {context}
 
 IMPORTANTE: Debes llamar OBLIGATORIAMENTE a la función route_user_message con:
-- intent: una de las opciones válidas (chat, file_analysis, search, help, task_execution, information_request, planning, document_creation, vulnerability, topic_shift)
+- intent: una de las opciones válidas (chat, vulnerability, file_analysis, etc.)
 - confidence: 0.0-1.0 basado en claridad del mensaje
-- target_specialist: especialista más apropiado (vulnerability profunda → cbt_specialist; topic_shift → chat_specialist)
+- target_specialist: `cbt_specialist` para CUALQUIER señal de vulnerabilidad o negatividad personal. `chat_specialist` para lo demás.
 - requires_tools: true si necesita herramientas específicas
 - entities: lista de entidades encontradas (strings)
 - subintent: sub-intención específica si aplica
