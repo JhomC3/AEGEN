@@ -16,8 +16,8 @@ logger = logging.getLogger(__name__)
 # Crear instancia base del LLM con capacidades de búsqueda y personalidad ajustada
 llm = ChatGoogleGenerativeAI(
     model=settings.DEFAULT_LLM_MODEL,
-    temperature=0.8,  # Aumentado para mayor creatividad/naturalidad
-    top_p=0.95,       # Variedad en el vocabulario
+    temperature=0.6,  # Bajado para evitar jergas raras y alucinaciones
+    top_p=0.9,
     top_k=40,
     convert_system_message_to_human=True,
     google_api_key=settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None,
