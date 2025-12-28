@@ -16,7 +16,7 @@ from src.core.schemas import GraphStateV2
 logger = logging.getLogger(__name__)
 
 # Constantes
-CHAT_SPECIALIST_NODE = "chat_specialist"
+CHAT_SPECIALIST_NODE = "cbt_specialist"
 
 
 def route_to_chat(state: GraphStateV2) -> str:

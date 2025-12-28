@@ -200,10 +200,10 @@ class SpecialistMapper:
         IntentType.FILE_ANALYSIS: ["file_handler_agent", "document_processor"],
         IntentType.PLANNING: ["planner_agent", "task_manager"],
         IntentType.SEARCH: ["search_agent", "web_retriever"],
-        IntentType.CHAT: ["chat_specialist"],
-        IntentType.HELP: ["chat_specialist", "help_agent"],
-        IntentType.VULNERABILITY: ["chat_specialist"],
-        IntentType.TOPIC_SHIFT: ["chat_specialist"],
+        IntentType.CHAT: ["cbt_specialist"],
+        IntentType.HELP: ["cbt_specialist", "help_agent"],
+        IntentType.VULNERABILITY: ["cbt_specialist"],
+        IntentType.TOPIC_SHIFT: ["cbt_specialist"],
     }
 
     def map_intent_to_specialist(
@@ -221,7 +221,7 @@ class SpecialistMapper:
         """
         available_specialists = list(cache.get_tool_to_specialist_map().values())
         preferred_specialists = self.INTENT_TO_SPECIALISTS.get(
-            intent, ["chat_specialist"]
+            intent, ["cbt_specialist"]
         )
 
         # Buscar primer especialista disponible en orden de preferencia
@@ -230,4 +230,4 @@ class SpecialistMapper:
                 return preferred
 
         # Fallback seguro siempre disponible
-        return "chat_specialist"
+        return "cbt_specialist"
