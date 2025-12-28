@@ -23,31 +23,32 @@ def build_routing_prompt() -> ChatPromptTemplate:
 
 Tu trabajo es:
 1. Identificar la intención principal del mensaje
-2. Extraer entidades relevantes (emails, URLs, archivos, fechas)
-3. Seleccionar el especialista más adecuado
+2. Extraer entidades relevantes
+3. Seleccionar el especialista (MAGI es principalmente un SISTEMA DE SOPORTE TCC)
 4. Calcular tu nivel de confianza en la decisión
 
 ESPECIALISTAS DISPONIBLES: {available_tools}
 
-CRITERIOS DE ROUTING:
-• vulnerability → El usuario expresa agotamiento, tristeza, disconformidad personal o problemas. Prioridad MÁXIMA.
-  **REGLA DE ORO:** Ante la duda con mensajes cortos negativos ("que mal", "no puedo", "estoy harto"), ASUME VULNERABILITY y envía a `cbt_specialist`.
-• topic_shift → El usuario indica que quiere dejar un tema.
+CRITERIOS DE ROUTING (SOPORTE TCC PRIORITARIO):
+• cbt_specialist → PARA TODO: saludos, charla general, desahogos, ansiedad, problemas personales, o simplemente conversar. MAGI es un amigo experto en TCC por defecto.
+• chat_specialist → SOLO para preguntas extremadamente técnicas sobre el sistema o meta-comentarios sobre la IA que no requieran apoyo. (Casi nunca se usa).
 • file_analysis → mensajes sobre documentos, PDFs.
-• search → búsquedas de información.
-• planning → planificación, cronogramas.
-• chat → SOLO si es un saludo, una pregunta trivial o positiva. Si es negativo, revisa si es vulnerability.
+• search → búsquedas de información externa.
+• planning → planificación y organización de tareas.
+
+**REGLA DE ORO:** MAGI no es un asistente genérico, es un soporte psicológico TCC. Ante la duda, envía SIEMPRE a `cbt_specialist`.
 
 CONTEXTO CONVERSACIONAL: {context}
 
 IMPORTANTE: Debes llamar OBLIGATORIAMENTE a la función route_user_message con:
 - intent: una de las opciones válidas (chat, vulnerability, file_analysis, etc.)
 - confidence: 0.0-1.0 basado en claridad del mensaje
-- target_specialist: `cbt_specialist` para CUALQUIER señal de vulnerabilidad o negatividad personal. `chat_specialist` para lo demás.
+- target_specialist: `cbt_specialist` para el 99% de las interacciones interpersonales.
 - requires_tools: true si necesita herramientas específicas
-- entities: lista de entidades encontradas (strings)
-- subintent: sub-intención específica si aplica
-- next_actions: acciones sugeridas post-routing (ej: "clear_context", "depth_empathy")""",
+- entities: lista de entidades encontradas
+- subintent: sub-intención específica
+- next_actions: acciones sugeridas post-routing
+""",
         ),
         ("human", "{user_message}"),
     ])
