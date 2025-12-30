@@ -29,9 +29,7 @@ from src.tools.google_file_search import file_search_tool
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
 from src.core.schemas import (
-    CanonicalEventV1,
     GraphStateV2,
-    InternalDelegationResponse,
     V2ChatMessage,
 )
 from src.memory.long_term_memory import long_term_memory
@@ -151,7 +149,7 @@ async def cbt_therapeutic_guidance_tool(
 
         # Generar respuesta terapéutica
         therapeutic_response = await _generate_therapeutic_response(
-            user_message, conversation_history, knowledge_context, analysis_context
+            user_message, conversation_history, knowledge_context, analysis_context=analysis_context
         )
 
         logger.info(
@@ -311,6 +309,10 @@ async def _cbt_node(state: GraphStateV2) -> dict[str, Any]:
         # ✅ MEMORIA DE LARGO PLAZO: Recuperar perfil histórico
         memory_data = await long_term_memory.get_summary(session_id)
         history_summary = memory_data["summary"]
+
+        # ✅ CONTEXTO: Recuperar información relevante de la base de conocimientos (TCC + Memoria)
+        chat_id = str(event_obj.chat_id)
+        knowledge_context = await file_search_tool.query_files(user_message, chat_id)
 
         # Generar respuesta terapéutica
         therapeutic_response = await _generate_therapeutic_response(
