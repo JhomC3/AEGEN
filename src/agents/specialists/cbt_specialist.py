@@ -244,6 +244,7 @@ async def _generate_therapeutic_response(
 
         prompt_input = {
             "user_message": user_message,
+            "conversation_history": conversation_history,
             "knowledge_context": knowledge_context,
         }
 
@@ -256,10 +257,6 @@ async def _generate_therapeutic_response(
         )
 
         therapeutic_response = str(response.content).strip()
-
-        # Añadir disclaimer si no está presente
-        if "ayuda adicional" not in therapeutic_response.lower():
-            therapeutic_response += "\n\nOye, como consejo de amigo: si sientes que esto te supera, no dudes en buscar a un profesional de verdad. Aquí te escucho, pero ellos tienen las herramientas completas."
 
         return therapeutic_response
 
