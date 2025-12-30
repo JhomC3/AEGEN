@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 # Crear instancia base del LLM con capacidades de búsqueda y personalidad ajustada
 llm = ChatGoogleGenerativeAI(
     model=settings.DEFAULT_LLM_MODEL,
-    temperature=0.6,  # Bajado para evitar jergas raras y alucinaciones
+    temperature=0.7,  # Restaurado a nivel estándar para AEGEN
     top_p=0.9,
     top_k=40,
     convert_system_message_to_human=True,
