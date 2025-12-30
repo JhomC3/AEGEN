@@ -404,8 +404,18 @@ class TelegramPhoto(BaseModel):
     height: int
 
 
+class TelegramUser(BaseModel):
+    id: int
+    is_bot: bool
+    first_name: str
+    last_name: str | None = None
+    username: str | None = None
+    language_code: str | None = None
+
+
 class TelegramMessage(BaseModel):
     chat: TelegramChat
+    from_user: TelegramUser | None = Field(None, alias="from")
     voice: TelegramVoice | None = None
     text: str | None = None
     photo: list[TelegramPhoto] | None = None

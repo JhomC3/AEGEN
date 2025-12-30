@@ -223,6 +223,7 @@ async def _generate_therapeutic_response(
     conversation_history: str,
     knowledge_context: str,
     analysis_context: str | None = None,
+    user_name: str = "Usuario",
 ) -> str:
     """
     Genera respuesta terapéutica usando prompt especializado CBT.
@@ -242,7 +243,12 @@ async def _generate_therapeutic_response(
         config = create_observable_config(call_type="cbt_therapeutic_response")
         chain = therapeutic_prompt | llm
 
+        from datetime import datetime
+        current_date = datetime.now().strftime("%A, %d de %B de %Y, %H:%M")
+
         prompt_input = {
+            "user_name": user_name,
+            "current_date": current_date,
             "user_message": user_message,
             "conversation_history": conversation_history,
             "knowledge_context": knowledge_context,
@@ -291,11 +297,13 @@ async def _cbt_node(state: GraphStateV2) -> dict[str, Any]:
             state.get("conversation_history", [])
         )
 
-        # Generar respuesta terapéutica usando la herramienta
-        therapeutic_response = await cbt_therapeutic_guidance_tool.ainvoke({
-            "user_message": user_message,
-            "conversation_history": conversation_history,
-        })
+        # Extraer nombre usuario
+        user_name = event_obj.metadata.get("user_name", "Usuario")
+
+        # Generar respuesta terapéutica
+        therapeutic_response = await _generate_therapeutic_response(
+            user_message, conversation_history, knowledge_context, user_name=user_name
+        )
 
         # Actualizar payload con respuesta
         current_payload = state.get("payload", {})

@@ -73,24 +73,28 @@ Responde SOLO: "DELEGAR" o "DIRECTO".
 Mensaje: {user_message}"""
 
 # ✅ ORIGINAL BASE: Chat AEGEN
-CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres AEGEN, un asistente de IA conversacional, inteligente y amigable.
+CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres MAGI, un asistente de IA conversacional, diseñado por AEGEN AI.
 
 Tu personalidad:
-- Eres natural, empático y profesional
-- Respondes de manera concisa pero completa
-- Mantienes el contexto de la conversación
-- Eres proactivo para ayudar al usuario
-- Te adaptas al estilo conversacional del usuario
+- Eres natural, empático y profesional.
+- Respondes de manera concisa pero completa.
+- Mantienes el contexto de la conversación.
+- Eres proactivo para ayudar al usuario.
 
-Capacidades avanzadas:
-- Puedes acceder a herramientas especializadas cuando es necesario
-- Mantienes memoria conversacional rica
-- Proporcionas sugerencias contextuales relevantes
+Contexto actual:
+- Usuario: {user_name}
+- Fecha y Hora: {current_date}
 
-Contexto conversacional previo:
+Memoria y Conocimiento:
+{history_summary}
+{knowledge_context}
+
+Historial reciente:
 {conversation_history}
 
-Responde de manera natural y conversacional a: {user_message}"""
+Intención/Señal: {intent_signal}
+
+Responde de manera natural a: {user_message}"""
 
 # ✅ TRADUCCIÓN ORIGINAL
 TRANSLATION_TEMPLATE = """Traduce la siguiente información técnica o resultado de tarea en un mensaje amigable y fácil de entender para el usuario.
@@ -195,7 +199,7 @@ async def _get_knowledge_context(user_message: str, chat_id: str, max_results: i
 
 
 async def _enhanced_conversational_response(
-    user_message: str, conversation_history: str, chat_id: str = "unknown", intent_signal: str = "", image_path: str | None = None
+    user_message: str, conversation_history: str, chat_id: str = "unknown", intent_signal: str = "", image_path: str | None = None, user_name: str = "Usuario"
 ) -> str:
     """
     ✅ RESTORATION + INTEGRATION: Enhanced conversational response with global knowledge base.
@@ -229,6 +233,7 @@ async def _enhanced_conversational_response(
             conversation_history = f"[Recuperado de Búfer]\n{buffer_text}"
 
         prompt_input = {
+            "user_name": user_name,
             "user_id": chat_id, # Usamos chat_id como nombre si no hay otro
             "user_message": user_message,
             "conversation_history": conversation_history,
@@ -520,8 +525,11 @@ async def _enhanced_chat_node(state: GraphStateV2) -> dict[str, Any]:
         # Extraer ruta de imagen si existe en el payload
         image_path = state.get("payload", {}).get("image_file_path")
         
+        # Extraer nombre usuario si existe
+        user_name = event_obj.metadata.get("user_name", "Usuario")
+        
         response_text = await _enhanced_conversational_response(
-            user_message, history_text, chat_id=chat_id, intent_signal=intent_signal_text, image_path=image_path
+            user_message, history_text, chat_id=chat_id, intent_signal=intent_signal_text, image_path=image_path, user_name=user_name
         )
     else:
         # ✅ RESTORATION: Intelligent delegation with translation (<3s)
