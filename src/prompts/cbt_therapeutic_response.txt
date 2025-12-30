@@ -42,6 +42,10 @@
 </system_instruction>
 
 <context_data>
+  <memory_profile>
+    {history_summary}
+  </memory_profile>
+
   <knowledge_base>
     {knowledge_context}
   </knowledge_base>

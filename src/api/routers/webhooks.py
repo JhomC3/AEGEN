@@ -174,10 +174,6 @@ async def telegram_webhook(
 
     from datetime import datetime
 
-    user_name = "User"
-    if request.message.from_user and request.message.from_user.first_name:
-         user_name = request.message.from_user.first_name
-
     event = schemas.CanonicalEventV1(
         event_id=uuid4(),
         event_type=event_type,
@@ -187,7 +183,7 @@ async def telegram_webhook(
         file_id=file_id,
         content=content,
         timestamp=datetime.now().isoformat(),
-        metadata={"trace_id": trace_id, "update_id": request.update_id, "user_name": user_name},
+        metadata={"trace_id": trace_id, "update_id": request.update_id},
     )
     logger.info(
         f"Webhook de Telegram recibido. EventID: {event.event_id}, TraceID: {trace_id}"

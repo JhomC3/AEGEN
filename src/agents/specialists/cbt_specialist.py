@@ -28,7 +28,13 @@ from src.core.engine import create_observable_config, llm
 from src.tools.google_file_search import file_search_tool
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.registry import specialist_registry
-from src.core.schemas import GraphStateV2, V2ChatMessage
+from src.core.schemas import (
+    CanonicalEventV1,
+    GraphStateV2,
+    InternalDelegationResponse,
+    V2ChatMessage,
+)
+from src.memory.long_term_memory import long_term_memory
 
 logger = logging.getLogger(__name__)
 
@@ -222,6 +228,7 @@ async def _generate_therapeutic_response(
     user_message: str,
     conversation_history: str,
     knowledge_context: str,
+    history_summary: str = "",
     analysis_context: str | None = None,
     user_name: str = "Usuario",
 ) -> str:
@@ -252,6 +259,7 @@ async def _generate_therapeutic_response(
             "user_message": user_message,
             "conversation_history": conversation_history,
             "knowledge_context": knowledge_context,
+            "history_summary": history_summary,
         }
 
         # Añadir contexto de análisis si está disponible
@@ -297,12 +305,16 @@ async def _cbt_node(state: GraphStateV2) -> dict[str, Any]:
             state.get("conversation_history", [])
         )
 
-        # Extraer nombre usuario
+        # Extraer nombre usuario (Fallback si no está en memoria)
         user_name = event_obj.metadata.get("user_name", "Usuario")
+
+        # ✅ MEMORIA DE LARGO PLAZO: Recuperar perfil histórico
+        memory_data = await long_term_memory.get_summary(session_id)
+        history_summary = memory_data["summary"]
 
         # Generar respuesta terapéutica
         therapeutic_response = await _generate_therapeutic_response(
-            user_message, conversation_history, knowledge_context, user_name=user_name
+            user_message, conversation_history, knowledge_context, history_summary=history_summary, user_name=user_name
         )
 
         # Actualizar payload con respuesta
