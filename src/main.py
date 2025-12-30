@@ -1,7 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi_cache import FastAPICache
@@ -83,7 +83,16 @@ app = FastAPI(
 )
 
 # --- Middleware ---
+# --- Middleware ---
 app.add_middleware(CorrelationIdMiddleware)
+
+@app.middleware("http")
+async def log_all_requests(request: Request, call_next):
+    """Middleware para ver TODAS las peticiones que llegan al servidor."""
+    logger.info(f">>> REQUEST INCOMING: {request.method} {request.url.path}")
+    response = await call_next(request)
+    logger.info(f"<<< RESPONSE OUTGOING: {request.method} {request.url.path} - Status: {response.status_code}")
+    return response
 
 if settings.ALLOWED_HOSTS == ["*"]:
     logger.warning(
