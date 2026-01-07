@@ -1,3 +1,4 @@
+# Polling Service v0.1.6 - Added Proxy Support for GCE
 import json
 import os
 import signal
@@ -33,6 +34,15 @@ def load_env_file():
 def make_request(url, method="GET", data=None, timeout=30):
     """Realiza peticiones HTTP usando solo la librería estándar"""
     try:
+        # Configurar Proxy si está definido en el entorno (Útil para GCE bloqueados)
+        proxy_url = os.getenv("TELEGRAM_PROXY") or os.getenv("https_proxy") or os.getenv("HTTPS_PROXY")
+        
+        # Usamos un opener específico si hay proxy y es para Telegram
+        opener = urllib.request.build_opener()
+        if proxy_url and "api.telegram.org" in url:
+             proxy_handler = urllib.request.ProxyHandler({'http': proxy_url, 'https': proxy_url})
+             opener = urllib.request.build_opener(proxy_handler)
+
         req = urllib.request.Request(url, method=method)
         req.add_header('Content-Type', 'application/json')
         
@@ -40,11 +50,18 @@ def make_request(url, method="GET", data=None, timeout=30):
             json_data = json.dumps(data).encode('utf-8')
             req.data = json_data
             
-        with urllib.request.urlopen(req, timeout=timeout) as response:
+        # Abrir la petición usando el opener local (evita contaminar el proceso global)
+        with opener.open(req, timeout=timeout) as response:
             if method == "POST" and response.status not in [200, 202]:
                 print(f"Error {response.status}: {response.read().decode()}")
                 return None
             return json.loads(response.read().decode())
+    except urllib.error.URLError as e:
+        if "api.telegram.org" in url:
+            print(f"FALLO DE RED TELEGRAM: {e.reason}")
+            if "Network is unreachable" in str(e.reason):
+                 print("CONSEJO: Tu instancia no tiene salida a Telegram. Prueba configurando TELEGRAM_PROXY en tu .env")
+        return None
     except urllib.error.HTTPError as e:
         # Ignorar 409 o errores esperados en webhook delete
         if "deleteWebhook" in url:
@@ -52,7 +69,7 @@ def make_request(url, method="GET", data=None, timeout=30):
         print(f"HTTP Error {e.code} en {url}: {e.reason}")
         return None
     except Exception as e:
-        print(f"Error conexión {url}: {e}")
+        print(f"Error inesperado en {url}: {e}")
         return None
 
 # --- Main Logic ---
@@ -60,7 +77,7 @@ def make_request(url, method="GET", data=None, timeout=30):
 # Cargar configuración
 load_env_file()
 TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
-API_URL = "http://localhost:8000/api/v1/webhooks/telegram"
+API_URL = "http://127.0.0.1:8000/api/v1/webhooks/telegram"
 
 if not TOKEN:
     print("Error: TELEGRAM_BOT_TOKEN no encontrado en .env")
@@ -79,8 +96,12 @@ def get_updates(offset=None):
     return make_request(url, timeout=35)
 
 def forward_update(update):
-    make_request(API_URL, method="POST", data=update, timeout=10)
-    print(f"Update procesado: {update.get('update_id')}")
+    print(f"Enviando Update {update.get('update_id')} al API local...")
+    result = make_request(API_URL, method="POST", data=update, timeout=15)
+    if result:
+        print(f"✅ Update {update.get('update_id')} procesado por el API.")
+    else:
+        print(f"❌ ERROR: El API local en {API_URL} no respondió o devolvió error.")
 
 def main():
     print("Iniciando Polling Service (v0.1.5 - StdLib Only)...")
