@@ -24,9 +24,6 @@ async def process_event_task(event: schemas.CanonicalEventV1):
     """
     task_id = event.event_id
     chat_id = str(event.chat_id)
-    logger.info(f"DEBUG: process_event_task iniciado para el evento {task_id}")
-    task_id = event.event_id
-    chat_id = str(event.chat_id)
     logger.info(f"[TaskID: {task_id}] Iniciando orquestación para chat {chat_id}.")
 
     # Cargar sesión existente o inicializar historial vacío
@@ -134,8 +131,6 @@ async def telegram_webhook(
     """
     Endpoint que actúa como un 'Adaptador de Telegram'.
     """
-    # SUPER DEBUG
-    logger.info(f"DEBUG: Webhook de Telegram recibido con UpdateID: {request.update_id}")
     trace_id = correlation_id.get()
 
     if not request.message:
