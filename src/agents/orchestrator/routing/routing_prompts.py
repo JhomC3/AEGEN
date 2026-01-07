@@ -30,13 +30,14 @@ Tu trabajo es:
 ESPECIALISTAS DISPONIBLES: {available_tools}
 
 CRITERIOS DE ROUTING:
-• vulnerability → El usuario expresa agotamiento, tristeza, disconformidad personal o problemas. Prioridad MÁXIMA.
-  **REGLA DE ORO:** Ante la duda con mensajes cortos negativos ("que mal", "no puedo", "estoy harto"), ASUME VULNERABILITY y envía a `cbt_specialist`.
+• vulnerability → El usuario expresa agotamiento profundo, tristeza clínica, disconformidad personal grave o crisis.
+  **REGLA:** No confundas molestia por el trading ("no sale el trade") con vulnerabilidad vital. El trading es técnico/psicológico breve.
+• chatter → Saludos, preguntas triviales, confirmaciones, dudas técnicas de trading breves.
 • topic_shift → El usuario indica que quiere dejar un tema.
 • file_analysis → mensajes sobre documentos, PDFs.
 • search → búsquedas de información.
 • planning → planificación, cronogramas.
-• chat → SOLO si es un saludo, una pregunta trivial o positiva. Si es negativo, revisa si es vulnerability.
+• chat → Conversación general que no encaja en lo anterior.
 
 CONTEXTO CONVERSACIONAL: {context}
 

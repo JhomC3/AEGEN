@@ -76,7 +76,7 @@ Mensaje: {user_message}"""
 CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres MAGI, un asistente de IA conversacional, diseñado por AEGEN AI.
 
 Tu personalidad:
-- Eres natural, empático y profesional.
+- Eres natural, empático y profesional. Estilo preferido: {user_style}.
 - Respondes de manera concisa pero completa.
 - Mantienes el contexto de la conversación.
 - Eres proactivo para ayudar al usuario.
@@ -183,102 +183,78 @@ async def _optimized_delegation_analysis(
         return False
 
 
-async def _get_knowledge_context(user_message: str, chat_id: str, max_results: int = 3) -> str:
-    """
-    ✅ INTEGRATION: Consulta Managed RAG en Google File API.
-    Busca en libros de TCC y memoria histórica del usuario.
-    """
-    try:
-        context = await file_search_tool.query_files(user_message, chat_id)
-        if context and "Información no encontrada" not in context:
-            return context
-        return ""
-    except Exception as e:
-        logger.error(f"Error recuperando contexto de conocimiento: {e}")
-        return ""
+from src.core.profile_manager import user_profile_manager
+
+async def _get_knowledge_context(user_message: str, chat_id: str) -> str:
+    """Obtiene contexto usando Smart RAG basado en el perfil."""
+    profile = await user_profile_manager.load_profile()
+    active_tags = user_profile_manager.get_active_tags()
+    return await file_search_tool.query_files(user_message, chat_id, tags=active_tags)
 
 
 async def _enhanced_conversational_response(
     user_message: str, conversation_history: str, chat_id: str = "unknown", intent_signal: str = "", image_path: str | None = None, user_name: str = "Usuario"
 ) -> str:
-    """
-    ✅ RESTORATION + INTEGRATION: Enhanced conversational response with global knowledge base.
+    """Genera respuesta conversacional con alma evolutiva e inyección de tiempo."""
+    # 1. Recuperar Contexto de Perfil
+    profile = await user_profile_manager.load_profile()
+    style = user_profile_manager.get_style()
+    metrics = profile.get("metrics", {})
+    
+    # 2. Smart RAG
+    knowledge_context = await _get_knowledge_context(user_message, chat_id)
+    
+    # 3. Preparar Prompt
+    conversational_prompt = ChatPromptTemplate.from_template(CONVERSATIONAL_RESPONSE_TEMPLATE)
+    
+    # 4. Long-Term Memory (Legacy fallback mapping)
+    memory_data = await long_term_memory.get_summary(chat_id)
+    history_summary = memory_data.get("summary", "Perfil evolutivo activo.")
+    
+    # Inyección Temporal Invisible v0.3.1
+    current_date_str = datetime.now().strftime("%A, %d de %B de %Y, %H:%M")
+    invisible_date_hint = f"\n[System Note: Today is {current_date_str}. Use this SILENTLY to log milestones. DO NOT mention the date unless asked.]\n"
 
-    Generates natural conversational responses using optimized prompting,
-    conversation context integration, and global knowledge base context.
-    """
-    prompt = ChatPromptTemplate.from_template(CONVERSATIONAL_RESPONSE_TEMPLATE)
+    # Si el historial de Redis está vacío pero el búfer tiene datos, los usamos
+    if (not conversation_history or conversation_history == "") and memory_data.get("buffer"):
+        buffer_text = "\n".join([f"{m['role']}: {m['content']}" for m in memory_data["buffer"]])
+        conversation_history = f"[Recuperado de Búfer Local]\n{buffer_text}"
+
+    prompt_input = {
+        "user_name": user_name,
+        "current_date": current_date_str + invisible_date_hint,
+        "user_message": user_message,
+        "conversation_history": conversation_history,
+        "knowledge_context": knowledge_context,
+        "history_summary": history_summary,
+        "intent_signal": intent_signal,
+        "user_style": style
+    }
 
     try:
-        # ✅ INTEGRATION: Obtener contexto de la global knowledge base (TCC + Memoria Usuario)
-        knowledge_context = await _get_knowledge_context(user_message, chat_id)
-
-        # ✅ ARCHITECTURE: Use src.core.engine instead of hardcoded LLM with observability
-        config = create_observable_config(call_type="conversational_response")
-        chain = prompt | llm
-
-        # ✅ LONG-TERM MEMORY: Recuperar perfil histórico y búfer de respaldo
-        memory_data = await long_term_memory.get_summary(chat_id)
-        history_summary = memory_data["summary"]
-
-        # ✅ TIME AWARENESS: Inyectar fecha y hora actual
-        current_date = datetime.now().strftime("%A, %d de %B de %Y, %H:%M")
-
-        # Si el historial de Redis está vacío pero el búfer tiene datos, los usamos
-        # Esto sucede cuando la sesión de Redis expira después de 1 hora
-        if (not conversation_history or conversation_history == "") and memory_data["buffer"]:
-            buffer_text = "\n".join([
-                f"{m['role']}: {m['content']}" for m in memory_data["buffer"]
-            ])
-            conversation_history = f"[Recuperado de Búfer]\n{buffer_text}"
-
-        prompt_input = {
-            "user_name": user_name,
-            "user_id": chat_id, # Usamos chat_id como nombre si no hay otro
-            "user_message": user_message,
-            "conversation_history": conversation_history,
-            "history_summary": history_summary,
-            "knowledge_context": knowledge_context,
-            "current_date": current_date,
-            "intent_signal": intent_signal,
-        }
-
-        # ✅ MULTIMODAL: Si hay una imagen, la codificamos y preparamos el contenido multimodal
+        config = create_observable_config(call_type="enhanced_chat_response")
+        chain = conversational_prompt | llm
+        
+        # Multimodal handling
         if image_path and Path(image_path).exists():
-            try:
-                with open(image_path, "rb") as f:
-                    image_data = base64.b64encode(f.read()).decode("utf-8")
-                
-                # Para multimodal, construimos el contenido manualmente
-                # El prompt ya fue formateado arriba, lo usamos como texto acompañante
-                formatted_prompt = await prompt.aformat(**prompt_input)
-                
-                content = [
-                    {"type": "text", "text": formatted_prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": f"data:image/jpeg;base64,{image_data}",
-                    },
-                ]
-                message = HumanMessage(content=content)
-                response = await llm.ainvoke([message], config=cast(RunnableConfig, config))
-            except Exception as ei:
-                logger.error(f"Error procesando imagen para multimodal: {ei}")
-                # Fallback a solo texto si la imagen falla
-                response = await chain.ainvoke(prompt_input, config=cast(RunnableConfig, config))
+            with open(image_path, "rb") as f:
+                image_data = base64.b64encode(f.read()).decode("utf-8")
+            formatted_prompt = await conversational_prompt.aformat(**prompt_input)
+            content = [
+                {"type": "text", "text": formatted_prompt},
+                {"type": "image_url", "image_url": f"data:image/jpeg;base64,{image_data}"},
+            ]
+            response = await llm.ainvoke([HumanMessage(content=content)], config=cast(RunnableConfig, config))
         else:
             response = await chain.ainvoke(prompt_input, config=cast(RunnableConfig, config))
-
-        result = str(response.content).strip()
-        logger.info(f"Enhanced conversational response generated: {len(result)} chars")
-        return result
-
-    except ResourceExhaustedError as e:
-        logger.error(f"API Quota Exceeded: {e}", exc_info=True)
-        return "Lo siento, la API de Google Gemini ha alcanzado su límite de cuota gratuita temporalmente. Intenta de nuevo en unos momentos."
+            
+        return str(response.content).strip()
+        
+    except ResourceExhaustedError:
+        return "Alcanzamos el límite de cuota temporal. Mantén la calma, respira y vuelve en un minuto."
     except Exception as e:
-        logger.error(f"Error en respuesta conversacional enhanced: {e}", exc_info=True)
-        return "Disculpa, tuve un problema técnico. ¿Podrías intentar de nuevo?"
+        logger.error(f"Error en respuesta conversacional: {e}", exc_info=True)
+        return "Disculpa, tuve un tropiezo técnico. ¿Qué estábamos diciendo?"
 
 
 async def _optimized_delegate_and_translate(
