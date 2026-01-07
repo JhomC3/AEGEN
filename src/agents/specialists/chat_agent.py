@@ -72,36 +72,20 @@ Historial: {conversation_history}
 Responde SOLO: "DELEGAR" o "DIRECTO".
 Mensaje: {user_message}"""
 
-# ✅ ORIGINAL BASE: Chat AEGEN
-CONVERSATIONAL_RESPONSE_TEMPLATE = """Eres MAGI, un asistente de IA conversacional, diseñado por AEGEN AI.
 
-Tu personalidad:
-- Eres natural, empático y profesional. Estilo preferido: {user_style}.
-- Respondes de manera concisa pero completa.
-- Mantienes el contexto de la conversación.
-- Eres proactivo para ayudar al usuario.
+# ✅ FUNCIONALIDAD RESTAURADA: Carga dinámica del prompt de personalidad (ADR-0008)
+def _load_persona_prompt() -> str:
+    """Carga el prompt maestro de personalidad desde el archivo."""
+    try:
+        prompt_path = Path(__file__).resolve().parent.parent.parent / "prompts" / "cbt_therapeutic_response.txt"
+        with open(prompt_path, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception as e:
+        logger.error(f"Error cargando prompt de personalidad: {e}")
+        # Fallback ultra simple para no fallar
+        return """Eres un asistente útil. Usuario: {user_name}. Mensaje: {user_message}."""
 
-Contexto actual:
-- Usuario: {user_name}
-- Fecha y Hora: {current_date}
-
-Memoria y Conocimiento:
-{history_summary}
-{knowledge_context}
-
-Historial reciente:
-{conversation_history}
-
-Intención/Señal: {intent_signal}
-
-Responde de manera natural a: {user_message}"""
-
-# ✅ TRADUCCIÓN ORIGINAL
-TRANSLATION_TEMPLATE = """Traduce la siguiente información técnica o resultado de tarea en un mensaje amigable y fácil de entender para el usuario.
-
-Info: {summary}
-
-Tu mensaje:"""
+# (CONVERSATIONAL_RESPONSE_TEMPLATE ELIMINADO - "LOBOTOMÍA INVERSA" COMPLETADA)
 
 
 @tool
@@ -205,17 +189,20 @@ async def _enhanced_conversational_response(
     knowledge_context = await _get_knowledge_context(user_message, chat_id)
     
     # 3. Preparar Prompt
-    conversational_prompt = ChatPromptTemplate.from_template(CONVERSATIONAL_RESPONSE_TEMPLATE)
-    
     # 4. Long-Term Memory
     memory_data = await long_term_memory.get_summary(chat_id)
     history_summary = memory_data.get("summary", "Perfil activo.")
+    struggles_summary = memory_data.get("struggles", "No especificado") 
     
-    # --- TIME-LOCK PROTOCOL (v0.3.2) ---
-    current_date_str = datetime.now().strftime("%A, %d de %B de %Y, %H:%M")
+    # --- TIME-LOCK PROTOCOL (SIMPLIFICADO) ---
+    current_date_str = datetime.now().strftime("%A, %d de %B") # Solo fecha, sin año ni hora para reducir ansiedad
     
     # Contexto profundo del perfil v0.3.2
     ranking_context = user_profile_manager.get_context_for_prompt()
+
+    # Cargar prompt maestro dinámicamente
+    persona_template = _load_persona_prompt()
+    conversational_prompt = ChatPromptTemplate.from_template(persona_template)
 
     # Si el historial de Redis está vacío pero el búfer tiene datos, los usamos
     if (not conversation_history or conversation_history == "") and memory_data.get("buffer"):
@@ -224,15 +211,16 @@ async def _enhanced_conversational_response(
 
     prompt_input = {
         "user_name": user_name,
-        "current_date": current_date_str, # Ancla Temporal Absoluta sin notas
+        "current_date": current_date_str, 
         "user_message": user_message,
         "conversation_history": conversation_history,
         "knowledge_context": knowledge_context,
         "history_summary": history_summary,
+        "struggles": struggles_summary, 
         "intent_signal": intent_signal,
         "user_style": style,
-        "user_phase": ranking_context.get("phase", "Unknown"),
-        "key_metaphors": ranking_context.get("metaphors", "")
+        "user_phase": ranking_context.get("phase", "Building"),
+        "key_metaphors": ", ".join(ranking_context.get("metaphors", ["El Autobús", "La Trinchera"])) 
     }
 
     try:
