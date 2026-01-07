@@ -207,13 +207,15 @@ async def _enhanced_conversational_response(
     # 3. Preparar Prompt
     conversational_prompt = ChatPromptTemplate.from_template(CONVERSATIONAL_RESPONSE_TEMPLATE)
     
-    # 4. Long-Term Memory (Legacy fallback mapping)
+    # 4. Long-Term Memory
     memory_data = await long_term_memory.get_summary(chat_id)
-    history_summary = memory_data.get("summary", "Perfil evolutivo activo.")
+    history_summary = memory_data.get("summary", "Perfil activo.")
     
-    # Inyección Temporal Invisible v0.3.1
+    # --- TIME-LOCK PROTOCOL (v0.3.2) ---
     current_date_str = datetime.now().strftime("%A, %d de %B de %Y, %H:%M")
-    invisible_date_hint = f"\n[System Note: Today is {current_date_str}. Use this SILENTLY to log milestones. DO NOT mention the date unless asked.]\n"
+    
+    # Contexto profundo del perfil v0.3.2
+    ranking_context = user_profile_manager.get_context_for_prompt()
 
     # Si el historial de Redis está vacío pero el búfer tiene datos, los usamos
     if (not conversation_history or conversation_history == "") and memory_data.get("buffer"):
@@ -222,13 +224,15 @@ async def _enhanced_conversational_response(
 
     prompt_input = {
         "user_name": user_name,
-        "current_date": current_date_str + invisible_date_hint,
+        "current_date": current_date_str, # Ancla Temporal Absoluta sin notas
         "user_message": user_message,
         "conversation_history": conversation_history,
         "knowledge_context": knowledge_context,
         "history_summary": history_summary,
         "intent_signal": intent_signal,
-        "user_style": style
+        "user_style": style,
+        "user_phase": ranking_context.get("phase", "Unknown"),
+        "key_metaphors": ranking_context.get("metaphors", "")
     }
 
     try:
