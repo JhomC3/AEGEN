@@ -42,7 +42,7 @@ class BaseAppSettings(BaseSettings):
     REDIS_SESSION_TTL: int = 3600  # 1 hour session timeout
 
     # Configs generales
-    DEFAULT_LLM_MODEL: str = "gemini-2.5-flash-latest"
+    DEFAULT_LLM_MODEL: str = "gemini-2.5-flash-lite-latest"
     DEFAULT_TEMPERATURE: float = 0.3
     DEFAULT_WHISPER_MODEL: str = "small"
     DEBUG_MODE: bool = False

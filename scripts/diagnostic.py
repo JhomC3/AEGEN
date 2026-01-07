@@ -112,7 +112,7 @@ def test_webhook_status():
 
 def check_model():
     print("\n--- 4. Checking Gemini Model ---")
-    model = os.getenv("DEFAULT_LLM_MODEL", "gemini-2.5-flash-latest")
+    model = os.getenv("DEFAULT_LLM_MODEL", "gemini-2.5-flash-lite")
     print(f"🔍 Current model configured: {model}")
 
 if __name__ == "__main__":
