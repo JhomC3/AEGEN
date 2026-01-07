@@ -21,9 +21,10 @@ logger = logging.getLogger(__name__)
 async def process_event_task(event: schemas.CanonicalEventV1):
     """
     Tarea de fondo que orquesta el flujo de procesamiento para un evento canónico.
-    Utiliza un directorio temporal para gestionar los archivos de forma segura.
-    Integra memoria conversacional via SessionManager.
     """
+    task_id = event.event_id
+    chat_id = str(event.chat_id)
+    logger.info(f"DEBUG: process_event_task iniciado para el evento {task_id}")
     task_id = event.event_id
     chat_id = str(event.chat_id)
     logger.info(f"[TaskID: {task_id}] Iniciando orquestación para chat {chat_id}.")
@@ -132,8 +133,9 @@ async def telegram_webhook(
 ):
     """
     Endpoint que actúa como un 'Adaptador de Telegram'.
-    Convierte el evento de Telegram en un CanonicalEvent y lo encola para su procesamiento.
     """
+    # SUPER DEBUG
+    logger.info(f"DEBUG: Webhook de Telegram recibido con UpdateID: {request.update_id}")
     trace_id = correlation_id.get()
 
     if not request.message:
