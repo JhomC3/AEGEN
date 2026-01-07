@@ -165,6 +165,10 @@ class CBTSpecialist(SpecialistInterface):
     @property
     def tool(self) -> BaseTool: return self._tool
 
+    def get_capabilities(self) -> list[str]:
+        """Este especialista maneja eventos de tipo texto y terapéuticos."""
+        return ["text", "cbt"]
+
     def _build_graph(self) -> Any:
         graph_builder = StateGraph(GraphStateV2)
         graph_builder.add_node("cbt_therapy", _cbt_node)
