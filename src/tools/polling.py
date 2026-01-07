@@ -96,12 +96,17 @@ def get_updates(offset=None):
     return make_request(url, timeout=35)
 
 def forward_update(update):
-    print(f"Enviando Update {update.get('update_id')} al API local...")
-    result = make_request(API_URL, method="POST", data=update, timeout=15)
-    if result:
-        print(f"✅ Update {update.get('update_id')} procesado por el API.")
-    else:
-        print(f"❌ ERROR: El API local en {API_URL} no respondió o devolvió error.")
+    update_id = update.get('update_id')
+    print(f"Forwarding Update {update_id} to {API_URL}...")
+    try:
+        result = make_request(API_URL, method="POST", data=update, timeout=15)
+        if result:
+            print(f"✅ Update {update_id} successfully forwarded and processed.")
+        else:
+            print(f"❌ ERROR: Local API at {API_URL} failed to process Update {update_id}.")
+            print(f"   Check if the bot container is running and port 8000 is exposed.")
+    except Exception as e:
+        print(f"❌ CRITICAL ERROR forwarding Update {update_id}: {e}")
 
 def main():
     print("Iniciando Polling Service (v0.1.5 - StdLib Only)...")
@@ -120,12 +125,22 @@ def main():
     while True:
         try:
             updates = get_updates(offset)
-            if updates and updates.get("ok"):
-                for update in updates.get("result", []):
+            if updates is None:
+                print("⚠️ Warning: No response from Telegram. Possible network issue or rate limit.")
+                time.sleep(5)
+                continue
+                
+            if updates.get("ok"):
+                result_list = updates.get("result", [])
+                if result_list:
+                    print(f"Received {len(result_list)} updates from Telegram.")
+                for update in result_list:
                     forward_update(update)
                     offset = update["update_id"] + 1
             else:
-                time.sleep(1) # Backoff si hay error o no updates
+                error_msg = updates.get("description", "Unknown error")
+                print(f"❌ Telegram API Error: {error_msg}")
+                time.sleep(5)
         except Exception as e:
             print(f"Error en ciclo principal: {e}")
             time.sleep(5)
