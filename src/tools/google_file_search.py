@@ -84,7 +84,7 @@ class GoogleFileSearchTool:
         
         try:
             # Usamos el modelo estándar definido en la configuración
-            model_name = settings.DEFAULT_LLM_MODEL or "gemini-2.5-flash-latest"
+            model_name = settings.DEFAULT_LLM_MODEL or "gemini-2.5-flash-lite"
             model = genai.GenerativeModel(model_name)
             
             prompt_parts = [
