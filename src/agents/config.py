@@ -16,8 +16,8 @@ class AgentConfig:
     Contiene modelos, temperatura y otors parametros que lso agentes puede necesitar en tiempo de ejecucion.
     """
 
-    search_model: str = "google_genai:gemini-2.5-flash"
-    synthesis_model: str = "google_genai:gemini-2.5-flash"
+    search_model: str = settings.DEFAULT_LLM_MODEL
+    synthesis_model: str = settings.DEFAULT_LLM_MODEL
 
     search_temperature: float = 0.1
     synthesis_temperature: float = 0.3
