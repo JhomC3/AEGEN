@@ -133,7 +133,27 @@ def test_webhook_status():
 def check_model():
     print("\n--- 4. Checking Gemini Model ---")
     model = os.getenv("DEFAULT_LLM_MODEL", "gemini-2.5-flash-lite")
+    api_key = os.getenv("GOOGLE_API_KEY")
     print(f"🔍 Current model configured: {model}")
+    
+    if not api_key:
+        print("⚠️ Warning: GOOGLE_API_KEY not found in environment. Cannot verify model availability.")
+        return
+        
+    print("🧪 Testing model availability with a small request...")
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        m = genai.GenerativeModel(model)
+        # Just a very simple probe
+        m.count_tokens("probe")
+        print(f"✅ SUCCESS: Model '{model}' is VALID and reachable.")
+    except ImportError:
+        print("⚠️ Warning: 'google-generativeai' not installed. Could not probe API directly.")
+        print("   TIP: You can run `python3 scripts/list_models.py` if you have it installed.")
+    except Exception as e:
+        print(f"❌ ERROR: Model '{model}' failed the availability test: {e}")
+        print("   ACTION: Check the model name or run `python3 scripts/list_models.py` to see valid options.")
 
 if __name__ == "__main__":
     load_env_file()
