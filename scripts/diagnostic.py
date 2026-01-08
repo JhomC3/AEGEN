@@ -72,12 +72,32 @@ def test_local_api():
     try:
         with urllib.request.urlopen(url, timeout=5) as response:
             data = json.loads(response.read().decode())
-            print(f"✅ SUCCESS: Local API is healthy. Status: {data.get('status')}")
+            # Use 'state' or 'message' instead of 'status' which doesn't exist
+            status_val = data.get('state') or "UP"
+            print(f"✅ SUCCESS: Local API is healthy. State: {status_val}")
             return True
     except Exception as e:
         print(f"❌ ERROR: Could not reach Local API at 127.0.0.1:8000: {e}")
         print("   TIP: Make sure your docker containers are running (`docker-compose ps`).")
         return False
+
+def check_polling_process():
+    print("\n--- 3. Checking Polling Process ---")
+    try:
+        # We try to run a command to find the process. 
+        # Note: This works on Linux/Mac if running on the same host.
+        import subprocess
+        result = subprocess.run(['pgrep', '-f', 'src/tools/polling.py'], capture_output=True, text=True)
+        if result.stdout.strip():
+            print(f"✅ SUCCESS: Polling service is RUNNING (PID: {result.stdout.strip()})")
+            return True
+        else:
+            print("❌ ERROR: Polling service is NOT running.")
+            print("   FIX: Run `sudo systemctl start aegen-polling` or `python3 src/tools/polling.py &`")
+            return False
+    except Exception:
+        print("⚠️ Warning: Could not check process list (pgrep not available?)")
+        return None
 
 def test_webhook_status():
     print("\n--- 3. Checking Webhook Status ---")
@@ -124,11 +144,12 @@ if __name__ == "__main__":
     
     t_ok = test_telegram()
     l_ok = test_local_api()
+    p_ok = check_polling_process()
     w_ok = test_webhook_status()
     check_model()
     
     print("\n========================================")
-    if t_ok and l_ok:
+    if t_ok and l_ok and p_ok:
         print("✅ Core connectivity looks GOOD.")
         print("👉 If it still doesn't work, check the logs of your polling process.")
     else:
