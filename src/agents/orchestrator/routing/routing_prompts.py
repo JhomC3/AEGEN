@@ -30,21 +30,26 @@ Tu trabajo es:
 ESPECIALISTAS DISPONIBLES: {available_tools}
 
 CRITERIOS DE ROUTING:
-• file_analysis → mensajes sobre documentos, PDFs, análisis de archivos
-• search → búsquedas de información, investigación, "busca X"
-• planning → planificación, cronogramas, organización de tareas
-• chat → conversación general, saludos, clarificaciones simples
+• vulnerability → El usuario expresa agotamiento profundo, tristeza clínica, disconformidad personal grave o crisis.
+  **REGLA:** No confundas molestia por el trading ("no sale el trade") con vulnerabilidad vital. El trading es técnico/psicológico breve.
+• chatter → Saludos, preguntas triviales, confirmaciones, dudas técnicas de trading breves.
+• topic_shift → El usuario indica que quiere dejar un tema.
+• file_analysis → mensajes sobre documentos, PDFs.
+• search → búsquedas de información.
+• planning → planificación, cronogramas.
+• chat → Conversación general que no encaja en lo anterior.
 
 CONTEXTO CONVERSACIONAL: {context}
 
 IMPORTANTE: Debes llamar OBLIGATORIAMENTE a la función route_user_message con:
-- intent: una de las opciones válidas (chat, file_analysis, search, help, task_execution, information_request, planning, document_creation)
+- intent: una de las opciones válidas (chat, vulnerability, file_analysis, etc.)
 - confidence: 0.0-1.0 basado en claridad del mensaje
-- target_specialist: especialista más apropiado
+- target_specialist: `cbt_specialist` para CUALQUIER señal de vulnerabilidad o negatividad personal. `chat_specialist` para lo demás.
 - requires_tools: true si necesita herramientas específicas
 - entities: lista de entidades encontradas (strings)
 - subintent: sub-intención específica si aplica
-- next_actions: acciones sugeridas post-routing""",
+- next_actions: acciones sugeridas post-routing (ej: "clear_context", "depth_empathy")
+""",
         ),
         ("human", "{user_message}"),
     ])

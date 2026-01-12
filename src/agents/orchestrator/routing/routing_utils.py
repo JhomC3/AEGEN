@@ -52,28 +52,14 @@ def is_conversational_only(text: str) -> bool:
         r"^(como\s*estas|que\s*tal|todo\s*bien)$",
     ]
 
-    # Mensajes muy cortos (< 4 palabras) suelen ser conversacionales si no tienen keywords de acción
-    is_short = len(text.split()) < 4
-
-    # Verificar Regex
+    # Verificar Regex para saludos explícitos
     if any(re.match(p, text) for p in patterns):
         return True
 
-    # Si es corto y no tiene palabras clave de acción, asumir conversacional
-    action_keywords = [
-        "analiza",
-        "busca",
-        "investiga",
-        "crea",
-        "resume",
-        "plan",
-        "youtube",
-        "archivo",
-        "transcribe",
-    ]
-    if is_short and not any(k in text for k in action_keywords):
-        return True
-
+    # CRITICAL FIX: Eliminada la heurística de "mensaje corto (<4 palabras)" 
+    # porque interceptaba señales emocionales breves ("Estoy mal", "Ayuda").
+    # Ahora TODO lo que no sea un saludo explícito pasa por el Router LLM.
+    
     return False
 
 

@@ -13,14 +13,14 @@ logger = logging.getLogger(__name__)
 
 # --- INICIO DE LA SOLUCIÓN CON OBSERVABILIDAD ---
 
-# Crear instancia base del LLM
+# Crear instancia base del LLM con personalidad ajustada
 llm = ChatGoogleGenerativeAI(
     model=settings.DEFAULT_LLM_MODEL,
-    temperature=settings.DEFAULT_TEMPERATURE,
-    convert_system_message_to_human=True,  # Necesario para algunos modelos de Google
-    google_api_key=settings.GOOGLE_API_KEY.get_secret_value()
-    if settings.GOOGLE_API_KEY
-    else None,  # type: ignore[call-arg]
+    temperature=0.7,  # Restaurado a nivel estándar para AEGEN
+    top_p=0.9,
+    top_k=40,
+    convert_system_message_to_human=True,
+    google_api_key=settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None,
 )
 
 

@@ -92,7 +92,8 @@ def main():
     os.environ["TAVILY_API_KEY"] = settings.TAVILY_API_KEY.get_secret_value()
     os.environ["GOOGLE_API_KEY"] = settings.GOOGLE_API_KEY.get_secret_value()
 
-    llm = init_chat_model("google_genai:gemini-2.5-flash")
+    model_id = f"google_genai:{settings.DEFAULT_LLM_MODEL}"
+    llm = init_chat_model(model_id)
 
     agent = ResearchAgent(llm)
 
