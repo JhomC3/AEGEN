@@ -119,11 +119,11 @@ async def _generate_therapeutic_response(
         return str(response.content).strip()
     except Exception as e:
         logger.error(f"Error in _generate_therapeutic_response: {e}")
-        return "El mercado es incertidumbre. Tu disciplina es la única certeza. Mantente firme."
+        return "Lo siento, tuve una dificultad técnica. ¿Podrías reformular lo que te preocupa para que pueda ayudarte mejor?"
 
 async def _cbt_node(state: GraphStateV2) -> GraphStateV2:
-    """Nodo principal CBT - Rescue MAGI v0.3.2"""
-    logger.info("CBT Node (Deep Stoic v0.3.2) procesando...")
+    """Nodo principal CBT - Professional Clinical Psychologist"""
+    logger.info("CBT Node (Professional v1.0) procesando...")
     
     user_content = extract_user_content_from_state(state)
     if not user_content:
@@ -140,7 +140,7 @@ async def _cbt_node(state: GraphStateV2) -> GraphStateV2:
     # 2. Smart RAG
     knowledge_context = await _get_knowledge_context(user_content, chat_id)
 
-    # 3. Generar Respuesta Mentoral
+    # 3. Generar Respuesta Terapéutica
     response = await _generate_therapeutic_response(
         user_content, conv_history, knowledge_context, history_summary, user_name=user_name
     )
