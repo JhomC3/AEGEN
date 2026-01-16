@@ -27,6 +27,7 @@ dependencies = [
     "google-generativeai",
     "httpx",
     "langchain",
+    "langchain-openai",
     "langchain[google-genai]",
     "langchain-tavily",
     "langgraph",
