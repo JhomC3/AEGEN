@@ -4,6 +4,7 @@ from typing import Any
 
 import psutil
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI  # Added for OpenRouter support
 
 from src.core.config import settings
 from src.core.schemas import SystemState, SystemStatus
@@ -13,15 +14,31 @@ logger = logging.getLogger(__name__)
 
 # --- INICIO DE LA SOLUCIÓN CON OBSERVABILIDAD ---
 
-# Crear instancia base del LLM con personalidad ajustada
-llm = ChatGoogleGenerativeAI(
-    model=settings.DEFAULT_LLM_MODEL,
-    temperature=0.7,  # Restaurado a nivel estándar para AEGEN
-    top_p=0.9,
-    top_k=40,
-    convert_system_message_to_human=True,
-    google_api_key=settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None,
-)
+# Crear instancia base del LLM con lógica de selección de proveedor
+def _initialize_llm():
+    if settings.LLM_PROVIDER == "openrouter":
+        logger.info(f"Using OpenRouter Provider with model: {settings.OPENROUTER_MODEL_NAME}")
+        return ChatOpenAI(
+            model=settings.OPENROUTER_MODEL_NAME,
+            temperature=0.7,
+            openai_api_key=settings.OPENROUTER_API_KEY.get_secret_value() if settings.OPENROUTER_API_KEY else "dummy-key",
+            openai_api_base="https://openrouter.ai/api/v1",
+            # OpenRouter specific headers can be added here if needed
+        )
+    else:
+        logger.info(f"Using Google Provider with model: {settings.DEFAULT_LLM_MODEL}")
+        return ChatGoogleGenerativeAI(
+            model=settings.DEFAULT_LLM_MODEL,
+            temperature=0.7,  # Restaurado a nivel estándar para AEGEN
+            top_p=0.9,
+            top_k=40,
+            convert_system_message_to_human=True,
+            google_api_key=settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None,
+            # Habilitamos búsqueda web nativa (Grounding) SOLO para Google
+            tools=[{"google_search_retrieval": {}}],  # type: ignore[arg-type]
+        )
+
+llm = _initialize_llm()
 
 
 def create_observable_config(
