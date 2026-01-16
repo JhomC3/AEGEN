@@ -21,6 +21,11 @@ class BaseAppSettings(BaseSettings):
 
     # Secretos
     GOOGLE_API_KEY: SecretStr | None = None
+    OPENROUTER_API_KEY: SecretStr | None = None  # New for OpenRouter
+
+    # LLM Provider Configuration
+    LLM_PROVIDER: str = "google"  # Options: "google", "openrouter"
+    OPENROUTER_MODEL_NAME: str = "liquid/lfm-40b"  # Default to Liquid LFM 40B (MiMo base) or user preference
     ALCHEMY_API_KEY: SecretStr | None = None
     ETHERSCAN_API_KEY: SecretStr | None = None
     TAVILY_API_KEY: SecretStr | None = None
