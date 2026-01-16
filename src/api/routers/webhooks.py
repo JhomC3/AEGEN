@@ -180,7 +180,11 @@ async def telegram_webhook(
         file_id=file_id,
         content=content,
         timestamp=datetime.now().isoformat(),
-        metadata={"trace_id": trace_id, "update_id": request.update_id},
+        metadata={
+            "trace_id": trace_id, 
+            "update_id": request.update_id,
+            "user_name": request.message.from_user.first_name if request.message.from_user else "Usuario"
+        },
     )
     logger.info(
         f"Webhook de Telegram recibido. EventID: {event.event_id}, TraceID: {trace_id}"

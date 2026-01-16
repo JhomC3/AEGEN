@@ -99,8 +99,12 @@ class GoogleFileSearchTool:
             if f.display_name == user_vault_name:
                 relevant.append(f)
         
-        # Limitar número de archivos para no saturar contexto
-        return relevant[:5]
+        # Limitar número de archivos y asegurar que estén ACTIVE
+        active_files = [f for f in relevant if f.state.name == "ACTIVE"]
+        if len(relevant) > len(active_files):
+            logger.warning(f"Omitiendo {len(relevant) - len(active_files)} archivos en estado no-ACTIVE")
+            
+        return active_files[:5]
 
     async def query_files(self, query: str, chat_id: str, tags: Optional[list[str]] = None) -> str:
         """
@@ -115,7 +119,11 @@ class GoogleFileSearchTool:
         
         try:
             # Usamos el modelo estándar definido en la configuración
-            model_name = settings.DEFAULT_LLM_MODEL or "gemini-2.5-flash-lite"
+            model_name = settings.DEFAULT_LLM_MODEL
+            if not model_name.startswith("models/"):
+                model_name = f"models/{model_name}"
+            
+            logger.info(f"Smart RAG: Usando modelo {model_name} para consulta.")
             model = genai.GenerativeModel(model_name)
             
             prompt_parts = [
@@ -124,12 +132,16 @@ class GoogleFileSearchTool:
                 "Si la información no está, di 'Información no encontrada'.",
                 "Estilo: Directo, sin introducciones innecesarias."
             ]
+            
+            # Solo añadir archivos que existan y sean válidos
             prompt_parts.extend(relevant_files)
 
+            logger.debug(f"Smart RAG Prompt Parts: {[str(p) if not hasattr(p, 'name') else p.name for p in prompt_parts]}")
+            
             response = model.generate_content(prompt_parts)
             return response.text.strip()
         except Exception as e:
-            logger.error(f"Error en Smart RAG query_files: {e}")
+            logger.error(f"Error en Smart RAG query_files: {e}", exc_info=True)
             return ""
 
     async def delete_file(self, file_name: str):
