@@ -186,7 +186,11 @@ async def _enhanced_conversational_response(
     metrics = profile.get("metrics", {})
     
     # 2. Smart RAG
-    knowledge_context = await _get_knowledge_context(user_message, chat_id)
+    try:
+        knowledge_context = await _get_knowledge_context(user_message, chat_id)
+    except Exception as e:
+        logger.error(f"Error recuperando contexto de conocimiento: {e}")
+        knowledge_context = ""
     
     # 3. Preparar Prompt
     # 4. Long-Term Memory

@@ -41,6 +41,37 @@ class GoogleFileSearchTool:
             logger.error(f"Error listando archivos: {e}")
             return self._file_cache or []
 
+    async def upload_file(self, file_path: str, display_name: Optional[str] = None):
+        """
+        Sube un archivo a la Google File API.
+        
+        Args:
+            file_path: Ruta local del archivo.
+            display_name: Nombre opcional para mostrar en la API.
+        """
+        try:
+            path = Path(file_path)
+            if not path.exists():
+                raise FileNotFoundError(f"Archivo no encontrado: {file_path}")
+                
+            name = display_name or path.name
+            logger.info(f"Subiendo archivo {path.name} como '{name}'...")
+            
+            # Sincrónico en el SDK, pero lo envolvemos si fuera necesario. 
+            # Por ahora uso directo ya que la mayoría de scripts son async.
+            uploaded_file = genai.upload_file(path=str(path), display_name=name)
+            
+            # Esperar a que el archivo pase de 'PROCESSING' a 'ACTIVE' (opcional pero recomendado)
+            # Para subidas masivas en scripts, es mejor dejar que el script maneje la espera
+            # o simplemente invalidar cache y listo.
+            
+            self._file_cache = None # Invalidar cache para forzar recarga en la próxima consulta
+            logger.info(f"Archivo subido exitosamente: {uploaded_file.uri}")
+            return uploaded_file
+        except Exception as e:
+            logger.error(f"Error subiendo archivo {file_path}: {e}")
+            raise
+
     async def get_relevant_files(self, chat_id: str, tags: Optional[list[str]] = None) -> list[Any]:
         """
         Identifica qué archivos son relevantes basado en chat_id y tags opcionales.
