@@ -130,18 +130,19 @@ class GoogleFileSearchTool:
             logger.info(f"Smart RAG: Usando modelo {model_name} con estrategia System Instruction.")
             
             # 1. Definir la instrucción del sistema separada del contenido del usuario
-            system_instruction = (
+            system_instruction_text = (
                 "Actúa como un extractor de sabiduría estoica y técnica.\n"
                 "Basándote EXCLUSIVAMENTE en los archivos adjuntos proporcionados en el contexto, "
                 "responde de forma concisa a la consulta del usuario.\n"
                 "Si la información no está en los archivos, di 'Información no encontrada'.\n"
-                "Estilo: Directo, sin introducciones innecesarias."
+                "Estilo: Directo, sin introducciones innecesarias.\n\n"
             )
 
             # 2. Construir la configuración de generación
+            # NOTA: En SDK 1.x antiguo, system_instruction puede fallar en config. 
+            # Lo inyectamos en el prompt como fallback seguro.
             config = types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                temperature=0.3 # Baja temperatura para mayor fidelidad a los documentos
+                temperature=0.3
             )
 
             # 3. Construir el contenido del usuario (Archivos + Query)
@@ -154,8 +155,9 @@ class GoogleFileSearchTool:
                     mime_type=f.mime_type
                 ))
             
-            # Añadir la consulta del usuario al final
-            user_parts.append(types.Part.from_text(text=query))
+            # Inyectar instrucción + query en el texto del usuario
+            full_prompt = system_instruction_text + "Consulta: " + query
+            user_parts.append(types.Part.from_text(text=full_prompt))
             
             contents = [types.Content(role="user", parts=user_parts)]
 
