@@ -118,16 +118,14 @@ class GoogleFileSearchTool:
         logger.info(f"Smart RAG: Consultando {len(relevant_files)} archivos para {chat_id} (Tags: {tags})")
         
         try:
-            # Restaurando a 2.5-flash-lite por petición del usuario
+            # Usar modelo configurado (gemini-2.5-flash-lite)
             model_name = settings.DEFAULT_LLM_MODEL
-            # Asegurar prefijo de forma idempotente
             if not model_name.startswith("models/"):
                 model_name = f"models/{model_name}"
             
             logger.info(f"Smart RAG: Usando modelo {model_name} para consulta de archivos.")
             model = genai.GenerativeModel(model_name)
             
-            # Unimos las instrucciones en un solo string para evitar inconsistencias en el envío mutipart
             instruction = (
                 "Actúa como un extractor de sabiduría estoica y técnica.\n"
                 f"Basándote EXCLUSIVAMENTE en los archivos adjuntos, responde de forma concisa: {query}\n"
@@ -135,47 +133,12 @@ class GoogleFileSearchTool:
                 "Estilo: Directo, sin introducciones innecesarias."
             )
             
-            # Solo añadir archivos que estén ACTIVE (ya filtrados en get_relevant_files)
-            # FIX: Colocar archivos PRIMERO, luego la instrucción de texto.
-            prompt_parts = relevant_files + [instruction]
+            # Estructura simple: instrucción + archivos
+            prompt_parts = [instruction] + relevant_files
 
-            # --- FIX: Verificar frescura de archivos para evitar Error 400 ---
-            fresh_prompt_parts = [instruction] # Instrucción es el primer contexto mental
+            logger.debug(f"Smart RAG Prompt Parts Count: {len(prompt_parts)}")
             
-            valid_files_count = 0
-            for file_ref in relevant_files:
-                try:
-                    # Recuperar metadata fresca para asegurar que el objeto es válido
-                    fresh_file = genai.get_file(file_ref.name)
-                    if fresh_file.state.name == "ACTIVE":
-                        fresh_prompt_parts.append(fresh_file) # Agregar archivo verificado
-                        valid_files_count += 1
-                    else:
-                        logger.warning(f"RAG: Archivo {file_ref.name} ignorado por estado {fresh_file.state.name}")
-                except Exception as file_err:
-                     logger.warning(f"RAG: Error al refrescar archivo {file_ref.name}: {file_err}")
-
-            if valid_files_count == 0:
-                logger.info("Smart RAG: No hay archivos válidos/activos tras verificación fresca.")
-                return ""
-
-            # Revertir orden si el modelo lo prefiere así (Texto SYSTEM + Archivos o viceversa)
-            # Para Gemini 2.5, probamos: Archivos + Query específica
-            # Pero como 'instruction' es un setup del rol, lo pondremos al inicio O como parte 'user' del final.
-            # Intento robusto: [fresh_files...] + [text_query]
-            
-            final_parts = fresh_prompt_parts[1:] + [fresh_prompt_parts[0]] # Mover instrucción al final
-            
-            logger.debug(f"Smart RAG Final Parts: {len(final_parts)} (Files: {valid_files_count})")
-            
-            # Usar request_options para timeout
-            response = await model.generate_content_async(
-                contents=final_parts,
-                generation_config=genai.types.GenerationConfig(
-                    temperature=settings.DEFAULT_TEMPERATURE
-                ),
-                request_options={"timeout": 60} # Timeout explícito
-            )
+            response = await model.generate_content_async(prompt_parts)
             return response.text.strip()
         except Exception as e:
             logger.error(f"Error en Smart RAG query_files: {e}", exc_info=True)
