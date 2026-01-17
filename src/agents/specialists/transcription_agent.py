@@ -39,7 +39,7 @@ class TranscriptionSpecialist(SpecialistInterface):
     """
 
     def __init__(self):
-        self._name: str = "transcription_specialist"
+        self._name: str = "transcription_agent"
         self._graph: Any = self._build_graph()
         self._tool: BaseTool = transcription_tool
 
@@ -83,7 +83,7 @@ class TranscriptionSpecialist(SpecialistInterface):
             error_msg = "Error: No se proporcionó una ruta de archivo de audio válida."
             logger.error(error_msg)
             payload["response"] = error_msg
-            payload["last_specialist"] = "transcription_agent"
+            payload["last_specialist"] = self.name
             payload["next_action"] = "error"
             return {"payload": payload}
 

@@ -285,4 +285,3 @@ node_modules/
 
 # User scripts
 scripts/test_*.py
-scripts/list_models.py

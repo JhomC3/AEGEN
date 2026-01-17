@@ -107,6 +107,7 @@ async def _generate_therapeutic_response(
             "conversation_history": conversation_history,
             "knowledge_context": knowledge_context,
             "history_summary": history_summary,
+            "user_style": style,
             "user_phase": context_keys.get("phase", "Unknown"),
             "key_metaphors": context_keys.get("metaphors", ""),
             "struggles": context_keys.get("struggles", "")
