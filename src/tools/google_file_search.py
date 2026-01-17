@@ -141,7 +141,13 @@ class GoogleFileSearchTool:
 
             logger.debug(f"Smart RAG Prompt Parts Count: {len(prompt_parts)}")
             
-            response = await model.generate_content_async(prompt_parts)
+            # Usar request_options para evitar timeout en RAG pesado
+            response = await model.generate_content_async(
+                contents=prompt_parts,
+                generation_config=genai.types.GenerationConfig(
+                    temperature=settings.DEFAULT_TEMPERATURE
+                )
+            )
             return response.text.strip()
         except Exception as e:
             logger.error(f"Error en Smart RAG query_files: {e}", exc_info=True)
