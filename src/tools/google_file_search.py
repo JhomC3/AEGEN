@@ -139,19 +139,44 @@ class GoogleFileSearchTool:
             # FIX: Colocar archivos PRIMERO, luego la instrucción de texto.
             prompt_parts = relevant_files + [instruction]
 
-            logger.debug(f"Smart RAG Prompt Parts Count: {len(prompt_parts)}")
+            # --- FIX: Verificar frescura de archivos para evitar Error 400 ---
+            fresh_prompt_parts = [instruction] # Instrucción es el primer contexto mental
             
-            # Usar request_options para evitar timeout en RAG pesado
+            valid_files_count = 0
+            for file_ref in relevant_files:
+                try:
+                    # Recuperar metadata fresca para asegurar que el objeto es válido
+                    fresh_file = genai.get_file(file_ref.name)
+                    if fresh_file.state.name == "ACTIVE":
+                        fresh_prompt_parts.append(fresh_file) # Agregar archivo verificado
+                        valid_files_count += 1
+                    else:
+                        logger.warning(f"RAG: Archivo {file_ref.name} ignorado por estado {fresh_file.state.name}")
+                except Exception as file_err:
+                     logger.warning(f"RAG: Error al refrescar archivo {file_ref.name}: {file_err}")
+
+            if valid_files_count == 0:
+                logger.info("Smart RAG: No hay archivos válidos/activos tras verificación fresca.")
+                return ""
+
+            # Revertir orden si el modelo lo prefiere así (Texto SYSTEM + Archivos o viceversa)
+            # Para Gemini 2.5, probamos: Archivos + Query específica
+            # Pero como 'instruction' es un setup del rol, lo pondremos al inicio O como parte 'user' del final.
+            # Intento robusto: [fresh_files...] + [text_query]
+            
+            final_parts = fresh_prompt_parts[1:] + [fresh_prompt_parts[0]] # Mover instrucción al final
+            
+            logger.debug(f"Smart RAG Final Parts: {len(final_parts)} (Files: {valid_files_count})")
+            
+            # Usar request_options para timeout
             response = await model.generate_content_async(
-                contents=prompt_parts,
+                contents=final_parts,
                 generation_config=genai.types.GenerationConfig(
                     temperature=settings.DEFAULT_TEMPERATURE
-                )
+                ),
+                request_options={"timeout": 60} # Timeout explícito
             )
             return response.text.strip()
-        except Exception as e:
-            logger.error(f"Error en Smart RAG query_files: {e}", exc_info=True)
-            return ""
 
     async def delete_file(self, file_name: str):
         """Elimina un archivo de la File API."""
