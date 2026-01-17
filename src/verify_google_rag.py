@@ -24,7 +24,7 @@ async def main():
         return
 
     # 2. Crear archivo dummy
-    dummy_file = "test_verification.txt"
+    dummy_file = "/tmp/test_verification.txt"
     with open(dummy_file, "w") as f:
         f.write("El estoicismo enseña que debemos diferenciar lo que controlamos de lo que no. "
                 "Controlamos nuestras opiniones, impulsos y deseos.")
