@@ -33,7 +33,7 @@ class TelegramToolManager:
                 "El token del bot de Telegram no está configurado. "
                 "Por favor, añádelo a tus variables de entorno (TELEGRAM_BOT_TOKEN)."
             )
-        token = bot_token.get_secret_value()
+        token = bot_token.get_secret_value().strip()
         self.base_url = f"https://api.telegram.org/bot{token}"
         self.file_base_url = f"https://api.telegram.org/file/bot{token}"
 
