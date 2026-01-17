@@ -21,10 +21,9 @@ try:
     for f in files:
         print(f"📄 {f.display_name} ({f.name}) - Estado: {f.state.name}")
         
-        # Eliminar si falla o si el usuario quiere purgar todo (descomentar para purga total)
-        # if True: 
-        if f.state.name == "FAILED" or f.state.name == "PROCESSING":
-            print(f"   🗑️ Eliminando archivo corrupto/atascado: {f.name}...")
+        # Eliminar si es duplicado o estancado
+        if f.state.name in ["FAILED", "PROCESSING"] or "User_Vault" in f.display_name:
+            print(f"   🗑️ Eliminando archivo (Limpieza profunda): {f.display_name} ({f.name})...")
             genai.delete_file(f.name)
             print("   ✅ Eliminado.")
 
