@@ -118,12 +118,10 @@ class GoogleFileSearchTool:
         logger.info(f"Smart RAG: Consultando {len(relevant_files)} archivos para {chat_id} (Tags: {tags})")
         
         try:
-            # Usamos el modelo estándar definido en la configuración
-            model_name = settings.DEFAULT_LLM_MODEL
-            if not model_name.startswith("models/"):
-                model_name = f"models/{model_name}"
+            # Forzamos 1.5-flash para RAG por estabilidad con el File API y evitar errores 400
+            model_name = "models/gemini-1.5-flash"
             
-            logger.info(f"Smart RAG: Usando modelo {model_name} para consulta.")
+            logger.info(f"Smart RAG: Usando modelo {model_name} para consulta de archivos.")
             model = genai.GenerativeModel(model_name)
             
             prompt_parts = [
