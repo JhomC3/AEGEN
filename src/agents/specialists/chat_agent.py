@@ -224,7 +224,7 @@ async def _enhanced_conversational_response(
         "intent_signal": intent_signal,
         "user_style": style,
         "user_phase": ranking_context.get("phase", "Building"),
-        "key_metaphors": ", ".join(ranking_context.get("metaphors", ["El Autobús", "La Trinchera"])) 
+        "key_metaphors": ranking_context.get("metaphors", "El Autobús, La Trinchera") 
     }
 
     try:
@@ -247,10 +247,11 @@ async def _enhanced_conversational_response(
         return str(response.content).strip()
         
     except ResourceExhaustedError:
+        logger.error("Límite de cuota agotado en ChatAgent.")
         return "Alcanzamos el límite de cuota temporal. Mantén la calma, respira y vuelve en un minuto."
     except Exception as e:
-        logger.error(f"Error en respuesta conversacional: {e}", exc_info=True)
-        return "Disculpa, tuve un tropiezo técnico. ¿Qué estábamos diciendo?"
+        logger.error(f"Error crítico en _enhanced_conversational_response: {e}", exc_info=True)
+        return f"Lo siento, tuve un problema interno al procesar tu respuesta: {str(e)}"
 
 
 async def _optimized_delegate_and_translate(
