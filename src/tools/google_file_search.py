@@ -69,21 +69,25 @@ class GoogleFileSearchTool:
             logger.info(f"Archivo subido exitosamente: {uploaded_file.uri}")
 
             # Polling para esperar estado ACTIVE
-            logger.info(f"Esperando a que {uploaded_file.name} esté ACTIVE...")
-            for _ in range(10): # Max 20 segundos
+            logger.info(f"Esperando a que {uploaded_file.name} esté ACTIVE (Timeout 60s)...")
+            for i in range(30): # Aumentado a 60 segundos (30 * 2s)
                 await asyncio.sleep(2)
                 try:
                     current_file = await asyncio.to_thread(self.client.files.get, name=uploaded_file.name)
                     state = str(getattr(current_file, 'state', '')).upper()
                     if state == "ACTIVE":
-                        logger.info(f"Archivo {uploaded_file.name} listo para usar (ACTIVE).")
+                        logger.info(f"Archivo {uploaded_file.name} listo para usar (ACTIVE) en intento {i+1}.")
                         return current_file
                     elif state == "FAILED":
                         raise ValueError(f"Procesamiento de archivo falló: {uploaded_file.name}")
+                    else:
+                        if i % 5 == 0: # Log cada 10s para no saturar
+                            logger.info(f"Archivo {uploaded_file.name} en estado: {state}...")
                 except Exception as poll_err:
                     logger.warning(f"Error consultando estado de archivo: {poll_err}")
             
-            logger.warning(f"Timeout esperando estado ACTIVE para {uploaded_file.name}. Puede no estar disponible inmediatamente.")
+            logger.error(f"TIMEOUT CRÍTICO: El archivo {uploaded_file.name} no pasó a ACTIVE en 60s.")
+            # Intentamos devolverlo de todas formas, pero logueamos error fuerte
             return uploaded_file
         except Exception as e:
             logger.error(f"Error subiendo archivo {file_path}: {e}")
