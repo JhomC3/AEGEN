@@ -5,7 +5,7 @@ import time
 from pathlib import Path
 from typing import Any, Optional
 
-import google.generativeai as genai
+from google import genai
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -14,15 +14,16 @@ class GoogleFileSearchTool:
     """
     Herramienta para gestionar y buscar información en archivos usando la Google File API.
     Implementa un sistema de Managed RAG (Búsqueda de archivos gestionada) para Gemini.
+    Migrado al nuevo SDK 'google-genai' para compatibilidad con Gemini 2.x.
     """
 
     def __init__(self):
         api_key = settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else ""
-        genai.configure(api_key=api_key)
+        self.client = genai.Client(api_key=api_key)
         self._file_cache = None
         self._last_cache_update = 0
         self.CACHE_TTL = 300  # 5 minutos
-        logger.info("GoogleFileSearchTool inicializada con Smart RAG support.")
+        logger.info("GoogleFileSearchTool inicializada con el NUEVO SDK google-genai.")
 
     async def list_files(self):
         """
@@ -33,21 +34,18 @@ class GoogleFileSearchTool:
             return self._file_cache
             
         try:
-            files = list(genai.list_files())
+            # El nuevo SDK usa client.files.list() y devuelve un generador
+            files = list(self.client.files.list())
             self._file_cache = files
             self._last_cache_update = current_time
             return files
         except Exception as e:
-            logger.error(f"Error listando archivos: {e}")
+            logger.error(f"Error listando archivos con el nuevo SDK: {e}")
             return self._file_cache or []
 
     async def upload_file(self, file_path: str, display_name: Optional[str] = None):
         """
         Sube un archivo a la Google File API.
-        
-        Args:
-            file_path: Ruta local del archivo.
-            display_name: Nombre opcional para mostrar en la API.
         """
         try:
             path = Path(file_path)
@@ -57,15 +55,10 @@ class GoogleFileSearchTool:
             name = display_name or path.name
             logger.info(f"Subiendo archivo {path.name} como '{name}'...")
             
-            # Sincrónico en el SDK, pero lo envolvemos si fuera necesario. 
-            # Por ahora uso directo ya que la mayoría de scripts son async.
-            uploaded_file = genai.upload_file(path=str(path), display_name=name)
+            # El nuevo SDK usa client.files.upload()
+            uploaded_file = self.client.files.upload(path=file_path, config={'display_name': name})
             
-            # Esperar a que el archivo pase de 'PROCESSING' a 'ACTIVE' (opcional pero recomendado)
-            # Para subidas masivas en scripts, es mejor dejar que el script maneje la espera
-            # o simplemente invalidar cache y listo.
-            
-            self._file_cache = None # Invalidar cache para forzar recarga en la próxima consulta
+            self._file_cache = None # Invalidar cache
             logger.info(f"Archivo subido exitosamente: {uploaded_file.uri}")
             return uploaded_file
         except Exception as e:
@@ -85,22 +78,22 @@ class GoogleFileSearchTool:
         for f in all_files:
             f_name_upper = f.display_name.upper()
             
-            # 1. CORE KERNEL: Archivos marcados como CORE o ESTOICO siempre incluidos
+            # 1. CORE KERNEL
             if "CORE" in f_name_upper or "STOIC" in f_name_upper:
                 relevant.append(f)
                 continue
                 
-            # 2. TAG MATCH: Si tiene tags, priorizar archivos que los contengan
+            # 2. TAG MATCH
             if tags_upper and any(tag in f_name_upper for tag in tags_upper):
                 relevant.append(f)
                 continue
 
-            # 3. USER VAULT: Bóveda específica del usuario
+            # 3. USER VAULT
             if f.display_name == user_vault_name:
                 relevant.append(f)
         
-        # Limitar número de archivos y asegurar que estén ACTIVE
-        active_files = [f for f in relevant if f.state.name == "ACTIVE"]
+        # En el nuevo SDK, el estado es un string directo o un enum. Comparar con string es seguro.
+        active_files = [f for f in relevant if f.state == "ACTIVE"]
         if len(relevant) > len(active_files):
             logger.warning(f"Omitiendo {len(relevant) - len(active_files)} archivos en estado no-ACTIVE")
             
@@ -118,13 +111,12 @@ class GoogleFileSearchTool:
         logger.info(f"Smart RAG: Consultando {len(relevant_files)} archivos para {chat_id} (Tags: {tags})")
         
         try:
-            # Usar modelo configurado (gemini-2.5-flash-lite)
             model_name = settings.DEFAULT_LLM_MODEL
-            if not model_name.startswith("models/"):
-                model_name = f"models/{model_name}"
+            # Quitar prefijo 'models/' si existe, el nuevo SDK lo maneja o prefiere el ID puro
+            if model_name.startswith("models/"):
+                model_name = model_name.replace("models/", "")
             
-            logger.info(f"Smart RAG: Usando modelo {model_name} para consulta de archivos.")
-            model = genai.GenerativeModel(model_name)
+            logger.info(f"Smart RAG: Usando modelo {model_name} con el nuevo SDK.")
             
             instruction = (
                 "Actúa como un extractor de sabiduría estoica y técnica.\n"
@@ -133,25 +125,35 @@ class GoogleFileSearchTool:
                 "Estilo: Directo, sin introducciones innecesarias."
             )
             
-            # Estructura simple: instrucción + archivos
-            prompt_parts = [instruction] + relevant_files
+            # El orden recomendado ahora es [archivo, ..., instrucción]
+            contents = relevant_files + [instruction]
 
-            logger.debug(f"Smart RAG Prompt Parts Count: {len(prompt_parts)}")
+            # El nuevo SDK soporta llamadas async directamente si el método termina en _async o similar?
+            # En google-genai, se usa client.models.generate_content (sincrónico)
+            # Para async, se usa el cliente asíncrono o run_in_executor.
+            # Sin embargo, el SDK tiene un diseño robusto. Probemos sincrónico primero o busquemos el async.
+            # Según doc: client.models.generate_content es bloqueante.
             
-            response = await model.generate_content_async(prompt_parts)
+            import asyncio
+            response = await asyncio.to_thread(
+                self.client.models.generate_content,
+                model=model_name,
+                contents=contents
+            )
+            
             return response.text.strip()
         except Exception as e:
-            logger.error(f"Error en Smart RAG query_files: {e}", exc_info=True)
+            logger.error(f"Error en Smart RAG query_files (nuevo SDK): {e}", exc_info=True)
             return ""
 
     async def delete_file(self, file_name: str):
         """Elimina un archivo de la File API."""
         try:
-            genai.delete_file(file_name)
+            self.client.files.delete(name=file_name)
             logger.info(f"Archivo eliminado: {file_name}")
             self._file_cache = None # Reset cache
         except Exception as e:
-            logger.error(f"Error eliminando archivo: {e}")
+            logger.error(f"Error eliminando archivo con el nuevo SDK: {e}")
 
 # Instancia singleton
 file_search_tool = GoogleFileSearchTool()
