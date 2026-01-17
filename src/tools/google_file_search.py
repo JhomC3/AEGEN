@@ -177,6 +177,9 @@ class GoogleFileSearchTool:
                 request_options={"timeout": 60} # Timeout explícito
             )
             return response.text.strip()
+        except Exception as e:
+            logger.error(f"Error en Smart RAG query_files: {e}", exc_info=True)
+            return ""
 
     async def delete_file(self, file_name: str):
         """Elimina un archivo de la File API."""
