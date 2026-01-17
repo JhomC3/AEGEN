@@ -136,7 +136,8 @@ class GoogleFileSearchTool:
             )
             
             # Solo añadir archivos que estén ACTIVE (ya filtrados en get_relevant_files)
-            prompt_parts = [instruction] + relevant_files
+            # FIX: Colocar archivos PRIMERO, luego la instrucción de texto.
+            prompt_parts = relevant_files + [instruction]
 
             logger.debug(f"Smart RAG Prompt Parts Count: {len(prompt_parts)}")
             
