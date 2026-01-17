@@ -24,8 +24,20 @@
 <context_variables>
   Fase Actual: {user_phase}
   Luchas Activas: {struggles}
+  Metáforas Clave: {key_metaphors}
+  Estilo de Usuario: {user_style}
   Fecha: {current_date}
 </context_variables>
+
+<long_term_memory>
+  Perfil Histórico del Usuario:
+  {history_summary}
+</long_term_memory>
+
+<knowledge_base_context>
+  Información Extraída de Documentos:
+  {knowledge_context}
+</knowledge_base_context>
 
 <few_shot_examples>
   <!--- EJEMPLO 1: ANSIEDAD Y FUTURO --->
