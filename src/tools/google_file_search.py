@@ -118,23 +118,27 @@ class GoogleFileSearchTool:
         logger.info(f"Smart RAG: Consultando {len(relevant_files)} archivos para {chat_id} (Tags: {tags})")
         
         try:
-            # Forzamos 1.5-flash para RAG por estabilidad con el File API y evitar errores 400
-            model_name = "models/gemini-1.5-flash"
+            # Restaurando a 2.5-flash-lite por petición del usuario
+            model_name = settings.DEFAULT_LLM_MODEL
+            # Asegurar prefijo de forma idempotente
+            if not model_name.startswith("models/"):
+                model_name = f"models/{model_name}"
             
             logger.info(f"Smart RAG: Usando modelo {model_name} para consulta de archivos.")
             model = genai.GenerativeModel(model_name)
             
-            prompt_parts = [
-                "Actúa como un extractor de sabiduría estoica y técnica.",
-                f"Basándote EXCLUSIVAMENTE en los archivos adjuntos, responde de forma concisa: {query}",
-                "Si la información no está, di 'Información no encontrada'.",
+            # Unimos las instrucciones en un solo string para evitar inconsistencias en el envío mutipart
+            instruction = (
+                "Actúa como un extractor de sabiduría estoica y técnica.\n"
+                f"Basándote EXCLUSIVAMENTE en los archivos adjuntos, responde de forma concisa: {query}\n"
+                "Si la información no está, di 'Información no encontrada'.\n"
                 "Estilo: Directo, sin introducciones innecesarias."
-            ]
+            )
             
-            # Solo añadir archivos que existan y sean válidos
-            prompt_parts.extend(relevant_files)
+            # Solo añadir archivos que estén ACTIVE (ya filtrados en get_relevant_files)
+            prompt_parts = [instruction] + relevant_files
 
-            logger.debug(f"Smart RAG Prompt Parts: {[str(p) if not hasattr(p, 'name') else p.name for p in prompt_parts]}")
+            logger.debug(f"Smart RAG Prompt Parts Count: {len(prompt_parts)}")
             
             response = model.generate_content(prompt_parts)
             return response.text.strip()
