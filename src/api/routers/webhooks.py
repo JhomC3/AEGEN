@@ -101,10 +101,13 @@ async def process_event_task(event: schemas.CanonicalEventV1):
         )
 
     logger.info(f"[TaskID: {task_id}] Enviando respuesta al chat {chat_id}.")
-    await telegram_interface.reply_to_telegram_chat.ainvoke({
-        "chat_id": chat_id,
-        "message": message,
-    })
+    try:
+        await telegram_interface.reply_to_telegram_chat.ainvoke({
+            "chat_id": chat_id,
+            "message": message,
+        })
+    except Exception as e:
+        logger.error(f"[TaskID: {task_id}] Error enviando respuesta a Telegram: {e}")
 
     # Guardar el estado actualizado de la sesión en Redis
     session_saved = await session_manager.save_session(chat_id, final_state)

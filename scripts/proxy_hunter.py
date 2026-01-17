@@ -4,155 +4,87 @@ import urllib.error
 import random
 import time
 import socket
-import ssl
+import re
 import sys
-import os
 from pathlib import Path
 
 # --- Configuration ---
-TIMEOUT = 5
-MAX_PROXIES_TO_TEST = 50
+TIMEOUT = 7
+MAX_PROXIES_TO_TEST = 150
 TELEGRAM_TEST_URL = "https://api.telegram.org"
 
-# --- Sources ---
-# Free public proxy lists APIs (JSON format preferred)
-PROXY_SOURCES = [
-    "https://proxylist.geonode.com/api/proxy-list?limit=100&page=1&sort_by=lastChecked&sort_type=desc&protocols=https",
-    "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/http.txt", # Text format
-]
-
-# Hardcoded fallback list (high quality free proxies often rotate, these might die)
-FALLBACK_PROXIES = [
-    # Format: host:port
-    "20.210.113.32:8123",
-    "20.206.106.192:8123",
-    "8.219.97.248:80",
-]
-
-def load_env_file_manual():
-    """Manually loads .env to see if there is already a proxy set."""
-    try:
-        env_path = Path(__file__).resolve().parent.parent / ".env"
-        current_proxy = None
-        if env_path.exists():
-            with open(env_path, "r") as f:
-                for line in f:
-                    if line.startswith("TELEGRAM_PROXY="):
-                        current_proxy = line.split("=", 1)[1].strip().strip('"').strip("'")
-        return current_proxy
-    except:
-        return None
-
 def fetch_proxies():
-    """Fetches fresh proxies from sources."""
-    proxies = []
-    print("🌐 Fetching fresh proxy lists...")
+    """Fetches high-quality SOCKS5 and HTTP proxies from 2026 community sources."""
+    print("🌐 Fetching fresh proxy lists (SOCKS5/HTTP)...")
+    sources = [
+        # SOCKS5
+        "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=socks5&timeout=10000&country=all&ssl=all&anonymity=all",
+        "https://raw.githubusercontent.com/TheSpeedX/SOCKS-List/master/socks5.txt",
+        # HTTP/S
+        "https://api.proxyscrape.com/v2/?request=displayproxies&protocol=http&timeout=10000&country=all&ssl=all&anonymity=all",
+        "https://raw.githubusercontent.com/monosans/proxy-list/main/proxies/http.txt"
+    ]
     
-    # 1. Geonode API
-    try:
-        url = "https://proxylist.geonode.com/api/proxy-list?limit=50&page=1&sort_by=lastChecked&sort_type=desc&protocols=https"
-        with urllib.request.urlopen(url, timeout=10) as response:
-            data = response.read().decode()
-            import json
-            json_data = json.loads(data)
-            for item in json_data.get("data", []):
-                ip = item.get("ip")
-                port = item.get("port")
-                if ip and port:
-                    proxies.append(f"{ip}:{port}")
-    except Exception as e:
-        print(f"⚠️ Failed to fetch source 1: {e}")
-
-    # 2. Add fallback
-    proxies.extend(FALLBACK_PROXIES)
+    unique_proxies = set()
+    for i, url in enumerate(sources, 1):
+        try:
+            with urllib.request.urlopen(url, timeout=15) as response:
+                content = response.read().decode('utf-8')
+                # Find both IP:PORT
+                found = re.findall(r'\d+\.\d+\.\d+\.\d+:\d+', content)
+                unique_proxies.update(found)
+                print(f"✅ Source {i}: Found {len(found)} candidates.")
+        except Exception as e:
+            print(f"⚠️ Failed to fetch source {i}: {e}")
     
-    # Remove duplicates
-    unique_proxies = list(set(proxies))
-    print(f"✅ Found {len(unique_proxies)} potential candidates.")
-    return unique_proxies
+    return list(unique_proxies)
 
 def test_proxy(proxy_addr):
-    """Tests if a specific proxy can reach Telegram API."""
+    """
+    Tests if a proxy works for Telegram API.
+    Since urllib doesn't natively support SOCKS5 without extra libs,
+    we test it as an HTTP/HTTPS proxy first (many support both).
+    """
     proxy_url = f"http://{proxy_addr}"
     
-    # Create proxy handler
-    proxy_handler = urllib.request.ProxyHandler({
-        'http': proxy_url,
-        'https': proxy_url,
-    })
-    
-    # Setup opener
+    proxy_handler = urllib.request.ProxyHandler({'http': proxy_url, 'https': proxy_url})
     opener = urllib.request.build_opener(proxy_handler)
-    # Add fake user agent just in case
-    opener.addheaders = [('User-agent', 'Mozilla/5.0')]
     
     print(f"   Testing {proxy_addr}...", end=" ")
     sys.stdout.flush()
     
     try:
-        start_time = time.time()
-        # "getMe" request requires a token, so we just check the root or a safe endpoint
-        # Checking root usually returns specific text
+        # We check if we can reach api.telegram.org
         with opener.open(TELEGRAM_TEST_URL, timeout=TIMEOUT) as response:
-            code = response.getcode()
-            if code in [200, 302, 404]: # 404/302 is fine for root, means we reached server
-                duration = time.time() - start_time
-                print(f"✅ SUCCESS ({duration:.2f}s)")
+            if response.getcode() in [200, 404]: # 404 is fine for root
+                print("✅ WORKING!")
                 return True
-    except urllib.error.HTTPError as e:
-        # If we get a 404 from api.telegram.org, we reached it!
-        # If we get 407 (Proxy Auth Required), it failed for our purpose (free proxy)
-        if e.code == 404: 
-             print("✅ SUCCESS (HTTP 404 from Telegram)")
-             return True
-        print(f"❌ HTTP {e.code}")
-    except Exception as e:
-        print(f"❌ Failed")
-    
+    except Exception:
+        print("❌")
     return False
 
 def main():
     print("========================================")
-    print("      MAGI PROXY HUNTER v1.0")
+    print("      MAGI PROXY HUNTER v2.0 (2026)    ")
     print("========================================")
     
-    current = load_env_file_manual()
-    if current:
-        print(f"ℹ️ Current configured proxy: {current}")
-        print("   Retesting current proxy first...")
-        if test_proxy(current.replace("http://","").replace("https://","")):
-            print("\n🎉 The current proxy IS WORKING! You don't need a new one.")
-            sys.exit(0)
-        else:
-            print("❌ Current proxy is DEAD. Hunting for a new one...\n")
-
     candidates = fetch_proxies()
-    random.shuffle(candidates) # Shuffle to avoid thundering herd on first ones
+    random.shuffle(candidates)
     
-    working_proxy = None
-    
+    found = None
     count = 0
-    for proxy in candidates:
-        if count >= MAX_PROXIES_TO_TEST:
-            print("\n⚠️ Reached max test limit.")
-            break
-            
-        if test_proxy(proxy):
-            working_proxy = f"http://{proxy}"
+    for p in candidates:
+        if count >= MAX_PROXIES_TO_TEST: break
+        if test_proxy(p):
+            found = p
             break
         count += 1
         
-    print("\n========================================")
-    if working_proxy:
-        print("🎯 FOUND WORKING PROXY!")
-        print(f"   {working_proxy}")
-        print("\n👇 ADD THIS TO YOUR .env FILE:")
-        print(f"TELEGRAM_PROXY={working_proxy}")
-        print("========================================")
+    if found:
+        print("\n🎯 SUCCESS! Add this to your .env:")
+        print(f"TELEGRAM_PROXY=http://{found}")
     else:
-        print("😞 No working proxy found in this batch.")
-        print("   Try running the script again to fetch a new list.")
-        sys.exit(1)
+        print("\n😞 All proxies in this batch failed. GCE might be blocking and you need a private proxy.")
 
 if __name__ == "__main__":
     main()

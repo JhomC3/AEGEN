@@ -122,20 +122,14 @@ def main():
     delete_webhook()
 
     offset = None
-    fail_count = 0
     while True:
         try:
             updates = get_updates(offset)
             if updates is None:
-                fail_count += 1
-                print(f"⚠️ Warning: No response from Telegram. Fail count: {fail_count}")
-                if fail_count > 10:
-                    print("🚨 Excessive failures. Restarting proxy logic...")
-                    fail_count = 0
+                print("⚠️ Warning: No response from Telegram. Possible network issue or rate limit.")
                 time.sleep(5)
                 continue
                 
-            fail_count = 0
             if updates.get("ok"):
                 result_list = updates.get("result", [])
                 if result_list:

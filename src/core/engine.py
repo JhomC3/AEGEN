@@ -34,8 +34,6 @@ def _initialize_llm():
             top_k=40,
             convert_system_message_to_human=True,
             google_api_key=settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None,
-            # Habilitamos búsqueda web nativa (Grounding) SOLO para Google
-            tools=[{"google_search_retrieval": {}}],  # type: ignore[arg-type]
         )
 
 llm = _initialize_llm()
