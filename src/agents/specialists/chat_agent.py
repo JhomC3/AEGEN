@@ -49,7 +49,7 @@ except ImportError:
 
 # ✅ ARCHITECTURE FIX: Use src.core.engine instead of hardcoded LLM
 # ✅ FUNCTIONALITY RESTORATION: Re-import MasterOrchestrator for delegation
-from src.agents.orchestrator.factory import master_orchestrator
+from src.agents.orchestrator import master_orchestrator
 from src.core.engine import create_observable_config, llm
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.profile_manager import user_profile_manager
