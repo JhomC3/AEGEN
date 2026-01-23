@@ -1,4 +1,3 @@
-
 import asyncio
 import json
 import logging
@@ -8,7 +7,9 @@ from pathlib import Path
 import aiofiles
 
 # Configuración de logging
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 # Rutas - Ajustadas para ser relativas al root del proyecto
@@ -34,11 +35,12 @@ BAD_PATTERNS = [
     r"500",
 ]
 
-async def sanitize_file(file_path: Path):
+
+async def sanitize_file(file_path: Path):  # noqa: C901
     """Limpia un archivo específico de patrones tóxicos."""
     try:
         logger.info(f"Escaneando: {file_path.name}")
-        async with aiofiles.open(file_path, "r", encoding="utf-8") as f:
+        async with aiofiles.open(file_path, encoding="utf-8") as f:
             content = await f.read()
 
         try:
@@ -48,25 +50,33 @@ async def sanitize_file(file_path: Path):
             return
 
         is_dirty = False
-        
+
         # Estrategia para summaries (diccionarios)
         if isinstance(data, dict):
             if "summary" in data:
                 original_summary = data["summary"]
                 cleaned_summary = original_summary
-                
+
                 # Reemplazo agresivo en el texto del resumen
                 for pattern in BAD_PATTERNS:
                     if re.search(pattern, cleaned_summary, re.IGNORECASE):
-                        logger.info(f"⚠️ Detectado patrón tóxico '{pattern}' en {file_path.name}")
-                        cleaned_summary = re.sub(pattern, "[...]", cleaned_summary, flags=re.IGNORECASE)
+                        logger.info(
+                            f"⚠️ Detectado patrón tóxico '{pattern}' en {file_path.name}"
+                        )
+                        cleaned_summary = re.sub(
+                            pattern, "[...]", cleaned_summary, flags=re.IGNORECASE
+                        )
                         is_dirty = True
-                
+
                 # Si detectamos mucha basura, reseteamos a un estado estoico limpio
                 if is_dirty or "error" in cleaned_summary.lower():
-                     logger.warning(f"☢️ Resumen altamente contaminado en {file_path.name}. RESETEANDO.")
-                     data["summary"] = "El usuario busca disciplina y control emocional en su trading. Estilo directo y estoico preferido."
-                     is_dirty = True
+                    logger.warning(
+                        f"☢️ Resumen altamente contaminado en {file_path.name}. RESETEANDO."
+                    )
+                    data["summary"] = (
+                        "El usuario busca disciplina y control emocional en su trading. Estilo directo y estoico preferido."
+                    )
+                    is_dirty = True
                 else:
                     data["summary"] = cleaned_summary
 
@@ -75,13 +85,17 @@ async def sanitize_file(file_path: Path):
                 new_buffer = []
                 for msg in data["buffer"]:
                     msg_content = msg.get("content", "")
-                    if any(re.search(p, msg_content, re.IGNORECASE) for p in BAD_PATTERNS):
-                        logger.info(f"🗑️ Eliminando mensaje tóxico del buffer en {file_path.name}")
+                    if any(
+                        re.search(p, msg_content, re.IGNORECASE) for p in BAD_PATTERNS
+                    ):
+                        logger.info(
+                            f"🗑️ Eliminando mensaje tóxico del buffer en {file_path.name}"
+                        )
                         is_dirty = True
-                        continue # Saltamos este mensaje
+                        continue  # Saltamos este mensaje
                     new_buffer.append(msg)
                 data["buffer"] = new_buffer
-        
+
         if is_dirty:
             # Escribir limpio
             async with aiofiles.open(file_path, "w", encoding="utf-8") as f:
@@ -92,6 +106,7 @@ async def sanitize_file(file_path: Path):
 
     except Exception as e:
         logger.error(f"Error procesando {file_path}: {e}")
+
 
 async def main():
     logger.info(f"Verificando directorio de almacenamiento: {STORAGE_DIR}")
@@ -104,12 +119,13 @@ async def main():
         if "profile" in file_path.name:
             continue
         tasks.append(sanitize_file(file_path))
-    
+
     if tasks:
         await asyncio.gather(*tasks)
         logger.info("🏁 Lobotomía completada.")
     else:
         logger.info("No se encontraron archivos de memoria para escanear.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())

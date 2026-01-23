@@ -5,17 +5,11 @@ Encapsula carga, validación y acceso a prompts siguiendo Single Responsibility.
 """
 
 import logging
-from pathlib import Path
 from typing import Any
 
-import yaml
+from src.core.prompts.loader import load_yaml_prompt
 
 logger = logging.getLogger(__name__)
-
-# Path to prompts directory following project conventions
-PROMPTS_DIR = (
-    Path(__file__).parent.parent.parent.parent.parent / "prompts" / "planner_agent"
-)
 
 
 class PlannerPromptManager:
@@ -24,30 +18,16 @@ class PlannerPromptManager:
     Single responsibility: gestión de prompts.
     """
 
-    def __init__(self, prompt_file: str = "v1.yaml"):
-        self._prompt_file = PROMPTS_DIR / prompt_file
+    def __init__(self, version: str = "v1"):
+        self._version = version
         self._prompts = self._load_prompts()
 
     def _load_prompts(self) -> dict[str, Any]:
-        """Load prompts from YAML file with error handling."""
-        try:
-            with open(self._prompt_file, encoding="utf-8") as f:
-                prompts = yaml.safe_load(f)
-
-            if not prompts:
-                raise ValueError("Prompt file is empty or invalid")
-
-            return prompts
-
-        except FileNotFoundError:
-            logger.error(f"Prompt file not found: {self._prompt_file}")
+        """Load prompts using centralized loader."""
+        prompts = load_yaml_prompt("planner_agent", self._version)
+        if not prompts:
             return self._get_fallback_prompts()
-        except yaml.YAMLError as e:
-            logger.error(f"YAML parsing error: {e}")
-            return self._get_fallback_prompts()
-        except Exception as e:
-            logger.error(f"Unexpected error loading prompts: {e}")
-            return self._get_fallback_prompts()
+        return prompts
 
     def _get_fallback_prompts(self) -> dict[str, Any]:
         """Fallback prompts si no se puede cargar el archivo."""

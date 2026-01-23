@@ -56,10 +56,10 @@ def is_conversational_only(text: str) -> bool:
     if any(re.match(p, text) for p in patterns):
         return True
 
-    # CRITICAL FIX: Eliminada la heurística de "mensaje corto (<4 palabras)" 
+    # CRITICAL FIX: Eliminada la heurística de "mensaje corto (<4 palabras)"
     # porque interceptaba señales emocionales breves ("Estoy mal", "Ayuda").
     # Ahora TODO lo que no sea un saludo explícito pasa por el Router LLM.
-    
+
     return False
 
 

@@ -45,7 +45,7 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 - Implementación de la gobernanza ejecutable (v9.0 del `PROJECT_OVERVIEW.md`)
 - Creación de los artefactos normativos: `rules.md`, `adr/`
 - Estructura de directorios para `adr`, `playbooks`, `prompts` y `tests` de evaluación
-- 
+-
 
 ### Fixed
 - Errores críticos de routing en production:

@@ -1,6 +1,5 @@
 # scripts/index_knowledge.py
 import asyncio
-import os
 import sys
 from pathlib import Path
 
@@ -8,6 +7,7 @@ from pathlib import Path
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from src.tools.google_file_search import file_search_tool
+
 
 async def index_directory(directory_path: str):
     """
@@ -19,7 +19,9 @@ async def index_directory(directory_path: str):
         return
 
     supported_extensions = [".pdf", ".txt", ".md"]
-    files_to_upload = [f for f in path.iterdir() if f.suffix.lower() in supported_extensions]
+    files_to_upload = [
+        f for f in path.iterdir() if f.suffix.lower() in supported_extensions
+    ]
 
     if not files_to_upload:
         print("No se encontraron archivos compatibles (.pdf, .txt, .md)")
@@ -40,6 +42,7 @@ async def index_directory(directory_path: str):
     files = await file_search_tool.list_files()
     for f in files:
         print(f"- {f.display_name} (URI: {f.uri}, Status: {f.state.name})")
+
 
 if __name__ == "__main__":
     knowledge_dir = sys.argv[1] if len(sys.argv) > 1 else "knowledge"

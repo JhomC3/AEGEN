@@ -25,7 +25,7 @@ class BaseAppSettings(BaseSettings):
 
     # LLM Provider Configuration
     LLM_PROVIDER: str = "google"  # Options: "google", "openrouter"
-    OPENROUTER_MODEL_NAME: str = "xiaomi/mimo-v2-flash:free"  
+    OPENROUTER_MODEL_NAME: str = "xiaomi/mimo-v2-flash:free"
     ALCHEMY_API_KEY: SecretStr | None = None
     ETHERSCAN_API_KEY: SecretStr | None = None
     TAVILY_API_KEY: SecretStr | None = None
@@ -56,6 +56,9 @@ class BaseAppSettings(BaseSettings):
     # Umbrales para el MigrationDecisionEngine
     CPU_THRESHOLD_PERCENT: float = 80.0
     MEMORY_THRESHOLD_PERCENT: float = 80.0
+
+    # Rutas de recursos
+    PROMPTS_DIR: str = "src/prompts"
 
     # --- Validación ---
     # Validar que claves esenciales existan en producción
