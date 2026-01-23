@@ -45,7 +45,7 @@ Este documento es de **lectura obligatoria** para cualquier contribuidor (humano
 
 3.  **Levantar los servicios:**
     ```bash
-    make up
+    make run-dev
     ```
 
 Una vez levantado, la documentación interactiva de la API estará disponible en [http://localhost:8000/docs](http://localhost:8000/docs).
