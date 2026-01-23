@@ -81,12 +81,12 @@ class TestPermissionsCachePerformance:
 
         # Assertions
         assert result1 == result2, "Cache should return consistent results"
-        assert first_query_time > second_query_time, (
-            "Cache hit should be faster than miss"
-        )
-        assert improvement > 80, (
-            f"Cache should provide >80% improvement, got {improvement:.1f}%"
-        )
+        assert (
+            first_query_time > second_query_time
+        ), "Cache hit should be faster than miss"
+        assert (
+            improvement > 80
+        ), f"Cache should provide >80% improvement, got {improvement:.1f}%"
 
     async def test_batch_cache_performance(self, mock_role_manager):
         """Test rendimiento en lote (múltiples cache hits)."""
@@ -115,12 +115,12 @@ class TestPermissionsCachePerformance:
 
         # Assertions
         assert all(results), "All batch queries should succeed"
-        assert batch_avg_time < 1.0, (
-            f"Average batch time should be <1ms, got {batch_avg_time:.2f}ms"
-        )
-        assert batch_total_time < 15, (
-            f"Total batch time should be <15ms, got {batch_total_time:.2f}ms"
-        )
+        assert (
+            batch_avg_time < 1.0
+        ), f"Average batch time should be <1ms, got {batch_avg_time:.2f}ms"
+        assert (
+            batch_total_time < 15
+        ), f"Total batch time should be <15ms, got {batch_total_time:.2f}ms"
 
     async def test_concurrent_users_performance(self, mock_role_manager):
         """Test rendimiento con múltiples usuarios concurrentes."""
@@ -150,7 +150,7 @@ class TestPermissionsCachePerformance:
 
         # Assertions
         assert len(results) == 5, "All users should complete successfully"
-        assert concurrent_total_time < 100, (
-            f"Concurrent execution too slow: {concurrent_total_time:.2f}ms"
-        )
+        assert (
+            concurrent_total_time < 100
+        ), f"Concurrent execution too slow: {concurrent_total_time:.2f}ms"
         assert per_user_time < 20, f"Per-user time too high: {per_user_time:.2f}ms"

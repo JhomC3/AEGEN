@@ -125,9 +125,9 @@ class TestRoutingPerformanceFix:
         elapsed_time = time.time() - start_time
 
         # Validate performance target
-        assert elapsed_time < 2.0, (
-            f"Function calling took {elapsed_time:.2f}s, target is <2s"
-        )
+        assert (
+            elapsed_time < 2.0
+        ), f"Function calling took {elapsed_time:.2f}s, target is <2s"
         assert result["intent"] == "chat"
         assert result["confidence"] == 0.8
 
@@ -207,9 +207,9 @@ class TestRoutingPerformanceFix:
         # Validate that no breaking changes occurred
         breaking_changes = []  # Should be empty
 
-        assert len(breaking_changes) == 0, (
-            f"Breaking changes detected: {breaking_changes}"
-        )
+        assert (
+            len(breaking_changes) == 0
+        ), f"Breaking changes detected: {breaking_changes}"
         assert len(preserved_interfaces) >= 4
 
         print("✅ Backward compatibility preserved")
@@ -232,15 +232,15 @@ class TestRoutingPerformanceFix:
 
         # Validate memory restoration
         active_features = sum(memory_features.values())
-        assert active_features == 5, (
-            f"Expected 5 memory features, got {active_features}"
-        )
+        assert (
+            active_features == 5
+        ), f"Expected 5 memory features, got {active_features}"
 
         # Simulate memory access time (should be fast)
         memory_access_time = 0.02  # 20ms for memory operations
-        assert memory_access_time < 0.1, (
-            f"Memory access too slow: {memory_access_time}s"
-        )
+        assert (
+            memory_access_time < 0.1
+        ), f"Memory access too slow: {memory_access_time}s"
 
         print("✅ Memory functionality restored:")
         for feature, active in memory_features.items():
@@ -263,9 +263,9 @@ class TestPerformanceRegression:
         # In real environment, this would scan code for structured output usage
         structured_output_usage = []  # Should be empty in critical path
 
-        assert len(structured_output_usage) == 0, (
-            f"Structured output still used: {structured_output_usage}"
-        )
+        assert (
+            len(structured_output_usage) == 0
+        ), f"Structured output still used: {structured_output_usage}"
 
         print("✅ Structured output eliminated from critical path")
 

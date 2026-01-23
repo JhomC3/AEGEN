@@ -19,9 +19,9 @@ class TestADR009RoutingPerformance:
         routing_tools_path = "src/agents/orchestrator/routing/routing_tools.py"
 
         # Check file exists
-        assert os.path.exists(routing_tools_path), (
-            f"Routing tools file missing: {routing_tools_path}"
-        )
+        assert os.path.exists(
+            routing_tools_path
+        ), f"Routing tools file missing: {routing_tools_path}"
 
         with open(routing_tools_path, encoding="utf-8") as f:
             content = f.read()
@@ -34,9 +34,9 @@ class TestADR009RoutingPerformance:
             if item not in content:
                 missing_content.append(item)
 
-        assert len(missing_content) == 0, (
-            f"Missing function calling content: {missing_content}"
-        )
+        assert (
+            len(missing_content) == 0
+        ), f"Missing function calling content: {missing_content}"
         print("✅ Function calling tools implementation validated")
 
     def test_routing_analyzer_migration(self):
@@ -60,9 +60,9 @@ class TestADR009RoutingPerformance:
                     found_indicators.append(indicator)
 
             # At least some function calling patterns should be present
-            assert len(found_indicators) >= 1, (
-                "No function calling patterns found in routing analyzer"
-            )
+            assert (
+                len(found_indicators) >= 1
+            ), "No function calling patterns found in routing analyzer"
             print(f"✅ Routing analyzer function calling patterns: {found_indicators}")
         else:
             pytest.skip("Routing analyzer file not found - may have been refactored")
@@ -84,9 +84,9 @@ class TestADR009RoutingPerformance:
             if item not in content:
                 missing_adr_content.append(item)
 
-        assert len(missing_adr_content) <= 1, (
-            f"ADR-0009 missing content: {missing_adr_content}"
-        )
+        assert (
+            len(missing_adr_content) <= 1
+        ), f"ADR-0009 missing content: {missing_adr_content}"
         print("✅ ADR-0009 documentation validated")
 
     def test_performance_improvement_calculation(self):
@@ -102,11 +102,11 @@ class TestADR009RoutingPerformance:
         print(f"   Improvement factor: {improvement_factor:.1f}x")
 
         # Validate significant improvement
-        assert improvement_factor >= 15, (
-            f"Performance improvement should be 15x+, got {improvement_factor:.1f}x"
-        )
-        assert new_performance <= 2.0, (
-            f"New performance should be ≤2s, got {new_performance}s"
-        )
+        assert (
+            improvement_factor >= 15
+        ), f"Performance improvement should be 15x+, got {improvement_factor:.1f}x"
+        assert (
+            new_performance <= 2.0
+        ), f"New performance should be ≤2s, got {new_performance}s"
 
         print("✅ Performance improvement targets validated")
