@@ -23,7 +23,7 @@ Con el crecimiento del sistema (multi-tenant ChromaDB, delegation inteligente, r
 
 ### Business Case
 - **Optimización Performance:** Identificar bottlenecks en tiempo real
-- **Cost Control:** Track uso LLM y optimizar gastos 
+- **Cost Control:** Track uso LLM y optimizar gastos
 - **Debugging:** Correlation IDs para troubleshooting rápido
 - **SLA Monitoring:** Garantizar <2s routing, <3s delegation
 - **Capacity Planning:** Data para escalar proactivamente
@@ -38,7 +38,7 @@ Con el crecimiento del sistema (multi-tenant ChromaDB, delegation inteligente, r
 # src/core/llm_tracker.py
 class LLMTracker:
     """Central LLM call tracking con métricas tiempo real."""
-    
+
     async def track_call(
         self,
         correlation_id: str,
@@ -54,7 +54,7 @@ class LLMTracker:
     ) -> LLMCallMetrics:
         """Track single LLM call with full context."""
         pass
-    
+
     async def get_request_metrics(self, correlation_id: str) -> RequestMetrics:
         """Get aggregated metrics for entire request."""
         pass
@@ -75,19 +75,19 @@ class LLMTracker:
 async def tracing_middleware(request: Request, call_next):
     """Inject correlation_id y track request metrics."""
     correlation_id = str(uuid.uuid4())
-    
+
     # Inject en contexto
     contextvars_correlation_id.set(correlation_id)
-    
+
     # Track request start
     start_time = time.time()
-    
+
     response = await call_next(request)
-    
+
     # Track final metrics
     total_latency = (time.time() - start_time) * 1000
     await llm_tracker.finalize_request(correlation_id, total_latency)
-    
+
     return response
 ```
 
@@ -124,7 +124,7 @@ performance_target_violations_total{target_type}
 ```python
 # Performance Targets (SLA)
 ROUTING_TARGET_MS = 2000      # <2s routing analysis
-DELEGATION_TARGET_MS = 3000   # <3s delegated response  
+DELEGATION_TARGET_MS = 3000   # <3s delegated response
 TOTAL_REQUEST_TARGET_MS = 5000 # <5s end-to-end
 
 # Auto-alerting cuando se exceden
@@ -168,7 +168,7 @@ if latency > target:
 
 ### **Negativas**
 - ❌ **Implementation time:** ~4-6h development
-- ❌ **Storage overhead:** Métricas y logs adicionales  
+- ❌ **Storage overhead:** Métricas y logs adicionales
 - ❌ **Complexity:** Middleware y tracking logic
 - ❌ **Dependencies:** Prometheus/Grafana setup
 
@@ -275,9 +275,9 @@ assert sla_compliance > 0.95  # 95% target
 
 ---
 
-**Decision Date:** 2025-09-04  
-**Status:** PROPUESTO - Ready for implementation  
-**Priority:** 🔴 HIGH - Critical for production readiness  
-**Estimated Time:** 6 horas total (2h + 2h + 1h + 1h)  
-**Risk Level:** Bajo (non-breaking, feature-flagged)  
+**Decision Date:** 2025-09-04
+**Status:** PROPUESTO - Ready for implementation
+**Priority:** 🔴 HIGH - Critical for production readiness
+**Estimated Time:** 6 horas total (2h + 2h + 1h + 1h)
+**Risk Level:** Bajo (non-breaking, feature-flagged)
 **Next Review:** Post-Phase 1 (2h) - Validate core tracking before proceeding

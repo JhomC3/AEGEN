@@ -419,6 +419,7 @@ class TelegramMessage(BaseModel):
     voice: TelegramVoice | None = None
     text: str | None = None
     photo: list[TelegramPhoto] | None = None
+    caption: str | None = None
 
 
 class TelegramUpdate(BaseModel):

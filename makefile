@@ -44,7 +44,7 @@ verify: ## Validación completa: linting + tests + architecture simple
 	@echo "🎯 AEGEN Verification Suite..."
 	@echo "1/3 Linting..."
 	@$(MAKE) lint
-	@echo "2/3 Testing..."  
+	@echo "2/3 Testing..."
 	@$(MAKE) test
 	@echo "3/3 Architecture..."
 	@$(PYTHON) scripts/simple_check.py
@@ -117,7 +117,7 @@ status: ## Estado completo del proyecto - 3-2-1 model
 	@echo ""
 	@echo "📚 Documentation (3 files only):"
 	@echo "   ✅ PROJECT_OVERVIEW.md - Vision & roadmap"
-	@echo "   ✅ DEVELOPMENT.md - Technical guide"  
+	@echo "   ✅ DEVELOPMENT.md - Technical guide"
 	@echo "   ✅ Makefile - Commands"
 	@echo ""
 	@echo "🏗️ Architecture Status:"
@@ -135,7 +135,7 @@ help-dev: ## Muestra comandos de desarrollo esenciales
 	@echo "📖 Read: PROJECT_OVERVIEW.md for vision/roadmap"
 	@echo ""
 	@echo "⚡ Development:"
-	@echo "   make verify     - Full validation (lint+test+arch)"  
+	@echo "   make verify     - Full validation (lint+test+arch)"
 	@echo "   make dev-check  - Quick architecture check"
 	@echo "   make format     - Auto-fix code style"
 	@echo "   make dev        - Start development server"

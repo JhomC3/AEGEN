@@ -22,10 +22,10 @@ make verify       # Validar antes de commit
 **Copiar y pegar en TODO PR/commit:**
 
 ```
-□ Archivo < 100 líneas, funciones < 20 líneas  
+□ Archivo < 100 líneas, funciones < 20 líneas
 □ Una responsabilidad por archivo/clase
 □ Dependencies inyectadas, no construidas
-□ Business logic separado de infrastructure  
+□ Business logic separado de infrastructure
 □ Tests unitarios incluidos
 □ LLM calls trackeadas con correlation_id
 □ Performance targets validados (<2s routing)
@@ -34,7 +34,7 @@ make verify       # Validar antes de commit
 
 **🚫 RED FLAGS - STOP si ves:**
 - Clases con múltiples responsabilidades
-- Métodos > 20 líneas  
+- Métodos > 20 líneas
 - Multiple if/else complejos
 - Mixing business logic con infrastructure
 - LLM calls sin tracking/observabilidad
@@ -58,7 +58,7 @@ make verify       # Validar antes de commit
 
 ### Arquitectura
 - **Tools sin estado** - no manejan lifecycle de archivos
-- **Docstrings públicos** formato Numpy/Google + `LLM-hints` 
+- **Docstrings públicos** formato Numpy/Google + `LLM-hints`
 - **Single Responsibility** máximo 7 métodos/clase
 - **Clean Architecture** business logic vs infrastructure
 - **LLM Tracing** - todo LLM call debe pasar por tracker central
@@ -79,10 +79,10 @@ make verify       # Validar antes de commit
 ```bash
 # Desarrollo diario
 make dev          # Docker + hot-reload
-make verify       # Linting + tests + architecture  
+make verify       # Linting + tests + architecture
 make format       # Auto-fix código
 
-# Estado proyecto  
+# Estado proyecto
 make status       # Git + testing + métricas
 make sync-docs    # Actualizar documentación
 
@@ -100,7 +100,7 @@ make doctor       # Diagnóstico completo
 1. **Pre-código (OBLIGATORIO)**
    ```bash
    # Revisar checklist arriba ↑
-   # Planificar responsabilidades  
+   # Planificar responsabilidades
    # Definir interfaces claras
    ```
 
@@ -130,7 +130,7 @@ feat(scope): descripción imperativa
 # Opcional
 [BREAKING]
 
-• ¿Por qué?: user story o bug  
+• ¿Por qué?: user story o bug
 • ¿Qué?: solución técnica
 • ¿Cómo?: archivos clave
 ```
@@ -143,7 +143,7 @@ feat(scope): descripción imperativa
 - `CanonicalEventV1` como lingua franca
 - Eventos inmutables y serializables
 
-### Registry Pattern  
+### Registry Pattern
 - Autodescubrimiento de especialistas
 - No hard-coding de dependencies
 - **IMPORTANTE:** Todo especialista debe ser una clase que herede de `SpecialistInterface` y debe ser registrado en el `specialist_registry` para ser descubierto por el sistema.
@@ -168,7 +168,7 @@ feat(scope): descripción imperativa
 
 ### Coverage Mínimo
 - **Unit:** 85%
-- **Integration:** 60% 
+- **Integration:** 60%
 - **E2E:** Casos críticos
 
 ---
@@ -180,7 +180,7 @@ feat(scope): descripción imperativa
 make lint && make test
 ```
 
-### Fase 3B (Sistema Conversacional) 
+### Fase 3B (Sistema Conversacional)
 ```bash
 make verify  # Incluye integration tests
 ```
@@ -212,7 +212,7 @@ make format  # Auto-fix la mayoría
 ```
 
 ### Tests fallan
-```bash  
+```bash
 # Correr específico
 pytest tests/unit/test_specific.py -v
 ```
@@ -248,7 +248,7 @@ make run-dev     # Fresh start
 | File > 100 lines | Dividir responsabilidades en archivos separados |
 | Function > 20 lines | Extraer submétodos privados |
 | Sync I/O detected | Usar `aiohttp`, `aiofiles`, `asyncio.to_thread` |
-| Missing tests | Añadir tests unitarios para nueva funcionalidad |  
+| Missing tests | Añadir tests unitarios para nueva funcionalidad |
 | No docstring | Agregar docstring con formato Google + LLM-hints |
 
 ---

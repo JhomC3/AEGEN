@@ -120,7 +120,9 @@ class LongTermMemoryManager:
         try:
             async with aiofiles.open(buffer_path, mode="w", encoding="utf-8") as f:
                 await f.write(json.dumps(raw_buffer, ensure_ascii=False))
-            logger.info(f"💾 Memoria guardada en {buffer_path} ({len(raw_buffer)} msgs)")
+            logger.info(
+                f"💾 Memoria guardada en {buffer_path} ({len(raw_buffer)} msgs)"
+            )
         except Exception as e:
             logger.error(f"❌ Error escribiendo memoria en {buffer_path}: {e}")
 
@@ -167,15 +169,18 @@ class LongTermMemoryManager:
             try:
                 # Creamos un archivo temporal con el resumen para subirlo
                 user_memory_file = STORAGE_DIR / f"{chat_id}_vault.txt"
-                async with aiofiles.open(user_memory_file, mode="w", encoding="utf-8") as f:
-                    await f.write(f"Historial consolidado del usuario {chat_id}:\n\n{new_summary}")
-                
+                async with aiofiles.open(
+                    user_memory_file, mode="w", encoding="utf-8"
+                ) as f:
+                    await f.write(
+                        f"Historial consolidado del usuario {chat_id}:\n\n{new_summary}"
+                    )
+
                 # Subir/Actualizar en la Google File API
-                # Nota: En una implementación de producción, aquí buscaríamos si ya existe 
+                # Nota: En una implementación de producción, aquí buscaríamos si ya existe
                 # para borrar el anterior o simplemente confiar en el naming.
                 await file_search_tool.upload_file(
-                    str(user_memory_file), 
-                    display_name=f"User_Vault_{chat_id}"
+                    str(user_memory_file), display_name=f"User_Vault_{chat_id}"
                 )
                 logger.info(f"Bóveda en la nube actualizada para {chat_id}")
             except Exception as fe:
@@ -187,7 +192,6 @@ class LongTermMemoryManager:
             logger.error(
                 f"Error consolidando memoria para {chat_id}: {e}", exc_info=True
             )
-
 
 
 # Instancia singleton

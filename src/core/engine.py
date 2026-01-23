@@ -14,14 +14,19 @@ logger = logging.getLogger(__name__)
 
 # --- INICIO DE LA SOLUCIÓN CON OBSERVABILIDAD ---
 
+
 # Crear instancia base del LLM con lógica de selección de proveedor
 def _initialize_llm():
     if settings.LLM_PROVIDER == "openrouter":
-        logger.info(f"Using OpenRouter Provider with model: {settings.OPENROUTER_MODEL_NAME}")
+        logger.info(
+            f"Using OpenRouter Provider with model: {settings.OPENROUTER_MODEL_NAME}"
+        )
         return ChatOpenAI(
             model=settings.OPENROUTER_MODEL_NAME,
             temperature=0.7,
-            openai_api_key=settings.OPENROUTER_API_KEY.get_secret_value() if settings.OPENROUTER_API_KEY else "dummy-key",
+            openai_api_key=settings.OPENROUTER_API_KEY.get_secret_value()
+            if settings.OPENROUTER_API_KEY
+            else "dummy-key",
             openai_api_base="https://openrouter.ai/api/v1",
             # OpenRouter specific headers can be added here if needed
         )
@@ -33,8 +38,11 @@ def _initialize_llm():
             top_p=0.9,
             top_k=40,
             convert_system_message_to_human=True,
-            google_api_key=settings.GOOGLE_API_KEY.get_secret_value() if settings.GOOGLE_API_KEY else None,
+            google_api_key=settings.GOOGLE_API_KEY.get_secret_value()
+            if settings.GOOGLE_API_KEY
+            else None,
         )
+
 
 llm = _initialize_llm()
 

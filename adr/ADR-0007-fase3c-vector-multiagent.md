@@ -108,7 +108,7 @@ SessionMemory = {
 # ChromaDB: Memoria contexto largo plazo (persistente)
 VectorMemory = {
     "conversation_embeddings": [...],
-    "document_embeddings": [...], 
+    "document_embeddings": [...],
     "user_preferences": {...}
 }
 ```
@@ -125,7 +125,7 @@ VectorMemory = {
 # NO AgentComposer complejo aún - solo sequential execution
 async def execute_file_workflow(file_data, user_id):
     context = AgentContext(user_id=user_id, ...)
-    
+
     # Simple sequential execution
     parsed_file = await FileHandlerAgent().execute(file_data, context)
     analysis = await NLPParserAgent().execute(parsed_file, context)
@@ -136,20 +136,20 @@ async def execute_file_workflow(file_data, user_id):
 ```python
 class SimpleComposer:
     """Configuration-driven composition, no dynamic orchestration yet."""
-    
+
     WORKFLOWS = {
         "file_analysis": [FileHandlerAgent, NLPParserAgent],
         "chat": [NLPParserAgent],  # Start simple
         # Add more as needed, don't over-engineer
     }
-    
+
     def compose_for_task(self, task_type: str) -> List[BaseModularAgent]
     async def execute_workflow(self, agents: List[BaseModularAgent], input_data, context)
 ```
 
 **Justificación Revisada:**
 - ✅ **Start Without Composition**: Sequential execution validates agents independently
-- ✅ **Configuration-Driven**: Simple workflows before dynamic orchestration  
+- ✅ **Configuration-Driven**: Simple workflows before dynamic orchestration
 - ✅ **Prove Need**: Only add composition complexity when simple approach insufficient
 - ✅ **Incremental Complexity**: Build orchestration features when actual use cases require them
 
@@ -159,7 +159,7 @@ class SimpleComposer:
 - Crear InventoryAgent monolítico específico
 - **Problema**: No escalable, difícil de testear, no reutilizable
 
-### **Alternativa B: PostgreSQL + pgvector (RECHAZADA)**  
+### **Alternativa B: PostgreSQL + pgvector (RECHAZADA)**
 - Cambiar ChromaDB por PostgreSQL con extensión vector
 - **Problema**: Introduce nueva dependencia, ChromaDB ya funciona
 
@@ -171,12 +171,12 @@ class SimpleComposer:
 
 ### **Positivas**
 - ✅ **Privacidad**: Usuarios no pueden acceder datos de otros
-- ✅ **Escalabilidad**: Collections independientes escalan linealmente  
+- ✅ **Escalabilidad**: Collections independientes escalan linealmente
 - ✅ **Modularity**: Agentes reutilizables para múltiples casos de uso
 - ✅ **Performance**: Búsquedas vectoriales en datasets user-specific menores
 - ✅ **Testing**: Componentes modulares más fáciles de testear
 
-### **Negativas**  
+### **Negativas**
 - ❌ **Complejidad**: Más componentes para mantener
 - ❌ **Resource Usage**: Más collections = más memoria ChromaDB
 - ❌ **Migration**: Existing data en collection única debe migrarse
@@ -196,7 +196,7 @@ class SimpleComposer:
 4. Migration script para data existente
 5. Tests unitarios exhaustivos para foundation
 
-### **Fase 2: Core Agents Implementation (Semanas 4-6)**  
+### **Fase 2: Core Agents Implementation (Semanas 4-6)**
 **Objetivo**: 2 agentes funcionando perfectamente, no 4 half-working
 1. Implementar `FileHandlerAgent` completo con validación + parsing
 2. Implementar `NLPParserAgent` con intent recognition básico
@@ -235,7 +235,7 @@ assert search_time < 200_ms  # Relaxed initial target
 # Criterio 4: Individual agents funcionando
 file_result = await FileHandlerAgent().execute(file_data, context)
 assert file_result.success == True
-nlp_result = await NLPParserAgent().execute(file_result.data, context) 
+nlp_result = await NLPParserAgent().execute(file_result.data, context)
 assert nlp_result.intent is not None
 
 # Criterio 5: Sequential workflow
@@ -246,7 +246,7 @@ assert result contains expected analysis
 #### **Fase 3 - Composition Should-Haves**
 ```bash
 # Criterio 6: Simple composition (only if Phase 2 successful)
-workflow = composer.compose_for_task("file_analysis") 
+workflow = composer.compose_for_task("file_analysis")
 assert FileHandlerAgent in workflow
 assert NLPParserAgent in workflow
 
@@ -288,5 +288,5 @@ assert len(context) > 0  # Context retrieval working
 
 **Decision Date**: 2026-01-22 (Revisado)
 **Status**: ACEPTADO - En progreso (Fase 1: Foundation)
-**Revisors**: Tech Lead, AI Consensus Models (gemini-2.5-pro, gemini-2.0-flash-lite, gemini-2.5-flash)  
+**Revisors**: Tech Lead, AI Consensus Models (gemini-2.5-pro, gemini-2.0-flash-lite, gemini-2.5-flash)
 **Next Review**: End of Fase 1 (Week 3) - Validate foundation before proceeding

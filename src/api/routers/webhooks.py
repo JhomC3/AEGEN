@@ -146,7 +146,7 @@ async def telegram_webhook(
         )
 
     # Determinar el tipo de evento y el contenido
-    event_type: Literal["text", "audio", "document", "unknown"] = "unknown"
+    event_type: Literal["text", "audio", "document", "image", "unknown"] = "unknown"
     content: str | None = None
     file_id: str | None = None
 

@@ -12,10 +12,10 @@
 - **UX Degradada:** Sistema se siente fragmentado, no conversacional natural
 
 ### Situación Actual (Post Task #20)
-✅ **Sistema Observabilidad:** LangSmith + Prometheus operacional  
-✅ **Performance:** ~2.3s response time estable  
-✅ **Infraestructura:** MessageQueueManager + Redis + BackgroundTasks disponibles  
-✅ **Correlation IDs:** Trazabilidad end-to-end implementada  
+✅ **Sistema Observabilidad:** LangSmith + Prometheus operacional
+✅ **Performance:** ~2.3s response time estable
+✅ **Infraestructura:** MessageQueueManager + Redis + BackgroundTasks disponibles
+✅ **Correlation IDs:** Trazabilidad end-to-end implementada
 
 ### Oportunidad de Optimización
 **Concepto:** Sistema de agrupación inteligente con pausa dinámica:
@@ -48,7 +48,7 @@ BURST_KEYWORDS = ["urgente", "emergencia", "ayuda"]  # Bypass inmediato
 
 **FASE 1 - MVP Pragmático (2-3 semanas):**
 - Fixed-delay debounce (1.5s timeout)
-- Redis-based message buffering 
+- Redis-based message buffering
 - Basic error handling con fallback individual
 - Métricas performance + user experience
 
@@ -65,7 +65,7 @@ BURST_KEYWORDS = ["urgente", "emergencia", "ayuda"]  # Bypass inmediato
 ```python
 # Redis Keys Structure
 user:{user_id}:message_buffer    # Lista mensajes pendientes
-user:{user_id}:bundle_timer      # Timestamp próximo procesamiento  
+user:{user_id}:bundle_timer      # Timestamp próximo procesamiento
 user:{user_id}:bundle_metadata   # Metadata agrupación (correlation_ids, etc.)
 
 # TTL Configuration
@@ -86,7 +86,7 @@ TIMER_TTL = 8                    # Segundos máximos timer activo
 - **Problema:** UX complejo, no funciona para todos los clients (Telegram), pérdida mensajes
 
 ### **Alternativa B: Strict FIFO Only (RECHAZADA)**
-- Solo resolver orden, no agrupar mensajes  
+- Solo resolver orden, no agrupar mensajes
 - **Problema:** Pierde beneficio eficiencia + UX coherencia, no reduce llamadas LLM/DB
 
 ### **Alternativa C: In-Memory Buffering (RECHAZADA)**
@@ -122,7 +122,7 @@ TIMER_TTL = 8                    # Segundos máximos timer activo
 
 **Semana 1:**
 1. **Extend MessageQueueManager** con Redis buffer temporal
-2. **Implement debounce timer** con `asyncio` cancellable tasks  
+2. **Implement debounce timer** con `asyncio` cancellable tasks
 3. **Create Redis buffer operations:** enqueue, dequeue, cleanup
 4. **Basic timer cancellation** cuando nuevos mensajes llegan
 
@@ -148,7 +148,7 @@ TIMER_TTL = 8                    # Segundos máximos timer activo
 4. **Advanced error handling** con dead letter queue
 
 **Semana 6:**
-1. **A/B testing** timeout optimal per user segment  
+1. **A/B testing** timeout optimal per user segment
 2. **Performance optimization** basado en real usage data
 3. **User experience survey** y qualitative feedback
 4. **Documentation completa** + runbooks operational
@@ -159,7 +159,7 @@ TIMER_TTL = 8                    # Segundos máximos timer activo
 ```bash
 # Criterio 1: Message bundling funcional
 user_sends_burst = ["Hola", "¿Cómo estás?", "Me puedes ayudar"]
-response = await system.process_burst(user_sends_burst)  
+response = await system.process_burst(user_sends_burst)
 assert len(response.messages) == 1  # Single coherent response
 assert "Hola" in response.content and "estoy bien" in response.content
 
@@ -172,7 +172,7 @@ simulate_redis_failure()
 response = await system.process_message("test message")
 assert response.success == True  # Falls back to individual processing
 
-# Criterio 4: Resource efficiency  
+# Criterio 4: Resource efficiency
 llm_calls_before = count_llm_calls()
 process_message_burst(3_messages)
 llm_calls_after = count_llm_calls()
@@ -202,7 +202,7 @@ assert "John" in response.content  # Context preserved across batch
 
 ### **Métricas de Éxito Definidas**
 - [ ] **LLM Call Reduction:** Target >40% menos API calls (Fase 1 deliverable)
-- [ ] **User Experience:** Survey satisfaction antes/después (Fase 1 deliverable)  
+- [ ] **User Experience:** Survey satisfaction antes/después (Fase 1 deliverable)
 - [ ] **Response Time P95:** Mantener <3s total incluido delay (Fase 1 deliverable)
 - [ ] **Error Rate:** <5% batch processing failures (Fase 1 deliverable)
 
@@ -217,13 +217,13 @@ assert "John" in response.content  # Context preserved across batch
 **Si implementación falla o métricas no se cumplen:**
 
 1. **Immediate (5 min):** Feature flag disable Message Bundling
-2. **Short-term (30 min):** Revert webhook processing a individual messages  
+2. **Short-term (30 min):** Revert webhook processing a individual messages
 3. **Long-term (1 week):** Analyze failure data + re-approach con lessons learned
 4. **Net Positive:** Keep infrastructure improvements (Redis optimizations, monitoring)
 
 **Rollback Triggers:**
 - Error rate >10% during processing
-- User complaints >5% beta group  
+- User complaints >5% beta group
 - Performance degradation >20% baseline
 - Redis resource exhaustion
 
@@ -239,9 +239,9 @@ assert "John" in response.content  # Context preserved across batch
 
 ---
 
-**Decision Date**: 2025-01-08  
-**Status**: ACEPTADO - Consenso AI favorable, implementación Fase 1 autorizada  
-**Priority**: 🔴 HIGH - Soluciona problema crítico UX + optimización significativa  
-**Dependencies**: Task #20 (Observabilidad LLM - COMPLETADO)  
-**Next Review**: End of Fase 1 (3 semanas) - Validar MVP antes Fase 2  
+**Decision Date**: 2025-01-08
+**Status**: ACEPTADO - Consenso AI favorable, implementación Fase 1 autorizada
+**Priority**: 🔴 HIGH - Soluciona problema crítico UX + optimización significativa
+**Dependencies**: Task #20 (Observabilidad LLM - COMPLETADO)
+**Next Review**: End of Fase 1 (3 semanas) - Validar MVP antes Fase 2
 **Task ID**: #23 en master task list

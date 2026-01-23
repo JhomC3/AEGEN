@@ -59,6 +59,14 @@ async def lifespan(app: FastAPI):
     logger.info("Lifespan: Initializing global collections...")
     await initialize_global_collections()
 
+    # Validar prompts críticos
+    from src.core.prompts.loader import validate_required_prompts
+
+    validate_required_prompts([
+        "cbt_therapeutic_response.txt",
+        "planner_agent/v1.yaml",
+    ])
+
     logger.info("Lifespan: Application startup complete.")
     yield
     logger.info(f"Lifespan: Shutting down {settings.APP_NAME}...")
@@ -86,13 +94,17 @@ app = FastAPI(
 # --- Middleware ---
 app.add_middleware(CorrelationIdMiddleware)
 
+
 @app.middleware("http")
 async def log_all_requests(request: Request, call_next):
     """Middleware para ver TODAS las peticiones que llegan al servidor."""
     logger.info(f">>> REQUEST INCOMING: {request.method} {request.url.path}")
     response = await call_next(request)
-    logger.info(f"<<< RESPONSE OUTGOING: {request.method} {request.url.path} - Status: {response.status_code}")
+    logger.info(
+        f"<<< RESPONSE OUTGOING: {request.method} {request.url.path} - Status: {response.status_code}"
+    )
     return response
+
 
 if settings.ALLOWED_HOSTS == ["*"]:
     logger.warning(

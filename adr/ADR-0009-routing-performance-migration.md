@@ -19,7 +19,7 @@ self._chain = routing_prompt | llm.with_structured_output(RoutingDecision)
 
 **Problema**: Gemini + structured output = prohibitivamente lento debido a:
 - Pydantic model parsing overhead en runtime
-- Complex validation durante inference  
+- Complex validation durante inference
 - Multiple attempts para perfect structure match
 
 ### Usuario Impact
@@ -37,7 +37,7 @@ self._chain = routing_prompt | llm.with_structured_output(RoutingDecision)
 # ANTES (LENTO - 36+ segundos)
 self._chain = routing_prompt | llm.with_structured_output(RoutingDecision)
 
-# DESPUÉS (RÁPIDO - <2 segundos)  
+# DESPUÉS (RÁPIDO - <2 segundos)
 routing_tools = [routing_decision_tool]
 self._chain = routing_prompt | llm.bind_tools(routing_tools)
 ```
@@ -103,7 +103,7 @@ async def route_user_message(
 - Cache Pydantic parsing results
 - **Problema**: No resuelve latencia fundamental, añade complejidad
 
-### **Alternativa B: Switch to Claude/GPT (RECHAZADA)**  
+### **Alternativa B: Switch to Claude/GPT (RECHAZADA)**
 - Cambiar de Gemini a otro LLM para structured output
 - **Problema**: Major architectural change, Gemini es requirement del proyecto
 
@@ -116,18 +116,18 @@ async def route_user_message(
 ### **Positivas**
 - ✅ **Performance Recovery**: 36+s → <2s response time (18x improvement)
 - ✅ **User Experience**: Sistema responsive, mensajes en orden
-- ✅ **Memory Restoration**: Chat conversacional funcional  
+- ✅ **Memory Restoration**: Chat conversacional funcional
 - ✅ **Backward Compatible**: Zero breaking changes a specialists
 - ✅ **Architecture Preserved**: Mantiene modular design philosophy
 
-### **Negativas**  
+### **Negativas**
 - ❌ **Implementation Time**: 8h development + testing required
 - ❌ **Function Calling Complexity**: Slightly more complex tool definition
 - ❌ **Migration Risk**: Temporary functionality during transition
 
 ### **Riesgos Mitigados**
 - 🔶 **Routing Accuracy**: Mantiene exact same decision logic
-- 🔶 **Integration Issues**: Preserved interfaces eliminate breaking changes  
+- 🔶 **Integration Issues**: Preserved interfaces eliminate breaking changes
 - 🔶 **Performance Regression**: Function calling is proven fast approach
 
 ## Plan de Implementación
@@ -139,7 +139,7 @@ async def route_user_message(
 3. Maintain exact RoutingDecision output format
 4. Basic integration testing
 
-### **Phase 2: ChatAgent Restoration (4h)**  
+### **Phase 2: ChatAgent Restoration (4h)**
 **Objetivo**: Restore conversational memory functionality
 1. Analyze ChatAgent regression (312→144 lines)
 2. Restore conversation history management
@@ -157,7 +157,7 @@ async def route_user_message(
 
 #### **Phase 1 - Performance Must-Haves**
 ```bash
-# Criterio 1: Latencia restaurada  
+# Criterio 1: Latencia restaurada
 response_time = await router.analyze("hello", state, cache)
 assert response_time < 2.0  # vs 36+s current
 
@@ -170,14 +170,14 @@ assert decision.intent == IntentType.FILE_ANALYSIS
 ```bash
 # Criterio 3: Memoria conversacional
 chat_response = await chat_agent.process("remember my name is John")
-follow_up = await chat_agent.process("what's my name?") 
+follow_up = await chat_agent.process("what's my name?")
 assert "John" in follow_up
 
 # Criterio 4: Message ordering
 assert messages_arrive_in_fifo_order == True
 ```
 
-#### **Phase 3 - System Health Must-Haves**  
+#### **Phase 3 - System Health Must-Haves**
 ```bash
 # Criterio 5: All specialists functional
 for specialist in all_specialists:
@@ -192,7 +192,7 @@ assert average_response_time < 2.0
 ## Validación
 
 - [x] **Crisis Assessment**: Performance regression confirmed (36+s latency)
-- [x] **Root Cause Analysis**: `llm.with_structured_output()` identified as bottleneck  
+- [x] **Root Cause Analysis**: `llm.with_structured_output()` identified as bottleneck
 - [x] **Architecture Review**: Function calling preserves modular design
 - [ ] **Performance Testing**: <2s latency validation (Phase 1 deliverable)
 - [ ] **Integration Testing**: All specialists functional (Phase 3 deliverable)
@@ -200,7 +200,7 @@ assert average_response_time < 2.0
 ## Rollback Plan
 
 **Si migration falla**:
-1. **Immediate**: Revert `routing_analyzer.py` to structured output 
+1. **Immediate**: Revert `routing_analyzer.py` to structured output
 2. **Short-term**: Add structured output caching as temporary fix
 3. **Long-term**: Research Gemini structured output optimization
 4. **Net Positive**: Keep improved ChatAgent even if routing reverts
@@ -210,7 +210,7 @@ assert average_response_time < 2.0
 ## Performance Expectations
 
 | Metric | Current (Broken) | Target (Fixed) | Improvement |
-|--------|------------------|----------------|-------------|  
+|--------|------------------|----------------|-------------|
 | Response Time | 36+ seconds | <2 seconds | 18x faster |
 | Memory Usage | High parsing overhead | Normal | 60% reduction |
 | Chat Memory | Missing | Fully restored | Complete functionality |
@@ -219,9 +219,9 @@ assert average_response_time < 2.0
 
 ---
 
-**Decision Date**: 2025-09-03  
-**Status**: ACEPTADO - Implementación inmediata crítica  
-**Severity**: 🔴 CRÍTICO - Production system severely degraded  
-**Estimated Time**: 8 horas total (2h + 4h + 2h)  
-**Risk Level**: Bajo (backward compatible interfaces)  
+**Decision Date**: 2025-09-03
+**Status**: ACEPTADO - Implementación inmediata crítica
+**Severity**: 🔴 CRÍTICO - Production system severely degraded
+**Estimated Time**: 8 horas total (2h + 4h + 2h)
+**Risk Level**: Bajo (backward compatible interfaces)
 **Next Review**: Post-Phase 1 (2h) - Validate performance fix before proceeding
