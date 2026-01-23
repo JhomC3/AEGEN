@@ -162,7 +162,7 @@ feat(scope): descripción imperativa
 
 ### Por Tipo
 - **Unit:** Lógica pura + mocks de I/O
-- **Integration:** Componentes + Redis/ChromaDB  
+- **Integration:** Componentes + Redis/VectorStorage (Stub)
 - **E2E:** Flujo completo Telegram → respuesta
 - **Snapshot:** Prompts + respuestas LLM
 
@@ -180,12 +180,12 @@ feat(scope): descripción imperativa
 make lint && make test
 ```
 
-### Fase 3B (Actual) 
+### Fase 3B (Sistema Conversacional) 
 ```bash
 make verify  # Incluye integration tests
 ```
 
-### Fase 3C (Próximo)
+### Fase 3C (Actual)
 ```bash
 make verify  # + architecture enforcement
 ```

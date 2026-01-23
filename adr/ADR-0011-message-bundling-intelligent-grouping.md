@@ -1,7 +1,7 @@
 # ADR-0011: Message Bundling System - Intelligent Message Grouping
 
 ## Estado
-**ACEPTADO** - Consenso AI favorable (Gemini 2.5 Pro 9/10, Gemini 2.5 Flash 8/10), implementación inmediata requerida
+**REVERTIDO** - La implementación fue retirada el 2026-01-22 para simplificar el flujo asíncrono y rediseñar la integración con Redis. Se mantiene el ADR como registro de decisión pero no está presente en el código actual.
 
 ## Contexto
 

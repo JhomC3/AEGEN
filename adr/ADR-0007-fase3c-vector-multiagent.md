@@ -8,7 +8,7 @@
 ### Situación Actual (Fase 3B Completada)
 - ✅ Sistema conversacional funcional con ChatAgent → MasterOrchestrator → Specialists
 - ✅ Memoria Redis para sesiones conversacionales (TTL 1h)
-- ✅ ChromaDB básico implementado pero con limitaciones críticas
+- ⚠️ VectorMemoryManager como Interface/Stub (Pendiente implementación real ChromaDB)
 - ✅ LangSmith observabilidad operacional
 
 ### Problema a Resolver
@@ -286,7 +286,7 @@ assert len(context) > 0  # Context retrieval working
 
 ---
 
-**Decision Date**: 2025-08-25  
-**Status**: ACEPTADO (con modificaciones por consensus)  
+**Decision Date**: 2026-01-22 (Revisado)
+**Status**: ACEPTADO - En progreso (Fase 1: Foundation)
 **Revisors**: Tech Lead, AI Consensus Models (gemini-2.5-pro, gemini-2.0-flash-lite, gemini-2.5-flash)  
 **Next Review**: End of Fase 1 (Week 3) - Validate foundation before proceeding

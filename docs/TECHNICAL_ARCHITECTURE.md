@@ -29,8 +29,8 @@ graph TD
     D --> E[MasterOrchestrator]
 
     E --> F[EventRouter: ¿event_type?]
-    F -->|text| G[FunctionCallingRouter]
-    G --> H[ChatAgent Analysis]
+    F -->|text| G[EnhancedFunctionCallingRouter]
+    G --> H[RoutingAnalyzer: Analysis]
 
     H -->|conversación simple| I[Direct Response]
     H -->|tarea compleja| J[Delegate to Specialist]
@@ -83,7 +83,7 @@ class MasterOrchestrator:  # ❌ Violaba SRP
     def _chain_route_request(): pass  # Chaining logic
     # ... más responsabilidades mezcladas
 
-# Después: 7 componentes especializados
+# Después: 8 componentes especializados
 src/agents/orchestrator/
 ├── factory.py                    # Dependency injection + lazy init
 ├── master_orchestrator.py        # Coordinador minimalista clean
@@ -92,8 +92,9 @@ src/agents/orchestrator/
 ├── strategies.py                # ABCs para Strategy Pattern
 └── routing/
     ├── event_router.py          # Non-text event routing
-    ├── function_calling_router.py # LLM-based tool selection
-    └── chaining_router.py       # Specialist chaining logic
+    ├── enhanced_router.py       # Intelligent LLM routing + Analysis
+    ├── chaining_router.py       # Specialist chaining logic
+    └── routing_analyzer.py      # Logic for analyzing intent
 ```
 
 **Beneficios Alcanzados:**
@@ -148,19 +149,15 @@ class EventRouter(RoutingStrategy):
         return self._select_specialist(capable_specialists, event_type).name
 ```
 
-#### FunctionCallingRouter
+#### EnhancedFunctionCallingRouter
 ```python
-class FunctionCallingRouter(RoutingStrategy):
-    """Enrutamiento inteligente con LLM Function Calling"""
+class EnhancedFunctionCallingRouter(RoutingStrategy):
+    """Enrutamiento inteligente con arquitectura modular y structured output"""
 
     async def route(self, state: GraphStateV2) -> str:
-        llm_with_tools = self._cache.get_llm_with_tools()
-        response = await llm_with_tools.ainvoke([HumanMessage(content=user_message)])
-
-        if response.tool_calls:
-            return self._map_tool_to_specialist(response.tool_calls[0])
-        else:
-            return "chat_specialist"  # Fallback conversacional
+        # Utiliza RoutingAnalyzer para una sola llamada al LLM
+        routing_decision = await self._analyzer.analyze(user_message, state, self._cache)
+        return self._apply_routing_decision(state, routing_decision)
 ```
 
 #### ConfigurableChainRouter
@@ -487,10 +484,11 @@ services:
 
 ### Phase 3C Implementation - ChromaDB Vector Database + Multi-Agent
 
-La arquitectura actual está preparada para:
+La arquitectura actual está en proceso de:
 
-1. **ChromaDB Integration:** Vector database with user namespacing for privacy
-2. **FitnessAgent + InventoryAgent:** Multiple specialist agents for domain-specific tasks
+1. **ChromaDB Integration:** Vector database with user namespacing for privacy (EN DESARROLLO)
+2. **Message Bundling:** Optimización de carga por usuario (REVERTIDO / EN REVISIÓN)
+3. **FitnessAgent + InventoryAgent:** Multiple specialist agents for domain-specific tasks
 3. **Privacy-First Architecture:** User-specific vs shared knowledge base separation
 4. **Vector Search:** Knowledge retrieval capabilities with semantic search
 5. **File Processing:** Excel manipulation with conversational interface

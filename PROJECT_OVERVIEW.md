@@ -1,9 +1,9 @@
 # MAGI: Sistema de Agentes Evolutivo
 
-> **Versión:** 10.0 (Edición "Contexto Dinámico y Pragmático")
+> **Versión:** 0.1.0 (Edición "Clean Restoration")
 > **Estado:** Activo y Evolutivo
-> **Branch Actual:** `feature/phase3c-vector-multiagent`
-> **Última Actualización:** 2025-09-04
+> **Branch Actual:** `main`
+> **Última Actualización:** 2026-01-22
 
 <!-- LLM-Hint: This document follows a strict hierarchy. In case of conflict, PROJECT_OVERVIEW.md (this file) has the highest authority. The current project phase is defined in the "Estado Real" YAML block below. Use the DoD (Definition of Done) for each phase to understand completion criteria. All sections marked with 🎯 are current focus areas. -->
 
@@ -107,7 +107,8 @@ graph TD
 ### 🔮 FASE 3C: Vector DB Multi-Tenant + Características Avanzadas (EN PROGRESO)
 **Objetivo:** Base vectorial multi-tenant + agentes modulares + características avanzadas.
 - **Foundation + Core Restoration:** Completado.
-- **Próximo Sprint:** Message Bundling + Performance.
+- **Message Bundling:** Revertido temporalmente para rediseño.
+- **Próximo Sprint:** Integración Vectorial (ChromaDB Stub -> Real).
 
 ### 🌟 FASE 4: Federación Completa (Q2)
 - Múltiples especialistas con LangSmith observability.
