@@ -11,8 +11,8 @@ La implementación monolítica original fue movida a orchestrator_legacy.py
 import logging
 
 # RESTORED: Refactored implementation with lazy initialization fix
-from .orchestrator.factory import OrchestratorFactory, master_orchestrator
-from .orchestrator.master_orchestrator import MasterOrchestrator
+from .factory import OrchestratorFactory, master_orchestrator
+from .master_orchestrator import MasterOrchestrator
 
 logger = logging.getLogger(__name__)
 
