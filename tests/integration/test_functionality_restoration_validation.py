@@ -15,9 +15,9 @@ class TestFunctionalityRestoration:
         chat_agent_path = "src/agents/specialists/chat_agent.py"
 
         # Check file exists
-        assert os.path.exists(chat_agent_path), (
-            f"ChatAgent file not found: {chat_agent_path}"
-        )
+        assert os.path.exists(
+            chat_agent_path
+        ), f"ChatAgent file not found: {chat_agent_path}"
 
         with open(chat_agent_path) as f:
             content = f.read()
@@ -66,9 +66,9 @@ class TestFunctionalityRestoration:
             if check not in content:
                 missing_architecture.append(check)
 
-        assert len(missing_architecture) <= 1, (
-            f"Architecture issues: {missing_architecture}"
-        )
+        assert (
+            len(missing_architecture) <= 1
+        ), f"Architecture issues: {missing_architecture}"
 
         print("✅ ChatAgent restoration validation PASSED")
 
