@@ -64,7 +64,6 @@ async def lifespan(app: FastAPI):
 
     validate_required_prompts([
         "cbt_therapeutic_response.txt",
-        "planner_agent/v1.yaml",
     ])
 
     logger.info("Lifespan: Application startup complete.")
@@ -78,7 +77,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="API para análisis blockchain multi-agente MAGI, impulsada por IA.",
+    description="Plataforma de Agentes Evolutivos AEGEN. MAGI: Asistente Conversacional Inteligente con Especialistas.",
     lifespan=lifespan,
     debug=settings.DEBUG_MODE,
     openapi_tags=[

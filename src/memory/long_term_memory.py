@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any
 
 import aiofiles
-import google.generativeai as genai
 from langchain_core.prompts import ChatPromptTemplate
 
 from src.core.config import settings
@@ -33,7 +32,9 @@ class LongTermMemoryManager:
             if settings.GOOGLE_API_KEY
             else ""
         )
-        genai.configure(api_key=api_key_str)
+        # Fix: langchain-google-genai already configures the key for the chat model,
+        # but for direct genai usage, we use this.
+        os.environ["GOOGLE_API_KEY"] = api_key_str
 
         # Reutilizamos el LLM global configurado en el sistema
         self.llm = llm

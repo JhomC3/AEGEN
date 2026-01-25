@@ -109,7 +109,7 @@ class OrchestratorFactory:
     @staticmethod
     def _get_default_chaining_config() -> dict[str, Any]:
         """
-        Retorna configuración por defecto para mantener compatibilidad Phase 3B.
+        Retorna configuración por defecto para el sistema conversacional.
 
         Returns:
             Dict con configuración de chaining rules
@@ -117,12 +117,10 @@ class OrchestratorFactory:
         return {
             "chain_rules": {
                 "transcription_agent": {
-                    "next_specialist": "planner_agent",
-                    "conditions": {
-                        "required_payload": {}  # Sin condiciones adicionales
-                    },
+                    "next_specialist": "chat_specialist",
+                    "conditions": {"required_payload": {}},
                 },
-                "planner_agent": {"next_specialist": "__end__", "conditions": {}},
+                "chat_specialist": {"next_specialist": "__end__", "conditions": {}},
             },
             "fallback_action": "__end__",
         }

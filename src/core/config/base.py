@@ -14,9 +14,9 @@ class BaseAppSettings(BaseSettings):
         extra="ignore",
     )
 
-    APP_NAME: str = "MAGI"
+    APP_NAME: str = "AEGEN"
     APP_ENV: Environment = APP_ENV  # Carga la variable de entorno
-    APP_VERSION: str = "0.1.0"
+    APP_VERSION: str = "0.1.1"
     LOG_LEVEL: str = "INFO"
 
     # Secretos
@@ -35,9 +35,11 @@ class BaseAppSettings(BaseSettings):
     NGROK_AUTHTOKEN: SecretStr | None = None
 
     # LangSmith Configuration
+    # El proyecto en LangSmith se mantiene como MAGI para trazabilidad o se cambia?
+    # Lo cambiaremos a AEGEN para consistencia.
     LANGCHAIN_API_KEY: SecretStr | None = None
     LANGCHAIN_TRACING_V2: bool = False
-    LANGCHAIN_PROJECT: str = "MAGI"
+    LANGCHAIN_PROJECT: str = "AEGEN"
 
     # ... otros secretos
 
