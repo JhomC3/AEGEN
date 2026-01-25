@@ -5,7 +5,6 @@ from functools import lru_cache
 from fastapi import HTTPException, status
 from redis import asyncio as aioredis
 
-from src.agents.file_handler_agent import FileHandlerAgent
 from src.core.bus.in_memory import InMemoryEventBus
 from src.core.bus.redis import RedisEventBus
 from src.core.config import settings
@@ -108,16 +107,6 @@ def get_vector_memory_manager() -> VectorMemoryManager:
     return VectorMemoryManager()
 
 
-@lru_cache
-def get_file_handler_agent() -> FileHandlerAgent:
-    """FastAPI dependency para FileHandlerAgent."""
-    from src.agents.file_handler_agent import FileHandlerAgent
-
-    logger.debug("Creating/providing FileHandlerAgent instance.")
-    return FileHandlerAgent()
-
-
-@lru_cache
 def get_access_controller() -> AccessController:
     """FastAPI dependency para AccessController."""
     logger.debug("Creating/providing AccessController instance.")
@@ -129,6 +118,5 @@ def prime_dependencies():
     "Calienta" las dependencias singleton al arranque de la aplicación.
     """
     get_role_manager()
-    get_file_handler_agent()
     get_access_controller()
     logger.info("Primed singleton dependencies.")

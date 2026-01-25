@@ -9,6 +9,7 @@ def load_prompt(prompt_name: str, version: str = "v1") -> str:
     """Carga el contenido de un prompt desde su archivo YAML."""
     prompt_path = (
         Path(__file__).parent.parent.parent
+        / "src"
         / "prompts"
         / prompt_name
         / f"{version}.yaml"

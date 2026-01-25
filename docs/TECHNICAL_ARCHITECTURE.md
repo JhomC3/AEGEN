@@ -35,8 +35,7 @@ graph TD
     H -->|conversación simple| I[Direct Response]
     H -->|tarea compleja| J[Delegate to Specialist]
 
-    J --> K[PlannerAgent]
-    K --> L[Response Translation]
+    J --> L[Response Translation]
     L --> M[Natural Language Response]
 
     I --> N[Update Memory]
@@ -55,10 +54,10 @@ graph TD
 
     E --> F[EventRouter: audio]
     F --> G[TranscriptionAgent]
-    G --> H[FasterWhisper Processing]
+    G --> H[Speech Processing]
     H --> I[Chaining Router]
 
-    I --> J[PlannerAgent]
+    I --> J[ChatSpecialist: MAGI]
     J --> K[Intelligent Response]
     K --> L[Update Memory]
     L --> M[Save to Redis]
@@ -488,7 +487,8 @@ La arquitectura actual está en proceso de:
 
 1. **ChromaDB Integration:** Vector database with user namespacing for privacy (EN DESARROLLO)
 2. **Message Bundling:** Optimización de carga por usuario (REVERTIDO / EN REVISIÓN)
-3. **FitnessAgent + InventoryAgent:** Multiple specialist agents for domain-specific tasks
+    3. **TCC Specialist:** Agente enfocado en Terapia Cognitivo Conductual con acceso a perfil evolutivo.
+    4. **Transcription Specialist:** Maneja la conversión de voz a texto para procesar mensajes de audio.
 3. **Privacy-First Architecture:** User-specific vs shared knowledge base separation
 4. **Vector Search:** Knowledge retrieval capabilities with semantic search
 5. **File Processing:** Excel manipulation with conversational interface

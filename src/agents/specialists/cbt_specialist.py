@@ -7,7 +7,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 from langgraph.graph import StateGraph
 
-from src.agents.specialists.planner.state_utils import (
+from src.agents.utils.state_utils import (
     extract_user_content_from_state,
 )
 from src.core.engine import create_observable_config, llm
@@ -17,39 +17,9 @@ from src.core.prompts.loader import load_text_prompt
 from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV2
 from src.memory.long_term_memory import long_term_memory
+from src.tools.google_file_search import file_search_tool
 
 logger = logging.getLogger(__name__)
-
-
-# Keywords que activan el CBT specialist
-CBT_KEYWORDS = {
-    "spanish": [
-        "ansiedad",
-        "fomo",
-        "disciplina",
-        "ira",
-        "miedo",
-        "pánico",
-        "venganza",
-        "pérdida",
-        "trading",
-        "psicología",
-        "triste",
-    ],
-    "english": [
-        "anxiety",
-        "fomo",
-        "discipline",
-        "anger",
-        "fear",
-        "panic",
-        "revenge",
-        "loss",
-        "trading",
-        "psychology",
-        "sad",
-    ],
-}
 
 # --- Managed Prompts ---
 CBT_THERAPEUTIC_TEMPLATE = (
@@ -61,30 +31,46 @@ CBT_THERAPEUTIC_TEMPLATE = (
 @tool
 async def cbt_therapeutic_guidance_tool(
     user_message: str,
+    chat_id: str,
     conversation_history: str = "",
-    analysis_context: str | None = None,
 ) -> str:
     """
-    Rescue MAGI v0.3.2
+    Ejecuta la guía terapéutica TCC inyectando el perfil completo del usuario.
     """
     await user_profile_manager.load_profile()
+    profile_context = user_profile_manager.get_context_for_prompt()
     style = user_profile_manager.get_style()
-    user_profile_manager.get_context_for_prompt()  # phase, metaphors, struggles
+
+    # 1. Recuperar Memoria de Largo Plazo (Resumen)
+    memory_data = await long_term_memory.get_summary(chat_id)
+    history_summary = memory_data.get("summary", "Sin historial previo.")
+
+    # 2. Smart RAG (Conocimiento TCC)
+    try:
+        active_tags = user_profile_manager.get_active_tags()
+        knowledge_context = await file_search_tool.query_files(
+            user_message, chat_id, tags=active_tags
+        )
+    except Exception as e:
+        logger.warning(f"Error en RAG TCC: {e}")
+        knowledge_context = "No hay contexto documental disponible."
 
     try:
         config = create_observable_config(call_type="cbt_therapeutic_response")
         chain = ChatPromptTemplate.from_template(CBT_THERAPEUTIC_TEMPLATE) | llm
 
-        # Definimos la Verdad Absoluta Temporal
         current_date_str = datetime.now().strftime("%A, %d de %B de %Y")
 
         prompt_input = {
-            "user_name": "Usuario",
             "current_date": current_date_str,
             "user_message": user_message,
             "conversation_history": conversation_history,
-            "analysis_context": analysis_context or "No hay análisis previo.",
+            "history_summary": history_summary,
+            "knowledge_context": knowledge_context,
             "user_style": style,
+            "user_phase": profile_context.get("phase", "Unknown"),
+            "struggles": profile_context.get("struggles", "None"),
+            "key_metaphors": profile_context.get("metaphors", "None"),
         }
 
         response = await chain.ainvoke(
@@ -130,7 +116,7 @@ class CBTSpecialist(SpecialistInterface):
 
     async def _cbt_node(self, state: GraphStateV2) -> dict[str, Any]:
         """Nodo principal CBT - Professional Clinical Psychologist"""
-        logger.info("CBT Node (Professional v1.0) procesando...")
+        logger.info("CBT Node procesando...")
 
         user_content = extract_user_content_from_state(state)
         if not user_content:
@@ -138,15 +124,18 @@ class CBTSpecialist(SpecialistInterface):
 
         chat_id = state.get("session_id", "default_user")
 
-        # 1. Recuperar Historial y Perfil
-        history_data = await long_term_memory.get_summary(chat_id)
-        history_text = history_data.get("summary", "")
+        # Formatear historial para el prompt (mensajes recientes)
+        raw_history = state.get("conversation_history", [])
+        history_text = "\n".join([
+            f"{m.get('role', 'user').capitalize()}: {m.get('content', '')}"
+            for m in raw_history[-5:]
+        ])
 
         # 2. Ejecutar Tool
         response_text = await self.tool.ainvoke({
             "user_message": user_content,
+            "chat_id": chat_id,
             "conversation_history": history_text,
-            "analysis_context": state.get("payload", {}).get("analysis", ""),
         })
 
         # 3. Actualizar Estado

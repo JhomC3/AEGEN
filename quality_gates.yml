@@ -80,10 +80,10 @@ phases:
         command: "python scripts/check_memory_leaks.py"
         description: "Verificación básica de memory leaks"
 
-  # Fase 3C: InventoryAgent
-  # Enfoque: Sistema completo con automation
+  # Fase 3C: TCC Specialist
+  # Enfoque: Sistema completo con especialista funcional
   Fase_3C:
-    description: "InventoryAgent - Primer especialista con estado"
+    description: "TCC Specialist - Especialista funcional con integración de perfil"
     required_checks:
       - name: "lint"
         command: "make lint"

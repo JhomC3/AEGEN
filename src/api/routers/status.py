@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, status
 
 from src.core.config import settings
 from src.core.dependencies import get_event_bus
-from src.core.engine import MigrationDecisionEngine
 from src.core.interfaces.bus import IEventBus
 from src.core.registry import specialist_registry
 from src.core.schemas import (
@@ -15,7 +14,6 @@ from src.core.schemas import (
     ServiceHealth,
     ServiceStatus,
     StatusResponse,
-    SystemStatus,
 )
 
 router = APIRouter()
@@ -121,23 +119,6 @@ async def health_check(
         environment=AppEnvironment(settings.APP_ENV.value),
         services=service_checks,
     )
-
-
-@router.get(
-    "/status",
-    response_model=SystemStatus,
-    tags=["Status"],
-    summary="Evalúa el estado del sistema y si debe migrar a una arquitectura distribuida.",
-)
-def get_system_status() -> SystemStatus:
-    """
-    Ejecuta el motor de decisión de migración para determinar si los recursos
-    del sistema han superado los umbrales predefinidos.
-    """
-    logger.info("System status check requested.")
-    engine = MigrationDecisionEngine()
-    status = engine.get_system_status()
-    return status
 
 
 @router.get(

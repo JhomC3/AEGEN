@@ -197,11 +197,11 @@ class SpecialistMapper:
 
     # Mapeo preferido por intent
     INTENT_TO_SPECIALISTS = {
-        IntentType.FILE_ANALYSIS: ["file_handler_agent", "document_processor"],
-        IntentType.PLANNING: ["planner_agent", "task_manager"],
-        IntentType.SEARCH: ["search_agent", "web_retriever"],
+        IntentType.FILE_ANALYSIS: ["chat_specialist"],
+        IntentType.PLANNING: ["chat_specialist"],
+        IntentType.SEARCH: ["chat_specialist"],
         IntentType.CHAT: ["chat_specialist"],
-        IntentType.HELP: ["chat_specialist", "help_agent"],
+        IntentType.HELP: ["chat_specialist"],
         IntentType.VULNERABILITY: ["cbt_specialist"],
         IntentType.TOPIC_SHIFT: ["chat_specialist"],
     }

@@ -90,14 +90,14 @@ class TranscriptionSpecialist(SpecialistInterface):
         logger.info(f"TranscriptionAgent: Procesando audio {audio_path}")
         result = await self.tool.ainvoke({"audio_file_path": audio_path})
 
-        # Marcar para chaining: transcription → planner (Phase 3B UX fix)
-        payload["transcript"] = result  # Para que PlannerAgent use el texto
+        # Marcar para chaining: transcription → chat_specialist (MAGI)
+        payload["transcript"] = result  # Para que el chat use el texto
         payload["response"] = result  # Mantener compatibilidad
         payload["last_specialist"] = "transcription_agent"
-        payload["next_action"] = "chain_to_planner"  # Indica que debe encadenar
+        payload["next_action"] = "chain_to_chat"  # Indica que debe encadenar a MAGI
 
         logger.info(
-            "TranscriptionAgent: Transcripción completada, marcando para chain a PlannerAgent"
+            "TranscriptionAgent: Transcripción completada, marcando para chain a MAGI"
         )
         return {"payload": payload}
 

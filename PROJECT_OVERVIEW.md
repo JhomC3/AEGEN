@@ -1,11 +1,11 @@
-# MAGI: Sistema de Agentes Evolutivo
+# AEGEN: Plataforma de Orquestación de Agentes Multi-Especialistas
 
-> **Versión:** 0.1.0 (Edición "Clean Restoration")
-> **Estado:** Activo y Evolutivo
+> **MAGI:** El Asistente Conversacional (Interfaz Principal)
+> **Versión:** 0.1.1 (Identity Correction)
+> **Estado:** Refactorizando Especialista TCC
 > **Branch Actual:** `main`
-> **Última Actualización:** 2026-01-22
 
-<!-- LLM-Hint: This document follows a strict hierarchy. In case of conflict, PROJECT_OVERVIEW.md (this file) has the highest authority. The current project phase is defined in the "Estado Real" YAML block below. Use the DoD (Definition of Done) for each phase to understand completion criteria. All sections marked with 🎯 are current focus areas. -->
+<!-- LLM-Hint: AEGEN es la infraestructura. MAGI es el agente conversacional que el usuario ve. MAGI utiliza el MasterOrchestrator para delegar tareas a especialistas como el Agente TCC. Este documento es la Fuente de Verdad. -->
 
 ## 🎯 Contexto Actual del Proyecto
 
@@ -104,10 +104,10 @@ graph TD
 ### ✅ FASE 3B: Sistema Conversacional + Memoria (COMPLETADA)
 **Objetivo:** Sistema conversacional completo con memoria persistente. DoD Alcanzado.
 
-### 🔮 FASE 3C: Vector DB Multi-Tenant + Características Avanzadas (EN PROGRESO)
-**Objetivo:** Base vectorial multi-tenant + agentes modulares + características avanzadas.
+### ✅ FASE 3C: Especialista TCC + Perfil Evolutivo (EN PROGRESO)
+**Objetivo:** Especialista TCC funcional + integración profunda con perfil psicológico + memoria vectorial.
 - **Foundation + Core Restoration:** Completado.
-- **Message Bundling:** Revertido temporalmente para rediseño.
+- **TCC Agent Fix:** En proceso (Mismatch de variables).
 - **Próximo Sprint:** Integración Vectorial (ChromaDB Stub -> Real).
 
 ### 🌟 FASE 4: Federación Completa (Q2)
