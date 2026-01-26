@@ -29,6 +29,15 @@ CBT_THERAPEUTIC_TEMPLATE = (
 
 
 @tool
+async def query_user_history(chat_id: str, query: str) -> str:
+    """
+    5.2: Consulta el historial profundo del usuario para recuperar detalles del pasado.
+    Útil para recordar metas, valores o eventos conversados hace mucho tiempo.
+    """
+    return await file_search_tool.search_user_history(chat_id, query)
+
+
+@tool
 async def cbt_therapeutic_guidance_tool(
     user_message: str,
     chat_id: str,
@@ -37,17 +46,18 @@ async def cbt_therapeutic_guidance_tool(
     """
     Ejecuta la guía terapéutica TCC inyectando el perfil completo del usuario.
     """
-    await user_profile_manager.load_profile()
-    profile_context = user_profile_manager.get_context_for_prompt()
-    style = user_profile_manager.get_style()
+    # 1. Cargar perfil (Diskless/Multi-user)
+    profile = await user_profile_manager.load_profile(chat_id)
+    profile_context = user_profile_manager.get_context_for_prompt(profile)
+    style = user_profile_manager.get_style(profile)
 
-    # 1. Recuperar Memoria de Largo Plazo (Resumen)
+    # 2. Recuperar Memoria de Largo Plazo (Resumen)
     memory_data = await long_term_memory.get_summary(chat_id)
     history_summary = memory_data.get("summary", "Sin historial previo.")
 
-    # 2. Smart RAG (Conocimiento TCC)
+    # 3. Smart RAG (Conocimiento TCC)
     try:
-        active_tags = user_profile_manager.get_active_tags()
+        active_tags = user_profile_manager.get_active_tags(profile)
         knowledge_context = await file_search_tool.query_files(
             user_message, chat_id, tags=active_tags
         )

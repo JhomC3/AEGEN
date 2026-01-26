@@ -285,3 +285,6 @@ node_modules/
 
 # User scripts
 scripts/test_*.py
+
+# Storage (Diskless architecture)
+storage/

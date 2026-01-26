@@ -50,13 +50,14 @@ async def conversational_chat_tool(
     """
     Genera una respuesta empática y contextual usando el perfil del usuario.
     """
-    await user_profile_manager.load_profile()
-    profile_context = user_profile_manager.get_context_for_prompt()
-    style = user_profile_manager.get_style()
+    # 1. Cargar perfil (Diskless/Multi-user)
+    profile = await user_profile_manager.load_profile(chat_id)
+    profile_context = user_profile_manager.get_context_for_prompt(profile)
+    style = user_profile_manager.get_style(profile)
 
-    # Smart RAG
+    # 2. Smart RAG
     try:
-        active_tags = user_profile_manager.get_active_tags()
+        active_tags = user_profile_manager.get_active_tags(profile)
         knowledge_context = await file_search_tool.query_files(
             user_message, chat_id, tags=active_tags
         )

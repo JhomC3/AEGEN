@@ -1,4 +1,5 @@
 import asyncio
+import io
 import logging
 import time
 from pathlib import Path
@@ -54,122 +55,148 @@ class GoogleFileSearchTool:
             logger.error(f"Error listando archivos con el nuevo SDK: {e}")
             return self._file_cache or []
 
-    async def upload_file(self, file_path: str, display_name: str | None = None):
+    async def upload_file(
+        self, file_path: str, chat_id: str, display_name: str | None = None
+    ):
         """
-        Sube un archivo a la Google File API.
+        Sube un archivo a la Google File API con aislamiento por chat_id.
         """
         try:
             path = Path(file_path)
             if not path.exists():
                 raise FileNotFoundError(f"Archivo no encontrado: {file_path}")
 
-            name = display_name or path.name
+            # 1.4: Añadir prefijo {chat_id}/ para aislamiento
+            name = f"{chat_id}/{display_name or path.name}"
             logger.info(f"Subiendo archivo {path.name} como '{name}'...")
 
-            # Verificado: el argumento correcto es 'file', no 'path'.
-            # Ejecutamos en thread aparte porque es una operación I/O bloqueante.
             uploaded_file = await asyncio.to_thread(
                 self.client.files.upload, file=file_path, config={"display_name": name}
             )
 
             self._file_cache = None  # Invalidar cache
-            logger.info(f"Archivo subido exitosamente: {uploaded_file.uri}")
-
-            # Polling para esperar estado ACTIVE
-            logger.info(
-                f"Esperando a que {uploaded_file.name} esté ACTIVE (Timeout 60s)..."
-            )
-            for i in range(30):  # Aumentado a 60 segundos (30 * 2s)
-                await asyncio.sleep(2)
-                try:
-                    current_file = await asyncio.to_thread(
-                        self.client.files.get, name=uploaded_file.name
-                    )
-                    state = str(getattr(current_file, "state", "")).upper()
-                    if state == "ACTIVE":
-                        logger.info(
-                            f"Archivo {uploaded_file.name} listo para usar (ACTIVE) en intento {i + 1}."
-                        )
-                        return current_file
-                    elif state == "FAILED":
-                        raise ValueError(
-                            f"Procesamiento de archivo falló: {uploaded_file.name}"
-                        )
-                    else:
-                        if i % 5 == 0:  # Log cada 10s para no saturar
-                            logger.info(
-                                f"Archivo {uploaded_file.name} en estado: {state}..."
-                            )
-                except Exception as poll_err:
-                    logger.warning(f"Error consultando estado de archivo: {poll_err}")
-
-            logger.error(
-                f"TIMEOUT CRÍTICO: El archivo {uploaded_file.name} no pasó a ACTIVE en 60s."
-            )
-            # Intentamos devolverlo de todas formas, pero logueamos error fuerte
-            return uploaded_file
+            return await self._wait_for_active(uploaded_file)
         except Exception as e:
             logger.error(f"Error subiendo archivo {file_path}: {e}")
             raise
+
+    async def upload_from_string(
+        self, content: str, filename: str, chat_id: str, mime_type: str = "text/plain"
+    ):
+        """
+        1.2: Sube contenido directamente desde un string (Diskless).
+        Asegura aislamiento por chat_id.
+        """
+        try:
+            # 1.4: Prefijo chat_id
+            display_name = f"{chat_id}/{filename}"
+            logger.info(f"Subiendo contenido string como '{display_name}'...")
+
+            # Convertir string a stream de bytes
+            content_bytes = content.encode("utf-8")
+            file_io = io.BytesIO(content_bytes)
+
+            # Usamos el cliente para subir el stream
+            uploaded_file = await asyncio.to_thread(
+                self.client.files.upload,
+                file=file_io,
+                config={"display_name": display_name, "mime_type": mime_type},
+            )
+
+            self._file_cache = None
+            return await self._wait_for_active(uploaded_file)
+        except Exception as e:
+            logger.error(f"Error en upload_from_string para {filename}: {e}")
+            raise
+
+    async def download_to_string(self, filename: str, chat_id: str) -> str:
+        """
+        1.3: Intenta obtener el contenido de un archivo.
+        ADVERTENCIA: La Google File API no permite descarga directa de contenido.
+        Este método es un placeholder para consistencia arquitectónica, pero
+        la fuente de verdad para el sistema debe ser Redis.
+        """
+        display_name = f"{chat_id}/{filename}"
+        logger.warning(
+            f"download_to_string llamado para {display_name}. "
+            "La File API es de solo escritura (para RAG). Recuperando de caché/Redis si es posible."
+        )
+        # Por ahora devolvemos vacío ya que la API no lo soporta.
+        # En el futuro, si usamos GCS, aquí iría la lógica de descarga.
+        return ""
+
+    async def _wait_for_active(self, uploaded_file: Any):
+        """Helper para esperar a que un archivo esté ACTIVE."""
+        logger.info(f"Esperando a que {uploaded_file.name} esté ACTIVE...")
+        for _ in range(30):
+            await asyncio.sleep(2)
+            try:
+                current_file = await asyncio.to_thread(
+                    self.client.files.get, name=uploaded_file.name
+                )
+                state = str(getattr(current_file, "state", "")).upper()
+                if state == "ACTIVE":
+                    return current_file
+                elif state == "FAILED":
+                    raise ValueError(f"Procesamiento falló: {uploaded_file.name}")
+            except Exception as poll_err:
+                logger.warning(f"Error consultando estado: {poll_err}")
+
+        logger.error(f"TIMEOUT: {uploaded_file.name} no pasó a ACTIVE.")
+        return uploaded_file
 
     async def get_relevant_files(
         self, chat_id: str, tags: list[str] | None = None
     ) -> list[Any]:
         """
-        Identifica qué archivos son relevantes basado en chat_id y tags opcionales.
+        Identifica qué archivos son relevantes basado en chat_id (prefijo) y tags.
         """
         all_files = await self.list_files()
         relevant = []
-        user_vault_name = f"User_Vault_{chat_id}"
 
+        # Prefijo obligatorio para aislamiento
+        prefix = f"{chat_id}/"
         tags_upper = [t.upper() for t in (tags or [])]
 
         for f in all_files:
-            # Manejo seguro de atributos que podrían faltar si el objeto cambia
-            f_name = getattr(f, "display_name", "")
-            f_name_upper = f_name.upper()
+            f_display_name = getattr(f, "display_name", "")
 
-            # 1. CORE KERNEL
+            # 1. Aislamiento por chat_id (Obligatorio para archivos de usuario)
+            if f_display_name.startswith(prefix):
+                relevant.append(f)
+                continue
+
+            # 2. CORE KERNEL (Global para todos los usuarios)
+            f_name_upper = f_display_name.upper()
             if "CORE" in f_name_upper or "STOIC" in f_name_upper:
                 relevant.append(f)
                 continue
 
-            # 2. TAG MATCH
+            # 3. TAG MATCH (Si no tiene prefijo pero coincide con tag global)
             if tags_upper and any(tag in f_name_upper for tag in tags_upper):
                 relevant.append(f)
-                continue
 
-            # 3. USER VAULT
-            if f_name == user_vault_name:
-                relevant.append(f)
-
-        # Filtrar solo archivos activos
-        # En el nuevo SDK, state suele ser un enum o string. Lo convertimos a str para comparar seguro.
+        # Filtrar solo activos y limitar
         active_files = [
             f for f in relevant if str(getattr(f, "state", "")).upper() == "ACTIVE"
         ]
-
-        if len(relevant) > len(active_files):
-            logger.warning(
-                f"Omitiendo {len(relevant) - len(active_files)} archivos en estado no-ACTIVE (processing/failed)"
-            )
-
-        return active_files[:5]
+        return active_files[:10]  # Aumentado a 10 para mayor contexto
 
     async def query_files(
         self, query: str, chat_id: str, tags: list[str] | None = None
     ) -> str:
         """
         Realiza búsqueda semántica inteligente (Smart RAG) en archivos relevantes.
-        Refactorizado para usar system_instructions y evitar errores 400 INVALID_ARGUMENT.
         """
         relevant_files = await self.get_relevant_files(chat_id, tags)
         if not relevant_files:
             logger.info(f"No hay archivos relevantes para {chat_id} con tags {tags}")
             return ""
 
+        # Log de qué archivos estamos usando
+        file_names = [f.display_name for f in relevant_files]
         logger.info(
-            f"Smart RAG: Consultando {len(relevant_files)} archivos para {chat_id} (Tags: {tags})"
+            f"Smart RAG: Consultando {len(relevant_files)} archivos para {chat_id}: {file_names}"
         )
 
         try:
@@ -177,40 +204,27 @@ class GoogleFileSearchTool:
             if model_name.startswith("models/"):
                 model_name = model_name.replace("models/", "")
 
-            logger.info(
-                f"Smart RAG: Usando modelo {model_name} con estrategia System Instruction."
-            )
-
-            # 1. Definir la instrucción del sistema separada del contenido del usuario
-            system_instruction_text = (
-                "Actúa como un extractor de sabiduría estoica y técnica.\n"
-                "Basándote EXCLUSIVAMENTE en los archivos adjuntos proporcionados en el contexto, "
-                "responde de forma concisa a la consulta del usuario.\n"
-                "Si la información no está en los archivos, di 'Información no encontrada'.\n"
-                "Estilo: Directo, sin introducciones innecesarias.\n\n"
-            )
-
-            # 2. Construir la configuración de generación
-            # NOTA: En SDK 1.x antiguo, system_instruction puede fallar en config.
-            # Lo inyectamos en el prompt como fallback seguro.
             config = types.GenerateContentConfig(temperature=0.3)
 
-            # 3. Construir el contenido del usuario (Archivos + Query)
+            # Construir el prompt con contexto de archivos
             user_parts = []
-
-            # Añadir partes de archivo
             for f in relevant_files:
                 user_parts.append(
                     types.Part.from_uri(file_uri=f.uri, mime_type=f.mime_type)
                 )
 
-            # Inyectar instrucción + query en el texto del usuario
-            full_prompt = system_instruction_text + "Consulta: " + query
-            user_parts.append(types.Part.from_text(text=full_prompt))
+            system_instruction = (
+                "Eres un asistente que recupera información histórica y técnica con precisión clínica.\n"
+                "Usa los archivos proporcionados para responder a la consulta.\n"
+                "Si la información no está, di 'No encontrado'.\n"
+            )
+
+            user_parts.append(
+                types.Part.from_text(text=f"{system_instruction}\nConsulta: {query}")
+            )
 
             contents = [types.Content(role="user", parts=user_parts)]
 
-            # 4. Ejecutar llamada al modelo
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=model_name,
@@ -223,12 +237,16 @@ class GoogleFileSearchTool:
             return ""
 
         except Exception as e:
-            logger.error(
-                f"Error en Smart RAG query_files (nuevo SDK): {e}", exc_info=True
-            )
-            # Fallback simple: intentar sin system instruction si el modelo no lo soporta (poco probable en 2.x)
-            # o devolver error amigable
+            logger.error(f"Error en Smart RAG: {e}", exc_info=True)
             return ""
+
+    async def search_user_history(self, chat_id: str, query: str) -> str:
+        """
+        5.1: Búsqueda semántica aislada en el historial profundo del usuario.
+        """
+        logger.info(f"Buscando en historial profundo para {chat_id}: {query}")
+        # Usamos query_files sin tags globales para priorizar el historial del usuario
+        return await self.query_files(query, chat_id, tags=[])
 
     async def delete_file(self, file_name: str):
         """Elimina un archivo de la File API."""
