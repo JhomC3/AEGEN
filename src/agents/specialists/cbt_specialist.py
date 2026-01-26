@@ -73,6 +73,7 @@ async def cbt_therapeutic_guidance_tool(
 
         prompt_input = {
             "current_date": current_date_str,
+            "user_name": profile.get("identity", {}).get("name", "Usuario"),
             "user_message": user_message,
             "conversation_history": conversation_history,
             "history_summary": history_summary,

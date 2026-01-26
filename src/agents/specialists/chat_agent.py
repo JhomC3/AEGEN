@@ -74,7 +74,7 @@ async def conversational_chat_tool(
     conversational_prompt = ChatPromptTemplate.from_template(persona_template)
 
     prompt_input = {
-        "user_name": "Usuario",
+        "user_name": profile.get("identity", {}).get("name", "Usuario"),
         "current_date": current_date_str,
         "user_message": user_message,
         "conversation_history": conversation_history,
