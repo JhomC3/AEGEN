@@ -1,54 +1,29 @@
 # src/memory/long_term_memory.py
 import json
 import logging
-import os
-from pathlib import Path
 from typing import Any
 
-import aiofiles
 from langchain_core.prompts import ChatPromptTemplate
 
-from src.core.config import settings
 from src.core.engine import llm
+from src.memory.redis_buffer import RedisMessageBuffer
 from src.tools.google_file_search import file_search_tool
 
 logger = logging.getLogger(__name__)
 
-# Configuración del directorio de almacenamiento local
-# Configuración del directorio de almacenamiento local (Absoluta para evitar errores de CWD)
-STORAGE_DIR = Path(__file__).resolve().parent.parent.parent / "storage" / "memory"
-
 
 class LongTermMemoryManager:
     """
-    Gestiona la memoria episódica de largo plazo mediante resúmenes incrementales
-    y persistencia en archivos locales (optimizada para asincronía).
+    Gestiona la memoria episódica de largo plazo (Diskless).
+    Usa Redis para el buffer caliente y la Google File API para persistencia de largo plazo.
     """
 
     def __init__(self):
-        # Configurar SDK nativo por si se usa File API directamente
-        api_key_str = (
-            settings.GOOGLE_API_KEY.get_secret_value()
-            if settings.GOOGLE_API_KEY
-            else ""
-        )
-        # Fix: langchain-google-genai already configures the key for the chat model,
-        # but for direct genai usage, we use this.
-        os.environ["GOOGLE_API_KEY"] = api_key_str
-
         # Reutilizamos el LLM global configurado en el sistema
         self.llm = llm
+        self._buffer_instance = None
 
-        # Asegurar que el directorio de almacenamiento existe
-        try:
-            STORAGE_DIR.mkdir(parents=True, exist_ok=True)
-            logger.info(f"Directorio de memoria verificado: {STORAGE_DIR}")
-        except PermissionError:
-            logger.error(f"FATAL: Sin permisos para crear '{STORAGE_DIR}'.")
-        except Exception as e:
-            logger.error(f"Error inesperado creando '{STORAGE_DIR}': {e}")
-
-        logger.info("LongTermMemoryManager initialized (Hotfix v0.1.2: Async I/O)")
+        logger.info("LongTermMemoryManager initialized (Diskless Architecture)")
 
         self.summary_prompt = ChatPromptTemplate.from_messages([
             (
@@ -63,73 +38,65 @@ class LongTermMemoryManager:
             ),
         ])
 
-    def _get_buffer_path(self, chat_id: str) -> Path:
-        return STORAGE_DIR / f"{chat_id}_buffer.json"
+    async def get_buffer(self) -> RedisMessageBuffer:
+        """Obtiene la instancia del buffer de Redis (Lazy Initialization)."""
+        if self._buffer_instance is None:
+            from src.core.dependencies import redis_connection
 
-    def _get_local_path(self, chat_id: str) -> Path:
-        """Devuelve la ruta al archivo de resumen de memoria del usuario."""
-        return STORAGE_DIR / f"{chat_id}_summary.json"
+            if redis_connection is None:
+                raise RuntimeError(
+                    "Redis connection not available for LongTermMemoryManager"
+                )
+            self._buffer_instance = RedisMessageBuffer(redis_connection)
+        return self._buffer_instance
 
     async def get_summary(self, chat_id: str) -> dict[str, Any]:
-        """Recupera el resumen histórico y los mensajes en el búfer."""
-        local_path = self._get_local_path(chat_id)
-        buffer_path = self._get_buffer_path(chat_id)
+        """Recupera el resumen histórico de Redis y el buffer caliente."""
+        buffer = await self.get_buffer()
 
+        # 1. Recuperar resumen de Redis
+        from src.core.dependencies import redis_connection
+
+        if redis_connection is None:
+            logger.error("Redis no disponible para get_summary")
+            return {"summary": "Sin historial previo profesional.", "buffer": []}
+
+        summary_key = f"chat:summary:{chat_id}"
         summary = "Sin historial previo profesional."
-        raw_buffer = []
+        try:
+            raw_summary = await redis_connection.get(summary_key)
+            if raw_summary:
+                if isinstance(raw_summary, bytes):
+                    raw_summary = raw_summary.decode("utf-8")
+                summary_data = json.loads(raw_summary)
+                summary = summary_data.get("summary", summary)
+        except Exception as e:
+            logger.error(f"Error recuperando resumen de Redis para {chat_id}: {e}")
 
-        if local_path.exists():
-            try:
-                async with aiofiles.open(local_path, encoding="utf-8") as f:
-                    content = await f.read()
-                    data = json.loads(content)
-                    summary = data.get("summary", summary)
-            except Exception as e:
-                logger.error(f"Error leyendo memoria local para {chat_id}: {e}")
-
-        if buffer_path.exists():
-            try:
-                async with aiofiles.open(buffer_path, encoding="utf-8") as f:
-                    content = await f.read()
-                    raw_buffer = json.loads(content)
-            except Exception as e:
-                logger.error(f"Error leyendo búfer para {chat_id}: {e}")
+        # 2. Recuperar buffer de Redis
+        raw_buffer = await buffer.get_messages(chat_id)
 
         return {"summary": summary, "buffer": raw_buffer}
 
     async def store_raw_message(self, chat_id: str, role: str, content: str):
-        """Guarda un mensaje en el búfer persistente inmediatamente."""
-        buffer_path = self._get_buffer_path(chat_id)
-        raw_buffer = []
+        """Guarda un mensaje en el búfer de Redis inmediatamente."""
+        buffer = await self.get_buffer()
+        await buffer.push_message(chat_id, role, content)
 
-        if buffer_path.exists():
-            try:
-                async with aiofiles.open(buffer_path, encoding="utf-8") as f:
-                    content_json = await f.read()
-                    raw_buffer = json.loads(content_json)
-            except Exception as e:
-                logger.debug(
-                    f"No se pudo leer el búfer previo (normal en primera ejecución): {e}"
-                )
+        # 4.6: Integración con ConsolidationManager
+        from src.memory.consolidation_worker import consolidation_manager
 
-        raw_buffer.append({"role": role, "content": content})
+        count = await buffer.get_message_count(chat_id)
 
-        # Limitar el búfer a los últimos 20 mensajes antes de forzar resumen
-        if len(raw_buffer) > 20:
-            raw_buffer = raw_buffer[-20:]
+        if await consolidation_manager.should_consolidate(chat_id, count):
+            logger.info(f"Triggering background consolidation for {chat_id}")
+            import asyncio
 
-        try:
-            async with aiofiles.open(buffer_path, mode="w", encoding="utf-8") as f:
-                await f.write(json.dumps(raw_buffer, ensure_ascii=False))
-            logger.info(
-                f"💾 Memoria guardada en {buffer_path} ({len(raw_buffer)} msgs)"
-            )
-        except Exception as e:
-            logger.error(f"❌ Error escribiendo memoria en {buffer_path}: {e}")
+            asyncio.create_task(consolidation_manager.consolidate_session(chat_id))
 
     async def update_memory(self, chat_id: str):
         """
-        Analiza el búfer de mensajes, actualiza el resumen y limpia el búfer.
+        Analiza el búfer, actualiza el resumen en Redis y sincroniza con Google Cloud.
         """
         data = await self.get_summary(chat_id)
         current_summary = data["summary"]
@@ -153,41 +120,37 @@ class LongTermMemoryManager:
 
             new_summary = str(response.content).strip()
 
-            # Persistir resumen localmente
-            local_path = self._get_local_path(chat_id)
-            async with aiofiles.open(local_path, mode="w", encoding="utf-8") as f:
-                content = json.dumps(
+            # 1. Persistir resumen en Redis
+            from src.core.dependencies import redis_connection
+
+            if redis_connection is None:
+                raise RuntimeError("Redis no disponible para update_memory")
+
+            summary_key = f"chat:summary:{chat_id}"
+            await redis_connection.set(
+                summary_key,
+                json.dumps(
                     {"summary": new_summary, "chat_id": chat_id}, ensure_ascii=False
-                )
-                await f.write(content)
+                ),
+            )
 
-            # Limpiar el búfer ya que ha sido consolidado en el resumen
-            buffer_path = self._get_buffer_path(chat_id)
-            if buffer_path.exists():
-                os.remove(buffer_path)
+            # 2. Limpiar el búfer
+            buffer = await self.get_buffer()
+            await buffer.clear_buffer(chat_id)
 
-            # --- EXTENSIÓN: Google File Search (Híbrido) ---
+            # 3. Sincronizar con Google File Search (Cloud Vault) - Diskless!
             try:
-                # Creamos un archivo temporal con el resumen para subirlo
-                user_memory_file = STORAGE_DIR / f"{chat_id}_vault.txt"
-                async with aiofiles.open(
-                    user_memory_file, mode="w", encoding="utf-8"
-                ) as f:
-                    await f.write(
-                        f"Historial consolidado del usuario {chat_id}:\n\n{new_summary}"
-                    )
-
-                # Subir/Actualizar en la Google File API
-                # Nota: En una implementación de producción, aquí buscaríamos si ya existe
-                # para borrar el anterior o simplemente confiar en el naming.
-                await file_search_tool.upload_file(
-                    str(user_memory_file), display_name=f"User_Vault_{chat_id}"
+                cloud_content = (
+                    f"Historial consolidado del usuario {chat_id}:\n\n{new_summary}"
                 )
-                logger.info(f"Bóveda en la nube actualizada para {chat_id}")
+                await file_search_tool.upload_from_string(
+                    content=cloud_content, filename="vault.txt", chat_id=chat_id
+                )
+                logger.info(f"Bóveda en la nube actualizada (diskless) para {chat_id}")
             except Exception as fe:
                 logger.warning(f"No se pudo sincronizar con Google File API: {fe}")
 
-            logger.info(f"Memoria de largo plazo consolidada para {chat_id}")
+            logger.info(f"Memoria consolidada exitosamente para {chat_id}")
 
         except Exception as e:
             logger.error(
