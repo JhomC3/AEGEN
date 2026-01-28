@@ -122,6 +122,21 @@ async def health_check(
 
 
 @router.get(
+    "/llm-health",
+    tags=["Status"],
+    summary="Verifica la salud del proveedor LLM activo",
+)
+async def llm_health_check():
+    """
+    Verifica la conexión y salud del proveedor LLM configurado.
+    """
+    from src.core.engine import check_llm_health
+
+    health_data = await check_llm_health()
+    return health_data
+
+
+@router.get(
     "/specialists",
     tags=["Debug"],
     summary="Debug: Lista especialistas registrados",
