@@ -25,7 +25,7 @@ class BaseAppSettings(BaseSettings):
 
     # LLM Provider Configuration
     LLM_PROVIDER: str = "google"  # Options: "google", "openrouter"
-    OPENROUTER_MODEL_NAME: str = "xiaomi/mimo-v2-flash:free"
+    OPENROUTER_MODEL_NAME: str = "openai/gpt-oss-120b:free"
     ALCHEMY_API_KEY: SecretStr | None = None
     ETHERSCAN_API_KEY: SecretStr | None = None
     TAVILY_API_KEY: SecretStr | None = None
