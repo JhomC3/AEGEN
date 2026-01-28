@@ -22,10 +22,12 @@ class BaseAppSettings(BaseSettings):
     # Secretos
     GOOGLE_API_KEY: SecretStr | None = None
     OPENROUTER_API_KEY: SecretStr | None = None  # New for OpenRouter
+    GROQ_API_KEY: SecretStr | None = None
 
     # LLM Provider Configuration
-    LLM_PROVIDER: str = "google"  # Options: "google", "openrouter"
+    LLM_PROVIDER: str = "groq"  # Options: "groq", "google", "openrouter"
     OPENROUTER_MODEL_NAME: str = "openai/gpt-oss-120b:free"
+    GROQ_MODEL_NAME: str = "moonshotai/kimi-k2-instruct-0905"
     ALCHEMY_API_KEY: SecretStr | None = None
     ETHERSCAN_API_KEY: SecretStr | None = None
     TAVILY_API_KEY: SecretStr | None = None
