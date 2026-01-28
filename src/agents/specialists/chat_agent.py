@@ -11,7 +11,7 @@ from typing import Any, cast
 
 import aiofiles
 from langchain_core.messages import HumanMessage
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 from langgraph.graph import END, StateGraph
@@ -19,6 +19,7 @@ from langgraph.graph import END, StateGraph
 from src.agents.utils.state_utils import extract_user_content_from_state
 from src.core.engine import create_observable_config, llm
 from src.core.interfaces.specialist import SpecialistInterface
+from src.core.message_utils import dict_to_langchain_messages
 from src.core.profile_manager import user_profile_manager
 from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV2
@@ -33,12 +34,15 @@ logger = logging.getLogger(__name__)
 async def conversational_chat_tool(
     user_message: str,
     chat_id: str,
-    conversation_history: str = "",
+    conversation_history: list[dict[str, Any]] | None = None,
     image_path: str | None = None,
 ) -> str:
     """
     Genera una respuesta empática y contextual usando el perfil del usuario.
     """
+    if conversation_history is None:
+        conversation_history = []
+
     # 1. Cargar perfil (Diskless/Multi-user)
     profile = await user_profile_manager.load_profile(chat_id)
 
@@ -65,16 +69,23 @@ async def conversational_chat_tool(
         },
     )
 
+    # Configurar límite de historial desde el perfil
+    adaptation = user_profile_manager.get_personality_adaptation(profile)
+    history_limit = adaptation.get("history_limit", 8)
+
+    # Convertir historial a mensajes de LangChain
+    messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
+
     # Usamos un template más simple ya que el builder construye casi todo
     conversational_prompt = ChatPromptTemplate.from_messages([
         ("system", persona_template),
-        ("placeholder", "{conversation_history}"),
+        MessagesPlaceholder(variable_name="messages"),
         ("user", "{user_message}"),
     ])
 
     prompt_input = {
         "user_message": user_message,
-        "conversation_history": conversation_history,
+        "messages": messages,
     }
 
     try:
@@ -116,18 +127,12 @@ async def _chat_node(state: GraphStateV2) -> Any:
     chat_id = state.get("session_id", "default_user")
     raw_history = state.get("conversation_history", [])
 
-    # Formatear historial reciente para el LLM
-    history_text = "\n".join([
-        f"{m.get('role', 'user').capitalize()}: {m.get('content', '')}"
-        for m in raw_history[-8:]
-    ])
-
     image_path = state.get("payload", {}).get("image_file_path")
 
     response_text = await conversational_chat_tool.ainvoke({
         "user_message": user_content,
         "chat_id": chat_id,
-        "conversation_history": history_text,
+        "conversation_history": raw_history,
         "image_path": image_path,
     })
 

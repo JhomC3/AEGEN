@@ -1,7 +1,7 @@
 import logging
 from typing import Any, cast
 
-from langchain_core.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import BaseTool, tool
 from langgraph.graph import StateGraph
@@ -11,6 +11,7 @@ from src.agents.utils.state_utils import (
 )
 from src.core.engine import create_observable_config, llm
 from src.core.interfaces.specialist import SpecialistInterface
+from src.core.message_utils import dict_to_langchain_messages
 from src.core.profile_manager import user_profile_manager
 from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV2
@@ -37,11 +38,14 @@ async def query_user_history(chat_id: str, query: str) -> str:
 async def cbt_therapeutic_guidance_tool(
     user_message: str,
     chat_id: str,
-    conversation_history: str = "",
+    conversation_history: list[dict[str, Any]] | None = None,
 ) -> str:
     """
     Ejecuta la guía terapéutica TCC inyectando el perfil completo del usuario.
     """
+    if conversation_history is None:
+        conversation_history = []
+
     # 1. Cargar perfil (Diskless/Multi-user)
     profile = await user_profile_manager.load_profile(chat_id)
 
@@ -72,10 +76,17 @@ async def cbt_therapeutic_guidance_tool(
     try:
         config = create_observable_config(call_type="cbt_therapeutic_response")
 
+        # Configurar límite de historial desde el perfil
+        adaptation = user_profile_manager.get_personality_adaptation(profile)
+        history_limit = adaptation.get("history_limit", 8)
+
+        # Convertir historial a mensajes de LangChain
+        messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
+
         # Usamos un template más simple ya que el builder construye casi todo
         conversational_prompt = ChatPromptTemplate.from_messages([
             ("system", persona_template),
-            ("placeholder", "{conversation_history}"),
+            MessagesPlaceholder(variable_name="messages"),
             ("user", "{user_message}"),
         ])
 
@@ -83,7 +94,7 @@ async def cbt_therapeutic_guidance_tool(
 
         prompt_input = {
             "user_message": user_message,
-            "conversation_history": conversation_history,
+            "messages": messages,
         }
 
         response = await chain.ainvoke(
@@ -139,16 +150,12 @@ class CBTSpecialist(SpecialistInterface):
 
         # Formatear historial para el prompt (mensajes recientes)
         raw_history = state.get("conversation_history", [])
-        history_text = "\n".join([
-            f"{m.get('role', 'user').capitalize()}: {m.get('content', '')}"
-            for m in raw_history[-5:]
-        ])
 
         # 2. Ejecutar Tool
         response_text = await self.tool.ainvoke({
             "user_message": user_content,
             "chat_id": chat_id,
-            "conversation_history": history_text,
+            "conversation_history": raw_history,
         })
 
         # 3. Actualizar Estado
