@@ -94,10 +94,13 @@ async def process_event_task(event: schemas.CanonicalEventV1):
         message = final_state["error_message"]
     else:
         response_content = final_state.get("payload", {}).get("response")
+        logger.info(
+            f"[TaskID: {task_id}] Response content retrieved: {str(response_content)[:100]}..."
+        )
         message = (
             str(response_content)
-            if response_content
-            else "La tarea se completó, pero no se generó una respuesta."
+            if response_content and str(response_content).strip()
+            else "La tarea se completó, pero el agente generó una respuesta vacía."
         )
 
     logger.info(f"[TaskID: {task_id}] Enviando respuesta al chat {chat_id}.")
