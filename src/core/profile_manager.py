@@ -31,6 +31,7 @@ class UserProfileManager:
                 "communication_level": "intermediate",
                 "humor_tolerance": 0.7,
                 "formality_level": 0.3,
+                "history_limit": 8,
                 "learned_preferences": [],
                 "active_topics": [],
             },
@@ -189,14 +190,11 @@ class UserProfileManager:
                 "communication_level": "intermediate",
                 "humor_tolerance": 0.7,
                 "formality_level": 0.3,
+                "history_limit": 8,
                 "learned_preferences": [],
             },
         )
 
 
 # Singleton (Stateless Manager)
-user_profile_manager = UserProfileManager()
-
-
-# Singleton
 user_profile_manager = UserProfileManager()
