@@ -6,7 +6,6 @@ Maneja la interacción directa con el usuario, integrando memoria y perfil psico
 
 import base64
 import logging
-from datetime import datetime
 from pathlib import Path
 from typing import Any, cast
 
@@ -24,20 +23,10 @@ from src.core.profile_manager import user_profile_manager
 from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV2
 from src.memory.long_term_memory import long_term_memory
+from src.personality.prompt_builder import system_prompt_builder
 from src.tools.google_file_search import file_search_tool
 
 logger = logging.getLogger(__name__)
-
-
-def _load_persona_prompt() -> str:
-    """Carga el prompt maestro de personalidad (TCC compatible)."""
-    try:
-        prompt_path = Path("src/prompts/cbt_therapeutic_response.txt")
-        if prompt_path.exists():
-            return prompt_path.read_text(encoding="utf-8")
-    except Exception as e:
-        logger.error(f"Error cargando persona prompt: {e}")
-    return "Eres MAGI, un asistente útil y empático. Usuario: {user_name}. Mensaje: {user_message}."
 
 
 @tool
@@ -52,8 +41,6 @@ async def conversational_chat_tool(
     """
     # 1. Cargar perfil (Diskless/Multi-user)
     profile = await user_profile_manager.load_profile(chat_id)
-    profile_context = user_profile_manager.get_context_for_prompt(profile)
-    style = user_profile_manager.get_style(profile)
 
     # 2. Smart RAG
     try:
@@ -68,22 +55,26 @@ async def conversational_chat_tool(
     memory_data = await long_term_memory.get_summary(chat_id)
     history_summary = memory_data.get("summary", "Perfil activo.")
 
-    current_date_str = datetime.now().strftime("%A, %d de %B")
+    persona_template = await system_prompt_builder.build(
+        chat_id=chat_id,
+        profile=profile,
+        skill_name="chat",
+        runtime_context={
+            "history_summary": history_summary,
+            "knowledge_context": knowledge_context,
+        },
+    )
 
-    persona_template = _load_persona_prompt()
-    conversational_prompt = ChatPromptTemplate.from_template(persona_template)
+    # Usamos un template más simple ya que el builder construye casi todo
+    conversational_prompt = ChatPromptTemplate.from_messages([
+        ("system", persona_template),
+        ("placeholder", "{conversation_history}"),
+        ("user", "{user_message}"),
+    ])
 
     prompt_input = {
-        "user_name": profile.get("identity", {}).get("name", "Usuario"),
-        "current_date": current_date_str,
         "user_message": user_message,
         "conversation_history": conversation_history,
-        "knowledge_context": knowledge_context,
-        "history_summary": history_summary,
-        "user_style": style,
-        "user_phase": profile_context.get("phase", "Building"),
-        "struggles": profile_context.get("struggles", "None"),
-        "key_metaphors": profile_context.get("metaphors", "None"),
     }
 
     try:

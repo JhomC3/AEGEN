@@ -62,7 +62,14 @@ def check_basic_patterns() -> bool:
                 violations.append(f"{file_path}: Use aiohttp instead of requests")
 
             if "open(" in content and "async" not in content:
-                violations.append(f"{file_path}: Use aiofiles for file I/O")
+                violations.append(
+                    f"{file_path}: Use aiofiles for file I/O (ephemeral only)"
+                )
+
+            if '"storage/' in content or "'storage/" in content:
+                violations.append(
+                    f"{file_path}: Use Redis/Cloud instead of 'storage/' for persistent data"
+                )
 
         if violations:
             print("❌ Pattern violations:")

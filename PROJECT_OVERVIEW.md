@@ -1,8 +1,8 @@
 # AEGEN: Plataforma de Orquestación de Agentes Multi-Especialistas
 
 > **MAGI:** El Asistente Conversacional (Interfaz Principal)
-> **Versión:** 0.1.1 (Identity Correction)
-> **Estado:** Refactorizando Especialista TCC
+> **Versión:** 0.2.0 (Diskless Architecture)
+> **Estado:** Arquitectura Diskless Implementada
 > **Branch Actual:** `main`
 
 <!-- LLM-Hint: AEGEN es la infraestructura. MAGI es el agente conversacional que el usuario ve. MAGI utiliza el MasterOrchestrator para delegar tareas a especialistas como el Agente TCC. Este documento es la Fuente de Verdad. -->
@@ -61,7 +61,12 @@ MAGI/
 ├── 🧠 Orquestación
 │   ├── agents/
 │   │   ├── orchestrator/    # ✅ MasterOrchestrator, GraphBuilder, Router
-│   │   └── specialists/     # ✅ Transcription, Chat, etc.
+│   │   └── specialists/     # ✅ TCC, Chat, Transcription, etc.
+│   │
+│   ├── personality/         # ✅ NUEVO: Sistema de Personalidad Adaptativa
+│   │   ├── base/            # ✅ SOUL.md, IDENTITY.md
+│   │   ├── skills/          # ✅ Overlays (TCC, Chat)
+│   │   └── prompt_builder.py # ✅ Composición dinámica
 │   │
 │   └── core/                # ✅ Schemas, Registry, Interfaces
 │
@@ -70,7 +75,7 @@ MAGI/
 └── 📊 Observabilidad        # ✅ Logging, Middleware, Metrics
 ```
 
-### Flujo de Datos Actual
+### Flujo de Datos Actual (Arquitectura Diskless)
 ```mermaid
 graph TD
     A[Telegram] --> B(Webhook);
@@ -79,11 +84,20 @@ graph TD
     D --> E{EnhancedFunctionCallingRouter};
     E --> F[RoutingAnalyzer];
     F --> G{LLM (Gemini)};
-    E --> H[SpecialistCache];
-    H --> I[Specialist Agent];
-    I --> J[GraphExecution];
-    J --> K(Response);
-    K --> A;
+    E --> H[Specialist Agent];
+    H --> I[GraphExecution];
+    I --> J[RedisMessageBuffer];
+    J --> K[ConsolidationManager];
+    K --> L[Google File Search API];
+    I --> M(Response);
+    M --> A;
+
+    subgraph Memory
+        J
+        K
+        L
+        N[Redis Profile Cache]
+    end
 ```
 
 ## 🧪 3. Estrategia de Testing (Gradual)
@@ -104,11 +118,11 @@ graph TD
 ### ✅ FASE 3B: Sistema Conversacional + Memoria (COMPLETADA)
 **Objetivo:** Sistema conversacional completo con memoria persistente. DoD Alcanzado.
 
-### ✅ FASE 3C: Especialista TCC + Perfil Evolutivo (EN PROGRESO)
-**Objetivo:** Especialista TCC funcional + integración profunda con perfil psicológico + memoria vectorial.
-- **Foundation + Core Restoration:** Completado.
-- **TCC Agent Fix:** En proceso (Mismatch de variables).
-- **Próximo Sprint:** Integración Vectorial (ChromaDB Stub -> Real).
+### ✅ FASE 3C: Arquitectura Diskless + Especialista TCC (COMPLETADA)
+**Objetivo:** Eliminar dependencia de storage local + Especialista TCC funcional con memoria a largo plazo en Google Cloud.
+- **Diskless Memory:** Implementado con Redis + Google File Search.
+- **Multi-tenant Profiles:** Stateless ProfileManager operativo.
+- **TCC Agent:** Integrado con búsqueda semántica de historial.
 
 ### 🌟 FASE 4: Federación Completa (Q2)
 - Múltiples especialistas con LangSmith observability.

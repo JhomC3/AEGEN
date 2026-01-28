@@ -136,6 +136,36 @@ GET session:chat:123456789
 TTL session:chat:123456789
 ```
 
+## Estructura de Datos (Arquitectura Diskless)
+
+A partir de la versión 0.2.0, AEGEN utiliza Redis de forma extensiva para una operación stateless.
+
+### Base de Datos 1: Memoria y Perfiles
+
+| Clave | Tipo | Propósito | TTL |
+|-------|------|-----------|-----|
+| `session:chat:{id}` | JSON | Estado actual de la sesión LangGraph | 1h |
+| `chat:buffer:{id}` | List | Mensajes recientes pendientes de consolidación | - |
+| `chat:summary:{id}` | JSON | Resumen consolidado del historial | - |
+| `chat:last_activity:{id}` | String | Timestamp de la última interacción | - |
+| `profile:{id}` | JSON | Perfil de usuario (nombre, identidad, personalidad evolutiva) | 24h |
+
+### Comandos de Inspección Útiles
+
+```bash
+# Ver buffer de mensajes pendientes
+LRANGE chat:buffer:123456789 0 -1
+
+# Ver perfil del usuario
+GET profile:123456789
+
+# Ver resumen consolidado
+GET chat:summary:123456789
+
+# Verificar última actividad para consolidación
+GET chat:last_activity:123456789
+```
+
 ## Monitoreo
 
 ### Comandos Útiles

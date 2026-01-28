@@ -310,6 +310,53 @@ def _transcribe():
 - **Idioma:** Forzado a español (`language="es"`)
 - **VAD:** Optimizado para conversaciones (`min_silence_duration_ms=700`)
 
+### 3.5 Arquitectura de Memoria Diskless (Fase 3C)
+
+AEGEN ha eliminado la dependencia del sistema de archivos local para la persistencia de datos de usuario, migrando a una arquitectura 100% cloud-native y distribuida.
+
+#### Flujo de Consolidación de Memoria
+```mermaid
+graph LR
+    A[Interacción] --> B[RedisMessageBuffer]
+    B --> C{Condiciones de Consolidación}
+    C -->|N >= 20 msgs| D[ConsolidationManager]
+    C -->|6h Inactividad| D
+    D --> E[Google File Search API]
+    E --> F[Historial Permanente]
+```
+
+**Componentes:**
+- **RedisMessageBuffer:** Almacena mensajes recientes en una lista de Redis (`chat:buffer:{chat_id}`). Permite acceso de baja latencia para el contexto inmediato.
+- **ConsolidationManager:** Procesa el buffer de forma asíncrona. Genera un resumen y sube el historial completo a Google Cloud.
+- **Google File Search API:** Actúa como el almacenamiento de largo plazo, permitiendo búsquedas semánticas sobre el historial consolidado sin necesidad de una base de datos vectorial local.
+
+### 3.6 Sistema de Perfiles Multi-Usuario Stateless
+
+El `ProfileManager` ha sido rediseñado para operar en entornos stateless, garantizando que cualquier instancia del motor pueda atender a cualquier usuario.
+
+- **Caché en Redis:** Los perfiles se almacenan en Redis (`profile:{chat_id}`) con un TTL para acceso rápido.
+- **Persistencia en Cloud:** Los cambios en el perfil se sincronizan con Google Cloud para persistencia a largo plazo.
+- **Identidad Dinámica:** El sistema carga automáticamente el nombre y preferencias del usuario desde el perfil al inicio de cada interacción, permitiendo una personalización profunda ("Hola [Nombre], según lo que hablamos ayer...").
+
+### 3.7 Arquitectura de Personalidad Adaptativa (Fase 4 - NUEVO)
+
+AEGEN implementa un sistema de personalidad modular y evolutivo para MAGI, permitiendo que el asistente se adapte al usuario y al contexto de la tarea sin perder su identidad base.
+
+#### Motor de Personalidad de 4 Capas
+```mermaid
+graph TD
+    A[Capa 1: Base - SOUL.md + IDENTITY.md] --> E[SystemPromptBuilder]
+    B[Capa 2: Adaptación - User Profile Redis] --> E
+    C[Capa 3: Skill Overlay - TCC/Chat Overlays] --> E
+    D[Capa 4: Contexto Runtime - Fecha/Canal/MLP] --> E
+    E --> F[System Prompt Dinámico]
+```
+
+**Componentes:**
+- **Base Identity:** Inspirada en Clawdbot (casual, directo, con opinión). Definida en `src/personality/base/`.
+- **Adaptation Engine:** Analiza interacciones durante la consolidación de memoria para ajustar parámetros como `humor_tolerance` y `preferred_style`.
+- **Skill Overlays:** Modificadores de tono específicos (ej: "Amor Duro" para TCC) que se añaden sobre la personalidad base.
+
 ---
 
 ## 📊 Observabilidad - LangSmith Integration
@@ -481,19 +528,15 @@ services:
 
 ## 🔄 Evolution Path
 
-### Phase 3C Implementation - ChromaDB Vector Database + Multi-Agent
+### Phase 3C Implementation - Diskless Memory + Cloud Integration (COMPLETADA)
 
-La arquitectura actual está en proceso de:
+La arquitectura actual ha logrado:
 
-1. **ChromaDB Integration:** Vector database with user namespacing for privacy (EN DESARROLLO)
-2. **Message Bundling:** Optimización de carga por usuario (REVERTIDO / EN REVISIÓN)
-    3. **TCC Specialist:** Agente enfocado en Terapia Cognitivo Conductual con acceso a perfil evolutivo.
-    4. **Transcription Specialist:** Maneja la conversión de voz a texto para procesar mensajes de audio.
-3. **Privacy-First Architecture:** User-specific vs shared knowledge base separation
-4. **Vector Search:** Knowledge retrieval capabilities with semantic search
-5. **File Processing:** Excel manipulation with conversational interface
-6. **Persistent State:** File state management in Redis sessions + vector embeddings
-7. **Multi-turn Workflows:** Complex file operations with memory + vector context
+1. **Google Cloud Integration:** Uso de Google File Search API para almacenamiento y búsqueda semántica.
+2. **Diskless Architecture:** Eliminación total de `storage/` y dependencias de filesystem local.
+3. **Stateless Scalability:** El sistema puede escalarse horizontalmente sin pérdida de datos.
+4. **TCC Specialist:** Agente enfocado en Terapia Cognitivo Conductual con acceso a memoria de largo plazo consolidada.
+5. **Personalización Dinámica:** Refuerzo de la identidad del usuario mediante el uso de perfiles persistentes en la nube.
 
 ### Future Enhancements
 

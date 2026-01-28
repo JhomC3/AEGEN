@@ -41,6 +41,8 @@ make verify       # Validar antes de commit
 - Hardcoded LLM imports (usar src.core.engine)
 - Performance regressions sin justificación
 - Missing correlation_id propagation
+- **Uso de `aiofiles` o escritura en `storage/` local para datos de usuario**
+- **Paths de archivos hardcodeados fuera de `/tmp`**
 
 ---
 
@@ -138,6 +140,18 @@ feat(scope): descripción imperativa
 ---
 
 ## 🏗️ Patterns de Arquitectura
+
+### Diskless-First Pattern
+- **Nunca** guardar datos de usuario o historiales en el sistema de archivos local.
+- Utilizar `RedisMessageBuffer` para persistencia temporal inmediata.
+- Confiar en la consolidación asíncrona hacia Google Cloud para almacenamiento de largo plazo.
+- Los perfiles de usuario deben gestionarse exclusivamente a través de `ProfileManager` (Redis + Cloud).
+- El almacenamiento local (`/tmp`) solo se permite para procesamiento efímero de archivos (ej. transcodificación de audio) que se eliminan inmediatamente después.
+
+### Personality Management Pattern
+- **Evolución obligatoria:** Toda interacción significativa debe ser analizada para actualizar el perfil de adaptación de personalidad del usuario.
+- **Base inmutable:** Nunca modificar `SOUL.md` o `IDENTITY.md` mediante código; estos son el ancla de identidad.
+- **Overlays modulares:** Los especialistas deben definir sus matices de personalidad mediante `SkillOverlay` sin sobrescribir la identidad base.
 
 ### Event-Driven
 - `CanonicalEventV1` como lingua franca
@@ -247,7 +261,7 @@ make run-dev     # Fresh start
 |-------|----------|
 | File > 100 lines | Dividir responsabilidades en archivos separados |
 | Function > 20 lines | Extraer submétodos privados |
-| Sync I/O detected | Usar `aiohttp`, `aiofiles`, `asyncio.to_thread` |
+| Sync I/O detected | Usar `aiohttp`, `asyncio.to_thread` (evitar `aiofiles` para datos persistentes) |
 | Missing tests | Añadir tests unitarios para nueva funcionalidad |
 | No docstring | Agregar docstring con formato Google + LLM-hints |
 

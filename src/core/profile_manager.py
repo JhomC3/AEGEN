@@ -23,8 +23,16 @@ class UserProfileManager:
         return {
             "identity": {
                 "name": "Usuario",
-                "style": "Deep Existential Stoic",
+                "style": "Casual y Directo",
                 "preferences": {},
+            },
+            "personality_adaptation": {
+                "preferred_style": "casual",
+                "communication_level": "intermediate",
+                "humor_tolerance": 0.7,
+                "formality_level": 0.3,
+                "learned_preferences": [],
+                "active_topics": [],
             },
             "psychological_state": {
                 "current_phase": "Discovery",
@@ -170,7 +178,20 @@ class UserProfileManager:
         return profile.get("active_tags", [])
 
     def get_style(self, profile: dict[str, Any]) -> str:
-        return profile.get("identity", {}).get("style", "Deep Existential Stoic")
+        return profile.get("identity", {}).get("style", "Casual y Directo")
+
+    def get_personality_adaptation(self, profile: dict[str, Any]) -> dict[str, Any]:
+        """Retorna la configuración de adaptación de personalidad."""
+        return profile.get(
+            "personality_adaptation",
+            {
+                "preferred_style": "casual",
+                "communication_level": "intermediate",
+                "humor_tolerance": 0.7,
+                "formality_level": 0.3,
+                "learned_preferences": [],
+            },
+        )
 
 
 # Singleton (Stateless Manager)
