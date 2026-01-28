@@ -18,6 +18,7 @@ Este documento es de **lectura obligatoria** para cualquier contribuidor (humano
 
 - **Arquitectura Evolutiva:** Diseñado para pasar de un monolito a un sistema distribuido cuando sea necesario.
 - **Desacoplamiento por Eventos:** Orquestación de flujos de trabajo a través de un bus de eventos asíncrono.
+- **Personalidad Adaptativa y Evolutiva:** MAGI posee una identidad base (estilo Clawdbot) que se adapta y evoluciona con cada usuario, modificando su tono y estilo según la interacción.
 - **Observabilidad LLM Completa:** Sistema híbrido LangSmith + Prometheus con tracking de llamadas, latency, tokens y costos. Correlation IDs end-to-end y dashboard tiempo real.
 - **Agentes Modulares Multi-tenant:** Sistema de agentes componibles con aislamiento per-usuario y memoria vectorial ChromaDB.
 - **Performance Optimizado:** Routing inteligente <2s, delegación híbrida, function calling optimizado (ADR-0009).

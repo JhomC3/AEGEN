@@ -16,6 +16,7 @@ from src.core.schemas import GraphStateV2
 from .routing_analyzer import RoutingAnalyzer
 from .routing_prompts import build_routing_prompt
 from .routing_utils import (
+    detect_explicit_command,
     is_conversational_only,
     route_to_chat,
     update_state_with_decision,
@@ -66,6 +67,15 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
                 "Fast Path: Mensaje puramente conversacional detectado -> ChatDirecto"
             )
             return route_to_chat(state)
+
+        # ✅ EXPLICIT COMMANDS
+        explicit_target = detect_explicit_command(user_message)
+        if explicit_target:
+            logger.info(f"Comando explícito detectado -> {explicit_target}")
+            if "payload" not in state:
+                state["payload"] = {}
+            state["payload"]["next_node"] = explicit_target
+            return explicit_target
 
         try:
             # Análisis integrado con componentes especializados

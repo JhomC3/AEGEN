@@ -1,5 +1,4 @@
 import logging
-from datetime import datetime
 from typing import Any, cast
 
 from langchain_core.prompts import ChatPromptTemplate
@@ -13,19 +12,16 @@ from src.agents.utils.state_utils import (
 from src.core.engine import create_observable_config, llm
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.profile_manager import user_profile_manager
-from src.core.prompts.loader import load_text_prompt
 from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV2
 from src.memory.long_term_memory import long_term_memory
+from src.personality.prompt_builder import system_prompt_builder
 from src.tools.google_file_search import file_search_tool
 
 logger = logging.getLogger(__name__)
 
 # --- Managed Prompts ---
-CBT_THERAPEUTIC_TEMPLATE = (
-    load_text_prompt("cbt_therapeutic_response.txt")
-    or "Eres MAGI, un mentor estoico. Ayuda al usuario con su trading sin preguntar la fecha."
-)
+# Eliminado CBT_THERAPEUTIC_TEMPLATE - Usando SystemPromptBuilder
 
 
 @tool
@@ -48,8 +44,6 @@ async def cbt_therapeutic_guidance_tool(
     """
     # 1. Cargar perfil (Diskless/Multi-user)
     profile = await user_profile_manager.load_profile(chat_id)
-    profile_context = user_profile_manager.get_context_for_prompt(profile)
-    style = user_profile_manager.get_style(profile)
 
     # 2. Recuperar Memoria de Largo Plazo (Resumen)
     memory_data = await long_term_memory.get_summary(chat_id)
@@ -65,23 +59,31 @@ async def cbt_therapeutic_guidance_tool(
         logger.warning(f"Error en RAG TCC: {e}")
         knowledge_context = "No hay contexto documental disponible."
 
-    try:
-        config = create_observable_config(call_type="cbt_therapeutic_response")
-        chain = ChatPromptTemplate.from_template(CBT_THERAPEUTIC_TEMPLATE) | llm
-
-        current_date_str = datetime.now().strftime("%A, %d de %B de %Y")
-
-        prompt_input = {
-            "current_date": current_date_str,
-            "user_name": profile.get("identity", {}).get("name", "Usuario"),
-            "user_message": user_message,
-            "conversation_history": conversation_history,
+    persona_template = await system_prompt_builder.build(
+        chat_id=chat_id,
+        profile=profile,
+        skill_name="tcc",
+        runtime_context={
             "history_summary": history_summary,
             "knowledge_context": knowledge_context,
-            "user_style": style,
-            "user_phase": profile_context.get("phase", "Unknown"),
-            "struggles": profile_context.get("struggles", "None"),
-            "key_metaphors": profile_context.get("metaphors", "None"),
+        },
+    )
+
+    try:
+        config = create_observable_config(call_type="cbt_therapeutic_response")
+
+        # Usamos un template más simple ya que el builder construye casi todo
+        conversational_prompt = ChatPromptTemplate.from_messages([
+            ("system", persona_template),
+            ("placeholder", "{conversation_history}"),
+            ("user", "{user_message}"),
+        ])
+
+        chain = conversational_prompt | llm
+
+        prompt_input = {
+            "user_message": user_message,
+            "conversation_history": conversation_history,
         }
 
         response = await chain.ainvoke(

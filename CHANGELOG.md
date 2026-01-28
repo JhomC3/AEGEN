@@ -5,6 +5,31 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [Unreleased]
 
+### Added
+- **Adaptive and Evolutionary Personality Architecture**: MAGI ahora posee una identidad base (estilo Clawdbot) que se adapta y evoluciona con cada usuario.
+  - `SystemPromptBuilder` modular para composición de prompts en 4 capas (Base, Adaptación, Skill, Runtime).
+  - `PersonalityManager` para gestión de archivos Markdown de identidad (`SOUL.md`, `IDENTITY.md`).
+  - `PersonalityEvolutionService` integrado en el ciclo de consolidación de memoria para aprendizaje continuo.
+  - Overlays de personalidad por especialista (ej: "Amor Duro" para TCC).
+  - Activación híbrida de especialistas: Detección automática + Comandos explícitos (`/tcc`, `/chat`).
+- **Diskless Memory Architecture**: Migración completa a Redis + Google Cloud para una infraestructura stateless y escalable.
+  - `RedisMessageBuffer` para gestión de mensajes pre-consolidación de alta velocidad.
+  - `ConsolidationManager` para consolidación automática de historiales (N>=20 mensajes o 6h de inactividad).
+  - Integración profunda con Google File Search API para almacenamiento y búsqueda semántica de historiales consolidados.
+  - Soporte multi-usuario stateless en `ProfileManager` con caché en Redis y persistencia en la nube.
+  - Nueva herramienta `query_user_history` para el especialista TCC.
+- **Personalización Dinámica**: Respuestas adaptativas que utilizan el nombre del usuario y refuerzan la memoria conversacional activa.
+
+### Changed
+- `LongTermMemoryManager` refactorizado para eliminar dependencias del sistema de archivos local.
+- `ChatAgent` y `CBT Specialist` ahora cargan perfiles de usuario dinámicamente mediante `chat_id`.
+- Prompts terapéuticos actualizados para incentivar el uso de la memoria a largo plazo y la identidad del usuario.
+
+### Removed
+- Directorio `storage/` y toda dependencia de almacenamiento local persistente.
+- Dependencia de `aiofiles` en módulos de memoria central.
+- Variables de entorno y configuraciones relacionadas con paths locales (`STORAGE_DIR`).
+
 ## [v0.1.5] - 2025-12-19
 ### Fixed
 - **Polling (Universal Fix):** Refactorizado `polling.py` para usar exclusivamente la librería estándar de Python (`urllib`, `json`). Eliminadas dependencias de `httpx` y `requests` que causaban fallos en entornos host sin entorno virtual activo (`systemctl`).

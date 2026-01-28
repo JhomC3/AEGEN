@@ -42,6 +42,11 @@ def is_conversational_only(text: str) -> bool:
     Detecta si un mensaje es puramente conversacional (saludo/despedida/gratitud)
     para evitar costo de LLM Router.
     """
+    # Si detectamos un comando explícito, NO es conversacional solamente,
+    # debe pasar por el router o ser procesado.
+    if detect_explicit_command(text):
+        return False
+
     text = text.strip().lower()
 
     # Patrones de saludos simples y cortesía
@@ -61,6 +66,27 @@ def is_conversational_only(text: str) -> bool:
     # Ahora TODO lo que no sea un saludo explícito pasa por el Router LLM.
 
     return False
+
+
+def detect_explicit_command(text: str) -> str | None:
+    """
+    Detecta si el usuario está usando un comando explícito para activar un especialista.
+    Ejemplos: /tcc, /terapeuta, /debug, /coding
+    """
+    text = text.strip().lower()
+
+    commands = {
+        "cbt_specialist": [r"^/tcc", r"^/terapeuta", r"^/psicologo"],
+        "chat_specialist": [r"^/chat", r"^/magi"],
+        # Futuros especialistas
+        "coding_specialist": [r"^/coding", r"^/code", r"^/programar"],
+    }
+
+    for specialist, patterns in commands.items():
+        if any(re.search(p, text) for p in patterns):
+            return specialist
+
+    return None
 
 
 def update_state_with_decision(state: GraphStateV2, decision: RoutingDecision) -> None:
