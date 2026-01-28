@@ -145,7 +145,7 @@ class ConfigurableChainRouter(RoutingStrategy):
                     f"Chain: Condiciones no cumplidas para {last_specialist}"
                 )
         else:
-            logger.warning(
+            logger.debug(
                 f"Chain: Sin regla para especialista '{last_specialist}'. Reglas disponibles: {list(self._chain_rules.keys())}"
             )
 

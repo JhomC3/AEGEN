@@ -262,7 +262,7 @@ class RoutingAnalyzer:
             intent = IntentType.CHAT
 
         # Convertir entities de strings a EntityInfo objects
-        entities_raw = decision_data.get("entities", [])
+        entities_raw = decision_data.get("entities") or []
         entities = []
         for entity_str in entities_raw:
             if isinstance(entity_str, str) and entity_str.strip():

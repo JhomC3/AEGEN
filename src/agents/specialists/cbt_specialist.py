@@ -78,7 +78,7 @@ async def cbt_therapeutic_guidance_tool(
 
         # Configurar límite de historial desde el perfil
         adaptation = user_profile_manager.get_personality_adaptation(profile)
-        history_limit = adaptation.get("history_limit", 8)
+        history_limit = adaptation.get("history_limit", 20)
 
         # Convertir historial a mensajes de LangChain
         messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
