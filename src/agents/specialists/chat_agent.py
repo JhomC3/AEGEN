@@ -146,6 +146,8 @@ async def _chat_node(state: GraphStateV2) -> Any:
     updated_history.append({"role": "assistant", "content": response_text})
 
     state["payload"]["response"] = response_text
+    state["payload"]["last_specialist"] = "chat_specialist"
+    state["payload"]["next_action"] = "respond_to_user"
     state["conversation_history"] = updated_history[-20:]
     return state
 
