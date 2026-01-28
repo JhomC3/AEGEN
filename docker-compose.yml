@@ -6,6 +6,12 @@ services:
     container_name: magi_app_prod
     ports:
       - "8000:8000"
+    environment:
+      - LLM_PROVIDER=${LLM_PROVIDER:-google}
+      - OPENROUTER_MODEL_NAME=${OPENROUTER_MODEL_NAME:-openai/gpt-oss-120b:free}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - APP_ENV=${APP_ENV:-production}
     volumes:
       - .env:/app/.env
       - ./storage:/app/storage
@@ -38,7 +44,6 @@ services:
 
 volumes:
   redis_data:
-
 
 networks:
   magi_network:
