@@ -1,28 +1,30 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi_cache import FastAPICache
-from fastapi_cache.backends.redis import RedisBackend
-from prometheus_fastapi_instrumentator import Instrumentator
+from src.core.logging_config import setup_logging
+
+# --- Inicialización de Logs (Debe ser lo primero) ---
+setup_logging()
+
+from fastapi import FastAPI, Request  # noqa: E402
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi.middleware.trustedhost import TrustedHostMiddleware  # noqa: E402
+from fastapi_cache import FastAPICache  # noqa: E402
+from fastapi_cache.backends.redis import RedisBackend  # noqa: E402
+from prometheus_fastapi_instrumentator import Instrumentator  # noqa: E402
 
 # Importar los especialistas para asegurar que se registren al inicio
-from src import agents  # noqa: F401
-from src.api.routers import analysis, llm_metrics, status, webhooks
-from src.core.config import settings
-from src.core.dependencies import (
+from src import agents  # noqa: F401, E402
+from src.api.routers import analysis, llm_metrics, status, webhooks  # noqa: E402
+from src.core.config import settings  # noqa: E402
+from src.core.dependencies import (  # noqa: E402
     initialize_global_collections,
     initialize_global_resources,
     prime_dependencies,
     shutdown_global_resources,
 )
-from src.core.error_handling import register_exception_handlers
-from src.core.logging_config import setup_logging
-from src.core.middleware import CorrelationIdMiddleware
-
-setup_logging()
+from src.core.error_handling import register_exception_handlers  # noqa: E402
+from src.core.middleware import CorrelationIdMiddleware  # noqa: E402
 
 logger = logging.getLogger(settings.APP_NAME)
 
