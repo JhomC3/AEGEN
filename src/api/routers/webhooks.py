@@ -146,6 +146,10 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
     if not fragments:
         return
 
+    # REFRESCO DE FEEDBACK: Enviar "typing" nuevamente antes de procesar
+    # Esto mantiene el indicador activo mientras el LLM piensa
+    await telegram_interface.telegram_manager.send_chat_action(str(chat_id), "typing")
+
     logger.info(
         f"Consolidando {len(fragments)} mensajes acumulados para el chat {chat_id}."
     )

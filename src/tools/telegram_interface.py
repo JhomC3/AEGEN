@@ -8,6 +8,7 @@ de la arquitectura del proyecto.
 """
 
 import logging
+import re
 from pathlib import Path
 from typing import cast
 
@@ -102,18 +103,35 @@ class TelegramToolManager:
                 )
                 return None
 
+    def _clean_markdown(self, text: str) -> str:
+        """
+        Limpia residuos de markdown (**, __, `) para envío seguro en texto plano.
+        """
+        # Eliminar negritas (**texto** -> texto)
+        text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
+        # Eliminar cursivas (__texto__ -> texto)
+        text = re.sub(r"__(.*?)__", r"\1", text)
+        # Eliminar código inline (`texto` -> texto)
+        text = re.sub(r"`(.*?)`", r"\1", text)
+        # Eliminar bloques de código (```texto``` -> texto)
+        text = re.sub(r"```(.*?)```", r"\1", text, flags=re.DOTALL)
+        return text
+
     @retry_on_failure(retries=3, delay=2.0, backoff=2.0)
     async def send_message(self, chat_id: str, text: str) -> bool:
         """
-        Envía un mensaje de texto a un chat de Telegram con reintentos y soporte Markdown.
+        Envía un mensaje de texto a un chat de Telegram.
+        Limpia markdown para evitar errores 400 y envía como texto plano.
         """
+        clean_text = self._clean_markdown(text)
+
         async with httpx.AsyncClient(timeout=15.0) as client:
             try:
                 url = f"{self.base_url}/sendMessage"
                 payload = {
                     "chat_id": chat_id,
-                    "text": text,
-                    "parse_mode": "Markdown",  # Permite negritas con **
+                    "text": clean_text,
+                    # Sin parse_mode: enviamos texto plano seguro
                 }
                 response = await client.post(url, json=payload)
                 response.raise_for_status()
