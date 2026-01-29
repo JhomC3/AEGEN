@@ -157,7 +157,7 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
     # Consolidar texto y seleccionar archivo más relevante
     combined_content = []
     final_file_id = None
-    final_event_type = "text"
+    final_event_type: Literal["text", "audio", "document", "image", "unknown"] = "text"
 
     for frag in fragments:
         if frag.get("content"):
@@ -250,7 +250,9 @@ async def telegram_webhook(
     )
 
     # 3. Lanzar tarea de fondo con espera
-    background_tasks.add_task(process_buffered_events, chat_id, current_seq, trace_id)
+    background_tasks.add_task(
+        process_buffered_events, chat_id, current_seq, trace_id or "no-trace"
+    )
 
     return schemas.IngestionResponse(
         task_id=f"{chat_id}-{current_seq}",
