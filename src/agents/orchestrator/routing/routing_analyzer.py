@@ -193,6 +193,12 @@ class RoutingAnalyzer:
         if context.get("history_length", 0) > 0:
             parts.append(f"Historial: {context['history_length']} mensajes")
 
+        if context.get("previous_intent"):
+            parts.append(f"Intent anterior: {context['previous_intent']}")
+
+        if context.get("previous_specialist"):
+            parts.append(f"Especialista previo: {context['previous_specialist']}")
+
         return " | ".join(parts) if parts else "Sesión nueva"
 
     def _create_fallback_decision(self, message: str) -> RoutingDecision:
