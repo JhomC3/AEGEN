@@ -36,12 +36,16 @@ async def conversational_chat_tool(
     chat_id: str,
     conversation_history: list[dict[str, Any]] | None = None,
     image_path: str | None = None,
+    routing_metadata: dict[str, Any] | None = None,
 ) -> str:
     """
     Genera una respuesta empática y contextual usando el perfil del usuario.
     """
     if conversation_history is None:
         conversation_history = []
+
+    routing_metadata = routing_metadata or {}
+    next_actions = routing_metadata.get("next_actions", [])
 
     # 1. Cargar perfil (Diskless/Multi-user)
     profile = await user_profile_manager.load_profile(chat_id)
@@ -59,6 +63,15 @@ async def conversational_chat_tool(
     memory_data = await long_term_memory.get_summary(chat_id)
     history_summary = memory_data.get("summary", "Perfil activo.")
 
+    # Instrucciones de monitoreo emocional (Low Confidence Vulnerability)
+    routing_instructions = ""
+    if "monitor_emotional_cues" in next_actions:
+        routing_instructions = (
+            "\n\nAVISO DE ENRUTAMIENTO: Se han detectado señales sutiles de vulnerabilidad. "
+            "Mantén un tono empático y valida sus sentimientos si parece necesario, "
+            "pero sin forzar una conversación terapéutica profunda.\n"
+        )
+
     persona_template = await system_prompt_builder.build(
         chat_id=chat_id,
         profile=profile,
@@ -68,6 +81,9 @@ async def conversational_chat_tool(
             "knowledge_context": knowledge_context,
         },
     )
+
+    if routing_instructions:
+        persona_template += routing_instructions
 
     # Configurar límite de historial desde el perfil
     adaptation = user_profile_manager.get_personality_adaptation(profile)
@@ -127,13 +143,16 @@ async def _chat_node(state: GraphStateV2) -> Any:
     chat_id = state.get("session_id", "default_user")
     raw_history = state.get("conversation_history", [])
 
-    image_path = state.get("payload", {}).get("image_file_path")
+    payload = state.get("payload", {})
+    image_path = payload.get("image_file_path")
+    routing_decision = payload.get("routing_decision", {})
 
     response_text = await conversational_chat_tool.ainvoke({
         "user_message": user_content,
         "chat_id": chat_id,
         "conversation_history": raw_history,
         "image_path": image_path,
+        "routing_metadata": routing_decision,
     })
 
     # Persistencia en memoria infinita

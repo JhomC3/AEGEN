@@ -39,12 +39,16 @@ async def cbt_therapeutic_guidance_tool(
     user_message: str,
     chat_id: str,
     conversation_history: list[dict[str, Any]] | None = None,
+    routing_metadata: dict[str, Any] | None = None,
 ) -> str:
     """
     Ejecuta la guía terapéutica TCC inyectando el perfil completo del usuario.
     """
     if conversation_history is None:
         conversation_history = []
+
+    routing_metadata = routing_metadata or {}
+    next_actions = routing_metadata.get("next_actions", [])
 
     # 1. Cargar perfil (Diskless/Multi-user)
     profile = await user_profile_manager.load_profile(chat_id)
@@ -63,6 +67,23 @@ async def cbt_therapeutic_guidance_tool(
         logger.warning(f"Error en RAG TCC: {e}")
         knowledge_context = "No hay contexto documental disponible."
 
+    # 4. Construir instrucciones adicionales basadas en next_actions
+    routing_instructions = ""
+    if next_actions:
+        routing_instructions = "\n\nINSTRUCCIONES DE ENRUTAMIENTO PRIORITARIAS:\n"
+        if "depth_empathy" in next_actions:
+            routing_instructions += "- Prioriza la validación emocional profunda antes de cualquier técnica.\n"
+        if "clarify_emotional_state" in next_actions:
+            routing_instructions += "- El estado emocional es ambiguo. Haz una pregunta suave para clarificar cómo se siente realmente.\n"
+        if "active_listening" in next_actions:
+            routing_instructions += (
+                "- Usa escucha activa reflexiva. Parafrasea lo que el usuario dijo.\n"
+            )
+        if "gentle_probe" in next_actions:
+            routing_instructions += (
+                "- Indaga con delicadeza sobre pensamientos automáticos subyacentes.\n"
+            )
+
     persona_template = await system_prompt_builder.build(
         chat_id=chat_id,
         profile=profile,
@@ -72,6 +93,10 @@ async def cbt_therapeutic_guidance_tool(
             "knowledge_context": knowledge_context,
         },
     )
+
+    # Inyectar instrucciones de routing al final del system prompt
+    if routing_instructions:
+        persona_template += routing_instructions
 
     try:
         config = create_observable_config(call_type="cbt_therapeutic_response")
@@ -152,10 +177,13 @@ class CBTSpecialist(SpecialistInterface):
         raw_history = state.get("conversation_history", [])
 
         # 2. Ejecutar Tool
+        routing_decision = state.get("payload", {}).get("routing_decision", {})
+
         response_text = await self.tool.ainvoke({
             "user_message": user_content,
             "chat_id": chat_id,
             "conversation_history": raw_history,
+            "routing_metadata": routing_decision,
         })
 
         # 3. Actualizar Estado
