@@ -132,6 +132,22 @@ class TelegramToolManager:
                 )
                 return False
 
+    async def send_chat_action(self, chat_id: str, action: str = "typing") -> bool:
+        """
+        Envía una acción de chat (ej: typing, upload_photo, record_voice) a Telegram.
+        """
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                url = f"{self.base_url}/sendChatAction"
+                payload = {"chat_id": chat_id, "action": action}
+                response = await client.post(url, json=payload)
+                return response.status_code == 200
+            except Exception as e:
+                logger.warning(
+                    f"No se pudo enviar ChatAction '{action}' a Telegram: {e}"
+                )
+                return False
+
 
 # Instancia única del gestor para ser utilizada por las herramientas.
 telegram_manager = TelegramToolManager()
