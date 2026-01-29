@@ -155,10 +155,17 @@ class RoutingAnalyzer:
         if self._intent_validator.has_clear_intent_evidence(message, decision.intent):
             decision.confidence = min(decision.confidence + 0.15, 1.0)
 
-        # Mapear a especialista disponible real
-        decision.target_specialist = self._specialist_mapper.map_intent_to_specialist(
-            decision.intent, cache
-        )
+        # Validar que el especialista del LLM exista, sino usar fallback por intent
+        available_specialists = list(cache.get_tool_to_specialist_map().values())
+
+        if decision.target_specialist not in available_specialists:
+            logger.warning(
+                f"LLM sugirió '{decision.target_specialist}' no disponible. "
+                f"Mapeando por intent: {decision.intent.value}"
+            )
+            decision.target_specialist = (
+                self._specialist_mapper.map_intent_to_specialist(decision.intent, cache)
+            )
 
         # Determinar requirement de tools
         decision.requires_tools = decision.intent != IntentType.CHAT
