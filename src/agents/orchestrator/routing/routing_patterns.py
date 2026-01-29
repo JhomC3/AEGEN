@@ -146,18 +146,91 @@ class IntentValidator:
             "asistencia",
             "apoyo",
         ],
-        IntentType.VULNERABILITY: [
-            "cansado",
-            "agotado",
-            "triste",
-            "deprimido",
-            "mal",
-            "desempleo",
-            "problema",
-            "solo",
-            "ayúdame",
-            "siento",
-        ],
+        IntentType.VULNERABILITY: {
+            "positive_patterns": [
+                # === 1. Emociones negativas básicas ===
+                "miedo",
+                "tristeza",
+                "ira",
+                "asco",
+                "ansiedad",
+                "angustia",
+                # === Emociones secundarias ===
+                "soledad",
+                "desesperación",
+                "culpabilidad",
+                "vergüenza",
+                "frustración",
+                "envidia",
+                "agobio",
+                "apatía",
+                # === 2. Distorsiones cognitivas TCC ===
+                "todo o nada",
+                "siempre me pasa",
+                "nunca logro",
+                "fracaso total",
+                "todos me",
+                "nadie me",
+                "nunca funciona",
+                "lo peor",
+                "terrible",
+                "desastre",
+                "catástrofe",
+                "es mi culpa",
+                "por mi culpa",
+                "piensan que",
+                "me juzgan",
+                # === 3. Pensamientos automáticos negativos ===
+                "no soy suficiente",
+                "no sirvo para",
+                "soy un fracaso",
+                "nadie me quiere",
+                "estoy solo",
+                "estoy sola",
+                "no lo lograré",
+                "no tiene sentido",
+                # === 4. Solicitudes de ayuda ===
+                "necesito ayuda",
+                "ayúdame",
+                "no sé qué hacer",
+                "necesito desahogarme",
+                "quiero hablar",
+                # === 5. Síntomas específicos ===
+                "muy nervioso",
+                "muy nerviosa",
+                "estresado",
+                "estresada",
+                "pánico",
+                "sin energía",
+                "desmotivado",
+                "desmotivada",
+                "me siento vacío",
+                "me siento vacía",
+                "no me valoro",
+                "no me acepto",
+                # === 6. Triggers contextuales ===
+                "cuando me pasa",
+                "cada vez que",
+                "me ocurre que",
+                # === Frases originales mejoradas ===
+                "me siento mal",
+                "estoy agotado",
+                "estoy deprimido",
+                "agotado",
+                "triste",
+                "deprimido",
+            ],
+            "negative_patterns": [
+                # Excluir contextos de trading/técnicos
+                "el trade",
+                "la operación",
+                "el mercado",
+                "la bolsa",
+                "stop loss",
+                "take profit",
+                "análisis técnico",
+            ],
+        },
         IntentType.TOPIC_SHIFT: [
             "deja",
             "basta",
@@ -182,9 +255,21 @@ class IntentValidator:
             bool: True si encuentra patterns claros del intent
         """
         text_lower = text.lower()
-        patterns = self.INTENT_PATTERNS.get(intent, [])
+        patterns_config = self.INTENT_PATTERNS.get(intent, [])
 
-        return any(pattern in text_lower for pattern in patterns)
+        # Soporte para estructura simple (lista) o compleja (dict con positive/negative)
+        if isinstance(patterns_config, dict):
+            positive_patterns = patterns_config.get("positive_patterns", [])
+            negative_patterns = patterns_config.get("negative_patterns", [])
+
+            # Si hay negative patterns y alguno matchea, NO es este intent
+            if any(neg in text_lower for neg in negative_patterns):
+                return False
+
+            return any(pos in text_lower for pos in positive_patterns)
+        else:
+            # Comportamiento legacy para listas simples
+            return any(pattern in text_lower for pattern in patterns_config)
 
 
 class SpecialistMapper:
