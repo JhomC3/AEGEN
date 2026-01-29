@@ -105,12 +105,16 @@ class TelegramToolManager:
     @retry_on_failure(retries=3, delay=2.0, backoff=2.0)
     async def send_message(self, chat_id: str, text: str) -> bool:
         """
-        Envía un mensaje de texto a un chat de Telegram con reintentos.
+        Envía un mensaje de texto a un chat de Telegram con reintentos y soporte Markdown.
         """
         async with httpx.AsyncClient(timeout=15.0) as client:
             try:
                 url = f"{self.base_url}/sendMessage"
-                payload = {"chat_id": chat_id, "text": text}
+                payload = {
+                    "chat_id": chat_id,
+                    "text": text,
+                    "parse_mode": "Markdown",  # Permite negritas con **
+                }
                 response = await client.post(url, json=payload)
                 response.raise_for_status()
                 data = response.json()

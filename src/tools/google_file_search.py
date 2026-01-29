@@ -128,7 +128,8 @@ class GoogleFileSearchTool:
     async def _wait_for_active(self, uploaded_file: Any):
         """Helper para esperar a que un archivo esté ACTIVE."""
         logger.info(f"Esperando a que {uploaded_file.name} esté ACTIVE...")
-        for _ in range(30):
+        # Aumentado de 30 a 45 intentos (~90 segundos) para evitar timeouts en archivos pesados
+        for _ in range(45):
             await asyncio.sleep(2)
             try:
                 current_file = await asyncio.to_thread(

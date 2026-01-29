@@ -38,12 +38,12 @@ class ConsolidationManager:
                     "- 'new_values': [lista]\n"
                     "- 'new_goals': [lista]\n"
                     "- 'milestone_detected': 'string' o null\n"
-                    "- 'personality_adaptation': {\n"
+                    "- 'personality_adaptation': {{\n"
                     "    'preferred_style': 'casual'|'formal'|'tecnico'|'empatico',\n"
                     "    'humor_tolerance_delta': float (-0.1 a 0.1),\n"
                     "    'formality_level_delta': float (-0.1 a 0.1),\n"
                     "    'new_preferences': [lista]\n"
-                    "}"
+                    "}}\n"
                 ),
             ),
             (
