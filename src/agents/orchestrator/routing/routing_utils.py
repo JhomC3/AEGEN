@@ -145,4 +145,11 @@ def extract_context_from_state(state: GraphStateV2) -> dict[str, Any]:
         context["history_length"] = 0
         context["recent_interactions"] = 0
 
+    # Información de routing previo
+    payload = state.get("payload", {})
+    if payload.get("intent"):
+        context["previous_intent"] = payload["intent"]
+    if payload.get("next_node"):
+        context["previous_specialist"] = payload["next_node"]
+
     return context
