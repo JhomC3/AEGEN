@@ -1,6 +1,8 @@
 # src/api/routers/webhooks.py
+import asyncio
 import logging
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 from uuid import uuid4
@@ -9,6 +11,7 @@ from fastapi import APIRouter, BackgroundTasks, status
 
 from src.agents.orchestrator.factory import master_orchestrator
 from src.core import schemas
+from src.core.ingestion_buffer import ingestion_buffer
 from src.core.middleware import correlation_id
 from src.core.schemas import GraphStateV2
 from src.core.session_manager import session_manager
@@ -43,7 +46,7 @@ async def process_event_task(event: schemas.CanonicalEventV1):
         payload={},
         error_message=None,
         conversation_history=conversation_history,
-        session_id=str(event.chat_id),  # Propagar session_id
+        session_id=str(event.chat_id),
     )
     final_state: dict
 
@@ -65,7 +68,6 @@ async def process_event_task(event: schemas.CanonicalEventV1):
                         f"[TaskID: {task_id}] Audio descargado en {audio_file_path}"
                     )
                 elif event.event_type == "image":
-                    # Usamos la misma lógica de descarga pero para imágenes
                     image_file_path = (
                         await telegram_interface.download_telegram_audio.ainvoke({
                             "file_id": event.file_id,
@@ -85,7 +87,7 @@ async def process_event_task(event: schemas.CanonicalEventV1):
             f"[TaskID: {task_id}] Fallo no controlado en la orquestación: {e}",
             exc_info=True,
         )
-        final_state = dict(initial_state)  # Convertir a dict genérico
+        final_state = dict(initial_state)
         final_state["error_message"] = (
             "Ocurrió un error inesperado al procesar tu solicitud."
         )
@@ -123,26 +125,86 @@ async def process_event_task(event: schemas.CanonicalEventV1):
     logger.info(f"[TaskID: {task_id}] Orquestación finalizada.")
 
 
+async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
+    """
+    Tarea de fondo que espera y consolida mensajes acumulados.
+    Implementa lógica de Debounce: solo el último mensaje de una ráfaga procesa todo.
+    """
+    # 1. Esperar el tiempo de debounce
+    await asyncio.sleep(3.0)
+
+    # 2. Verificar si somos la tarea más reciente
+    current_seq = await ingestion_buffer.get_current_sequence(str(chat_id))
+    if current_seq != task_seq:
+        logger.debug(
+            f"Interrupción de debounce para {chat_id}: Seq {task_seq} != {current_seq}. Abortando."
+        )
+        return
+
+    # 3. Recuperar y consolidar fragmentos
+    fragments = await ingestion_buffer.flush_all(str(chat_id))
+    if not fragments:
+        return
+
+    logger.info(
+        f"Consolidando {len(fragments)} mensajes acumulados para el chat {chat_id}."
+    )
+
+    # Consolidar texto y seleccionar archivo más relevante
+    combined_content = []
+    final_file_id = None
+    final_event_type = "text"
+
+    for frag in fragments:
+        if frag.get("content"):
+            combined_content.append(frag["content"])
+
+        # Priorizar audio sobre imagen si ambos vienen en la ráfaga
+        if frag.get("event_type") == "audio":
+            final_file_id = frag.get("file_id")
+            final_event_type = "audio"
+        elif frag.get("event_type") == "image" and final_event_type != "audio":
+            final_file_id = frag.get("file_id")
+            final_event_type = "image"
+
+    # Crear evento canónico consolidado
+    event = schemas.CanonicalEventV1(
+        event_id=uuid4(),
+        event_type=final_event_type,
+        source="telegram",
+        chat_id=chat_id,
+        user_id=chat_id,
+        file_id=final_file_id,
+        content="\n".join(combined_content) if combined_content else None,
+        timestamp=datetime.now().isoformat(),
+        metadata={
+            "trace_id": trace_id,
+            "consolidated": True,
+            "fragment_count": len(fragments),
+        },
+    )
+
+    # 4. Procesar el evento consolidado
+    await process_event_task(event)
+
+
 @router.post(
     "/telegram",
     response_model=schemas.IngestionResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Webhook for Telegram events",
-    description="Receives events (like audio messages) forwarded from a Telegram bot.",
+    description="Receives events forwarded from a Telegram bot and implements dynamic debounce.",
 )
 async def telegram_webhook(
     request: schemas.TelegramUpdate,
     background_tasks: BackgroundTasks,
 ):
     """
-    Endpoint que actúa como un 'Adaptador de Telegram'.
+    Endpoint que actúa como un 'Adaptador de Telegram' con acumulación.
     """
     trace_id = correlation_id.get()
 
     if not request.message:
-        logger.warning(
-            f"Webhook de Telegram recibido sin contenido de mensaje. UpdateID: {request.update_id}"
-        )
         return schemas.IngestionResponse(
             task_id=str(uuid4()),
             message="Event received but no processable content found.",
@@ -158,42 +220,35 @@ async def telegram_webhook(
         file_id = request.message.voice.file_id
     elif request.message.photo:
         event_type = "image"
-        # Tomar la foto de mayor resolución (última en la lista)
         file_id = request.message.photo[-1].file_id
-        content = request.message.caption  # Las fotos pueden tener caption
+        content = request.message.caption
     elif request.message.text:
         event_type = "text"
         content = request.message.text
 
-    # Si no se pudo determinar un tipo de evento procesable, no continuar.
     if event_type == "unknown":
-        logger.warning(
-            f"Webhook de Telegram recibido sin contenido procesable (ni voz ni texto). UpdateID: {request.update_id}"
-        )
         return schemas.IngestionResponse(
             task_id=str(uuid4()),
             message="Event received but no processable content found.",
         )
 
-    from datetime import datetime
+    chat_id = request.message.chat.id
 
-    event = schemas.CanonicalEventV1(
-        event_id=uuid4(),
-        event_type=event_type,
-        source="telegram",
-        chat_id=request.message.chat.id,
-        user_id=request.message.chat.id,
-        file_id=file_id,
-        content=content,
-        timestamp=datetime.now().isoformat(),
-        metadata={"trace_id": trace_id, "update_id": request.update_id},
-    )
-    logger.info(
-        f"Webhook de Telegram recibido. EventID: {event.event_id}, TraceID: {trace_id}"
+    # 1. Guardar fragmento en el buffer
+    fragment_data = {"event_type": event_type, "content": content, "file_id": file_id}
+    current_seq = await ingestion_buffer.push_event(str(chat_id), fragment_data)
+
+    # 2. Feedback inmediato al usuario
+    # Determinamos la acción según el tipo de mensaje predominante
+    action = "record_voice" if event_type == "audio" else "typing"
+    background_tasks.add_task(
+        telegram_interface.telegram_manager.send_chat_action, str(chat_id), action
     )
 
-    background_tasks.add_task(process_event_task, event)
+    # 3. Lanzar tarea de fondo con espera
+    background_tasks.add_task(process_buffered_events, chat_id, current_seq, trace_id)
 
     return schemas.IngestionResponse(
-        task_id=str(event.event_id), message="Telegram event accepted for processing."
+        task_id=f"{chat_id}-{current_seq}",
+        message="Telegram event accepted and buffered.",
     )
