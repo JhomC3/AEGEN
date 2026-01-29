@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from src.personality.manager import personality_manager
 
@@ -17,7 +17,7 @@ class SystemPromptBuilder:
         chat_id: str,
         profile: dict[str, Any],
         skill_name: str = "chat",
-        runtime_context: Optional[dict[str, Any]] = None,
+        runtime_context: dict[str, Any] | None = None,
     ) -> str:
         """
         Compone el prompt final.

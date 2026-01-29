@@ -1,5 +1,4 @@
 from dataclasses import dataclass, field
-from typing import Optional
 
 
 @dataclass
@@ -21,7 +20,7 @@ class SkillOverlay:
     name: str
     tone_modifiers: str
     instructions: str
-    anti_patterns: Optional[str] = None
+    anti_patterns: str | None = None
 
 
 @dataclass

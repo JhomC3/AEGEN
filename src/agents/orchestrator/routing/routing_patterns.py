@@ -222,6 +222,8 @@ class IntentValidator:
                 "agotado",
                 "triste",
                 "deprimido",
+                "mal",
+                "siento",
             ],
             "negative_patterns": [
                 # Excluir contextos de trading/técnicos

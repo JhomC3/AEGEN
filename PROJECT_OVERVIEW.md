@@ -36,9 +36,10 @@ Estas reglas son mandatorias y forzadas por herramientas automatizadas.
 
 1.  **`PROJECT_OVERVIEW.md` (Constitución - Este Documento):** Define la visión, principios, arquitectura y roadmap.
 2.  **`rules.md` (Reglas Técnicas):** Define el CÓMO. Estándares de código, políticas de errores, seguridad, observabilidad y compatibilidad con severidad (Must/Should/May).
-3.  **`adr/` (Architecture Decision Records):** Decisiones arquitectónicas con contexto y justificación histórica.
-4.  **Código y Docstrings (`LLM-hints`):** La implementación final, que debe adherirse a todo lo anterior.
-5.  **Issues / Pull Requests:** Unidades de trabajo que proponen cambios al código y documentos.
+3.  **`AGENTS.md` (Gobernanza de Agentes):** MANDATORIO para IAs. Define cómo los agentes deben interactuar con el repositorio, realizar commits y gestionar PRs.
+4.  **`adr/` (Architecture Decision Records):** Decisiones arquitectónicas con contexto y justificación histórica.
+5.  **Código y Docstrings (`LLM-hints`):** La implementación final, que debe adherirse a todo lo anterior.
+6.  **Issues / Pull Requests:** Unidades de trabajo que proponen cambios al código y documentos.
 
 ### 2.2. Estándares Fundamentales (Extracto de `rules.md`)
 
@@ -124,9 +125,13 @@ graph TD
 - **Multi-tenant Profiles:** Stateless ProfileManager operativo.
 - **TCC Agent:** Integrado con búsqueda semántica de historial.
 
-### 🌟 FASE 4: Federación Completa (Q2)
-- Múltiples especialistas con LangSmith observability.
-- Enrutamiento inteligente por LLM.
+### 🌟 FASE 4: Federación Completa & Skill Ecosystem (Q2)
+- **Observabilidad:** Integración profunda con LangSmith para tracing y evaluación.
+- **Enrutamiento Inteligente:** MasterRouter basado en razonamiento LLM (RoutingAnalyzer V2).
+- **Skill Ecosystem:**
+    - Implementación de **Micro-Specialists** (Skills atómicas) para tareas específicas (ej: Google Search, Calendar, File Management).
+    - Creación del **Skill Creator**: Herramienta automatizada para generar nuevos especialistas siguiendo el estándar de la plataforma.
+- **Gobernanza de Agentes:** Implementación de `AGENTS.md` y validaciones automáticas para el trabajo de IA en el repo.
 
 ## 🚀 5. Guía de Desarrollo
 
