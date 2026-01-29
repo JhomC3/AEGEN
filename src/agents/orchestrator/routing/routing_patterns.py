@@ -6,10 +6,13 @@ Maneja extracción de entidades con regex patterns y validación
 de intents basada en palabras clave específicas.
 """
 
+import logging
 import re
 
 from src.agents.orchestrator.specialist_cache import SpecialistCache
 from src.core.routing_models import EntityInfo, IntentType
+
+logger = logging.getLogger(__name__)
 
 
 class PatternExtractor:
@@ -313,6 +316,16 @@ class SpecialistMapper:
         for preferred in preferred_specialists:
             if preferred in available_specialists:
                 return preferred
+            else:
+                # Log cuando preferido no está disponible
+                logger.debug(
+                    f"Especialista preferido '{preferred}' para intent '{intent.value}' "
+                    f"no disponible. Probando siguiente opción."
+                )
 
+        logger.warning(
+            f"Ningún especialista preferido disponible para intent '{intent.value}'. "
+            f"Usando fallback: chat_specialist"
+        )
         # Fallback seguro siempre disponible
         return "chat_specialist"
