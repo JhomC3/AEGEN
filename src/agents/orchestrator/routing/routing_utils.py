@@ -51,10 +51,10 @@ def is_conversational_only(text: str) -> bool:
 
     # Patrones de saludos simples y cortesía
     patterns = [
-        r"^(hola|buenos\s*dias|buenas\s*tardes|buenas\s*noches|hey|hi|hello)$",
-        r"^(gracias|muchas\s*gracias|ok|vale|listo|entendido|grx|thx)$",
-        r"^(adios|chau|hasta\s*luego|nos\s*vemos|bye)$",
-        r"^(como\s*estas|que\s*tal|todo\s*bien)$",
+        r"^(hola|buenos\s*dias|buenas\s*tardes|buenas\s*noches|hey|hi|hello)[!.]*$",
+        r"^(gracias|muchas\s*gracias|ok|vale|listo|entendido|grx|thx)[!.]*$",
+        r"^(adios|chau|hasta\s*luego|nos\s*vemos|bye)[!.]*$",
+        r"^(como\s*estas|que\s*tal|todo\s*bien)[?!.]*$",
     ]
 
     # Verificar Regex para saludos explícitos
