@@ -10,7 +10,7 @@ import logging
 
 from src.agents.orchestrator.specialist_cache import SpecialistCache
 from src.agents.orchestrator.strategies import RoutingStrategy
-from src.core.routing_models import RoutingDecision
+from src.core.routing_models import IntentType, RoutingDecision
 from src.core.schemas import GraphStateV2
 
 from .routing_analyzer import RoutingAnalyzer
@@ -24,8 +24,10 @@ from .routing_utils import (
 
 logger = logging.getLogger(__name__)
 
-# Constantes
-MIN_CONFIDENCE_THRESHOLD = 0.7
+# Constantes de confianza para sistema multi-nivel
+MIN_CONFIDENCE_THRESHOLD = 0.5
+MODERATE_CONFIDENCE_THRESHOLD = 0.85
+LOW_CONFIDENCE_THRESHOLD = 0.60
 
 
 class EnhancedFunctionCallingRouter(RoutingStrategy):
@@ -93,16 +95,62 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
     def _apply_routing_decision(
         self, state: GraphStateV2, decision: RoutingDecision
     ) -> str:
-        """Aplica la decisión de routing al state."""
+        """Aplica la decisión de routing al state con sistema multi-nivel."""
 
-        # Verificar confianza mínima
+        # Verificar confianza mínima global
         if decision.confidence < MIN_CONFIDENCE_THRESHOLD:
             logger.warning(
-                f"Baja confianza ({decision.confidence:.2f}), fallback a ChatBot"
+                f"Confianza muy baja ({decision.confidence:.2f} < {MIN_CONFIDENCE_THRESHOLD}), "
+                f"fallback a ChatBot. Intent detectado: {decision.intent.value}"
             )
             return route_to_chat(state)
 
-        # Verificar que el specialist esté disponible
+        # Sistema multi-nivel para Vulnerabilidad
+        if decision.intent == IntentType.VULNERABILITY:
+            return self._handle_vulnerability_routing(state, decision)
+
+        # Routing normal para otros intents
+        return self._route_to_specialist(state, decision)
+
+    def _handle_vulnerability_routing(
+        self, state: GraphStateV2, decision: RoutingDecision
+    ) -> str:
+        """Maneja routing de vulnerabilidad con 3 niveles de confianza."""
+        confidence = decision.confidence
+
+        # Nivel 1: Alta confianza (>85%) → TCC directo
+        if confidence >= MODERATE_CONFIDENCE_THRESHOLD:
+            logger.info(
+                f"Vulnerabilidad detectada con alta confianza ({confidence:.2f}). "
+                f"Routing directo a cbt_specialist."
+            )
+            decision.next_actions = ["depth_empathy", "active_listening"]
+            return self._route_to_specialist(state, decision)
+
+        # Nivel 2: Confianza moderada (60-85%) → Clarificar
+        elif confidence >= LOW_CONFIDENCE_THRESHOLD:
+            logger.info(
+                f"Posible vulnerabilidad ({confidence:.2f}). "
+                f"Añadiendo acción de clarificación."
+            )
+            decision.next_actions = ["clarify_emotional_state", "gentle_probe"]
+            # Aún va a CBT, pero con instrucción de clarificar primero
+            return self._route_to_specialist(state, decision)
+
+        # Nivel 3: Baja confianza (50-60%) → Chat general
+        else:
+            logger.info(
+                f"Señal débil de vulnerabilidad ({confidence:.2f}). "
+                f"Routing a chat_specialist para evaluación suave."
+            )
+            decision.target_specialist = "chat_specialist"
+            decision.next_actions = ["monitor_emotional_cues"]
+            return self._route_to_specialist(state, decision)
+
+    def _route_to_specialist(
+        self, state: GraphStateV2, decision: RoutingDecision
+    ) -> str:
+        """Ejecuta el routing final a un especialista validado."""
         specialist_map = self._cache.get_tool_to_specialist_map()
 
         if decision.target_specialist in specialist_map.values():
