@@ -1,7 +1,6 @@
 import logging
 import re
 from pathlib import Path
-from typing import Optional
 
 import aiofiles
 
@@ -26,7 +25,7 @@ class PersonalityLoader:
 
         return PersonalityBase(identity=identity, soul=soul)
 
-    async def load_skill_overlay(self, skill_name: str) -> Optional[SkillOverlay]:
+    async def load_skill_overlay(self, skill_name: str) -> SkillOverlay | None:
         """Carga un overlay de skill específico."""
         overlay_path = self.base_path / "skills" / f"{skill_name}_overlay.md"
         if not overlay_path.exists():
@@ -42,7 +41,7 @@ class PersonalityLoader:
         if not path.exists():
             logger.warning(f"Archivo de personalidad no encontrado: {path}")
             return ""
-        async with aiofiles.open(path, mode="r", encoding="utf-8") as f:
+        async with aiofiles.open(path, encoding="utf-8") as f:
             return await f.read()
 
     async def _parse_identity(self, path: Path) -> dict[str, str]:
