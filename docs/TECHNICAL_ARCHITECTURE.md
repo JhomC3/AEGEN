@@ -338,9 +338,9 @@ El `ProfileManager` ha sido rediseñado para operar en entornos stateless, garan
 - **Persistencia en Cloud:** Los cambios en el perfil se sincronizan con Google Cloud para persistencia a largo plazo.
 - **Identidad Dinámica:** El sistema carga automáticamente el nombre y preferencias del usuario desde el perfil al inicio de cada interacción, permitiendo una personalización profunda ("Hola [Nombre], según lo que hablamos ayer...").
 
-### 3.7 Arquitectura de Personalidad Adaptativa (Fase 4 - NUEVO)
+### 3.7 Arquitectura de Personalidad Adaptativa y Localización (Fase 4 - ACTUALIZADO)
 
-AEGEN implementa un sistema de personalidad modular y evolutivo para MAGI, permitiendo que el asistente se adapte al usuario y al contexto de la tarea sin perder su identidad base.
+AEGEN implementa un sistema de personalidad modular y evolutivo para MAGI, permitiendo que el asistente se adapte al usuario, al contexto de la tarea y a su ubicación geográfica sin perder su identidad base.
 
 #### Motor de Personalidad de 4 Capas
 ```mermaid
@@ -348,14 +348,25 @@ graph TD
     A[Capa 1: Base - SOUL.md + IDENTITY.md] --> E[SystemPromptBuilder]
     B[Capa 2: Adaptación - User Profile Redis] --> E
     C[Capa 3: Skill Overlay - TCC/Chat Overlays] --> E
-    D[Capa 4: Contexto Runtime - Fecha/Canal/MLP] --> E
+    D[Capa 4: Contexto Runtime - Fecha/Canal/MLP/Localización] --> E
     E --> F[System Prompt Dinámico]
 ```
 
-**Componentes:**
+**Componentes y Mejoras Recientes:**
 - **Base Identity:** Inspirada en Clawdbot (casual, directo, con opinión). Definida en `src/personality/base/`.
 - **Adaptation Engine:** Analiza interacciones durante la consolidación de memoria para ajustar parámetros como `humor_tolerance` y `preferred_style`.
+- **Localization (NUEVO):** Identifica automáticamente el `language_code` del usuario (ej: `es-AR`, `es-ES`) y aplica reglas de jerga consistentes (voseo, tuteo) y zonas horarias dinámicas.
 - **Skill Overlays:** Modificadores de tono específicos (ej: "Amor Duro" para TCC) que se añaden sobre la personalidad base.
+
+---
+
+## 🚀 Enrutamiento Inteligente V2 (Routing Precision)
+
+En la Fase 4, el enrutamiento ha evolucionado para garantizar la **continuidad terapéutica y narrativa**:
+
+1. **Contexto de Diálogo:** El `RoutingAnalyzer` ahora procesa los últimos 5 mensajes de la sesión, permitiendo identificar si el usuario está respondiendo a una instrucción previa de un especialista.
+2. **Stickiness (Afinidad):** Se implementó una lógica de "inercia" que previene saltos injustificados entre especialistas si el tema se mantiene consistente, mediante un boost de confianza al `last_specialist`.
+3. **Resiliencia RAG:** Integración de **Exponential Backoff** para gestionar la latencia de la Google File API, asegurando que el conocimiento global esté disponible antes de responder.
 
 ---
 

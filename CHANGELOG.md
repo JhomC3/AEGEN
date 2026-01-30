@@ -5,8 +5,27 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [Unreleased]
 
+## [v0.2.1] - 2026-01-30
 ### Added
-- **Adaptive and Evolutionary Personality Architecture**: MAGI ahora posee una identidad base (estilo Clawdbot) que se adapta y evoluciona con cada usuario.
+- **Routing Precision V2**: Mejora drástica en la continuidad de hilos conversacionales.
+  - Contexto de enrutamiento enriquecido con los últimos 5 mensajes (diálogo real).
+  - Lógica de **Stickiness** (Afinidad): Inercia para mantener al especialista anterior si el tema es consistente.
+  - Reglas de continuidad explícitas en el prompt del router.
+- **Localization System**: Adaptación dinámica de MAGI al usuario.
+  - Extracción automática de `language_code` desde webhooks.
+  - Detección y persistencia de jerga regional (Argentino, Español, Mexicano).
+  - Conciencia de zona horaria basada en el indicativo telefónico.
+- **RAG Resilience**: Robustez en la gestión de archivos y conocimiento.
+  - Implementación de **Exponential Backoff** para la activación de archivos en Google File API.
+  - Filtro de búsqueda global mejorado para incluir bases de conocimiento (`CORE`, `GLOBAL`, `KNOWLEDGE`).
+- **Robust JSON Extraction**: Nuevo extractor basado en regex que previene fallos por decoraciones Markdown del LLM en procesos de consolidación.
+
+### Fixed
+- Corregido error de pérdida de contexto en ejercicios de TCC.
+- Eliminado error `JSONDecodeError` durante la consolidación de perfiles.
+- Reducción de fallos de subida de archivos pesados a la Google File API.
+
+## [v0.2.0] - 2026-01-29
   - `SystemPromptBuilder` modular para composición de prompts en 4 capas (Base, Adaptación, Skill, Runtime).
   - `PersonalityManager` para gestión de archivos Markdown de identidad (`SOUL.md`, `IDENTITY.md`).
   - `PersonalityEvolutionService` integrado en el ciclo de consolidación de memoria para aprendizaje continuo.

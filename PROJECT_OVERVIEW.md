@@ -125,13 +125,18 @@ graph TD
 - **Multi-tenant Profiles:** Stateless ProfileManager operativo.
 - **TCC Agent:** Integrado con búsqueda semántica de historial.
 
-### 🌟 FASE 4: Federación Completa & Skill Ecosystem (Q2)
-- **Observabilidad:** Integración profunda con LangSmith para tracing y evaluación.
-- **Enrutamiento Inteligente:** MasterRouter basado en razonamiento LLM (RoutingAnalyzer V2).
+### 🌟 FASE 4: Federación Completa & Skill Ecosystem (Q1-Q2)
+- **Observabilidad:** Integración profunda con LangSmith para tracing y evaluación (En Progreso).
+- **Enrutamiento Inteligente V2 (COMPLETADO ✅):**
+    - MasterRouter con memoria de diálogo (últimos 5 mensajes).
+    - Reglas de continuidad terapéutica y "Stickiness" para hilos activos.
+- **Localización Multi-plataforma (COMPLETADO ✅):**
+    - Detección automática de jerga (AR, ES, MX) mediante indicativo telefónico.
+    - Conciencia de zona horaria dinámica.
 - **Skill Ecosystem:**
     - Implementación de **Micro-Specialists** (Skills atómicas) para tareas específicas (ej: Google Search, Calendar, File Management).
-    - Creación del **Skill Creator**: Herramienta automatizada para generar nuevos especialistas siguiendo el estándar de la plataforma.
-- **Gobernanza de Agentes:** Implementación de `AGENTS.md` y validaciones automáticas para el trabajo de IA en el repo.
+    - Creación del **Skill Creator**: Herramienta automatizada para generar nuevos especialistas.
+- **Robustez RAG:** Resiliencia ante latencia de Google File API mediante Exponential Backoff.
 
 ## 🚀 5. Guía de Desarrollo
 

@@ -465,6 +465,9 @@ class CanonicalEventV1(BaseModel):
     timestamp: str | None = Field(
         None, description="Timestamp del evento (ISO format)."
     )
+    language_code: str | None = Field(
+        None, description="Código de lenguaje del usuario (ej. 'es-AR')."
+    )
     metadata: dict[str, Any] = Field(
         default_factory=dict, description="Metadatos adicionales de la fuente."
     )
