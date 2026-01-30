@@ -126,24 +126,32 @@ class GoogleFileSearchTool:
         return ""
 
     async def _wait_for_active(self, uploaded_file: Any):
-        """Helper para esperar a que un archivo esté ACTIVE."""
+        """Helper para esperar a que un archivo esté ACTIVE con exponential backoff."""
         logger.info(f"Esperando a que {uploaded_file.name} esté ACTIVE...")
-        # Aumentado de 30 a 45 intentos (~90 segundos) para evitar timeouts en archivos pesados
-        for _ in range(45):
-            await asyncio.sleep(2)
+
+        # B.6: Exponential Backoff (2s, 4s, 8s, 16s, 32s, 60s)
+        delays = [2, 4, 8, 16, 32, 60]
+
+        for delay in delays:
+            await asyncio.sleep(delay)
             try:
                 current_file = await asyncio.to_thread(
                     self.client.files.get, name=uploaded_file.name
                 )
                 state = str(getattr(current_file, "state", "")).upper()
                 if state == "ACTIVE":
+                    logger.info(f"Archivo {uploaded_file.name} listo (ACTIVE).")
                     return current_file
                 elif state == "FAILED":
                     raise ValueError(f"Procesamiento falló: {uploaded_file.name}")
+
+                logger.debug(
+                    f"Estado de {uploaded_file.name}: {state}. Reintentando en {delay * 2}s..."
+                )
             except Exception as poll_err:
                 logger.warning(f"Error consultando estado: {poll_err}")
 
-        logger.error(f"TIMEOUT: {uploaded_file.name} no pasó a ACTIVE.")
+        logger.error(f"TIMEOUT: {uploaded_file.name} no pasó a ACTIVE tras reintentos.")
         return uploaded_file
 
     async def get_relevant_files(
@@ -167,9 +175,14 @@ class GoogleFileSearchTool:
                 relevant.append(f)
                 continue
 
-            # 2. CORE KERNEL (Global para todos los usuarios)
+            # 2. CORE KERNEL & KNOWLEDGE (Global para todos los usuarios)
             f_name_upper = f_display_name.upper()
-            if "CORE" in f_name_upper or "STOIC" in f_name_upper:
+            is_global = any(
+                term in f_name_upper
+                for term in ["CORE", "STOIC", "KNOWLEDGE", "GLOBAL"]
+            ) or f_display_name.startswith("knowledge/")
+
+            if is_global:
                 relevant.append(f)
                 continue
 

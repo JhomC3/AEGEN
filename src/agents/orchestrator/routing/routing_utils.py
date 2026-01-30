@@ -129,7 +129,8 @@ def extract_context_from_state(state: GraphStateV2) -> dict[str, Any]:
     event = state["event"]
     history = state.get("conversation_history", [])
 
-    context = {}
+    # Explicitly type context as dict[str, Any] to avoid incorrect type inference
+    context: dict[str, Any] = {}
 
     # Información del usuario
     if hasattr(event, "user_id"):
@@ -138,12 +139,24 @@ def extract_context_from_state(state: GraphStateV2) -> dict[str, Any]:
     # Historial conversacional
     if history:
         context["history_length"] = len(history)
-        # Últimos 2 mensajes para contexto inmediato
-        recent_messages = history[-2:] if len(history) >= 2 else history
+        # Últimos 5 mensajes para contexto inmediato y continuidad
+        recent_messages = history[-5:] if len(history) >= 5 else history
         context["recent_interactions"] = len(recent_messages)
+
+        # Extraer contenido formateado para el LLM
+        formatted_history = []
+        for msg in recent_messages:
+            # Identificar rol (V2ChatMessage usa 'role')
+            role = "Asistente" if msg.get("role") == "assistant" else "Usuario"
+            content = msg.get("content", "")
+            if content:
+                formatted_history.append(f"{role}: {content}")
+
+        context["recent_messages_content"] = formatted_history
     else:
         context["history_length"] = 0
         context["recent_interactions"] = 0
+        context["recent_messages_content"] = []
 
     # Información de routing previo
     payload = state.get("payload", {})

@@ -29,6 +29,12 @@ async def process_event_task(event: schemas.CanonicalEventV1):
     chat_id = str(event.chat_id)
     logger.info(f"[TaskID: {task_id}] Iniciando orquestación para chat {chat_id}.")
 
+    # C.9: Actualizar localización antes de procesar
+    if event.language_code:
+        from src.core.profile_manager import user_profile_manager
+
+        await user_profile_manager.update_localization(chat_id, event.language_code)
+
     # Cargar sesión existente o inicializar historial vacío
     existing_session = await session_manager.get_session(chat_id)
     if existing_session:
@@ -157,11 +163,16 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
     # Consolidar texto y seleccionar archivo más relevante
     combined_content = []
     final_file_id = None
+    final_language_code = None
     final_event_type: Literal["text", "audio", "document", "image", "unknown"] = "text"
 
     for frag in fragments:
         if frag.get("content"):
             combined_content.append(frag["content"])
+
+        # Recuperar código de lenguaje del primer fragmento disponible
+        if not final_language_code and frag.get("language_code"):
+            final_language_code = frag["language_code"]
 
         # Priorizar audio sobre imagen si ambos vienen en la ráfaga
         if frag.get("event_type") == "audio":
@@ -181,6 +192,7 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
         file_id=final_file_id,
         content="\n".join(combined_content) if combined_content else None,
         timestamp=datetime.now().isoformat(),
+        language_code=final_language_code,
         metadata={
             "trace_id": trace_id,
             "consolidated": True,
@@ -239,7 +251,17 @@ async def telegram_webhook(
     chat_id = request.message.chat.id
 
     # 1. Guardar fragmento en el buffer
-    fragment_data = {"event_type": event_type, "content": content, "file_id": file_id}
+    # C.8: Extraer metadatos de localización del usuario
+    language_code = None
+    if request.message and request.message.from_user:
+        language_code = request.message.from_user.language_code
+
+    fragment_data = {
+        "event_type": event_type,
+        "content": content,
+        "file_id": file_id,
+        "language_code": language_code,
+    }
     current_seq = await ingestion_buffer.push_event(str(chat_id), fragment_data)
 
     # 2. Feedback inmediato al usuario

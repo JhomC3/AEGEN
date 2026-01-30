@@ -31,7 +31,10 @@ class SystemPromptBuilder:
 
         # 2. Capa de Adaptación al Usuario
         adaptation = profile.get("personality_adaptation", {})
-        user_section = self._build_user_adaptation_section(profile, adaptation)
+        localization = profile.get("localization", {})
+        user_section = self._build_user_adaptation_section(
+            profile, adaptation, localization
+        )
 
         # 3. Capa de Skill Overlay
         skill_section = self._build_skill_section(overlay) if overlay else ""
@@ -64,7 +67,10 @@ REGLA DE ORO: Mantén tu esencia MAGI (casual, directa, con opinión) incluso cu
         return f"# TU ALMA Y FILOSOFÍA\n{soul}"
 
     def _build_user_adaptation_section(
-        self, profile: dict[str, Any], adaptation: dict[str, Any]
+        self,
+        profile: dict[str, Any],
+        adaptation: dict[str, Any],
+        localization: dict[str, Any] | None = None,
     ) -> str:
         user_name = profile.get("identity", {}).get("name", "Usuario")
         style = adaptation.get("preferred_style", "casual")
@@ -75,6 +81,19 @@ REGLA DE ORO: Mantén tu esencia MAGI (casual, directa, con opinión) incluso cu
 - **Tolerancia al Humor:** {adaptation.get("humor_tolerance", 0.7)}
 - **Nivel de Formalidad:** {adaptation.get("formality_level", 0.3)}
 """
+        if localization:
+            dialect = localization.get("dialect", "neutro")
+            tz = localization.get("timezone", "UTC")
+            section += f"- **Localización:** {dialect} (Zona Horaria: {tz})\n"
+
+            # Reglas de jerga consistentes
+            if dialect == "argentino":
+                section += "- **Regla Lingüística:** Usa español rioplatense (voseo: vos, che, tenés, vení). Tono cercano.\n"
+            elif dialect == "español":
+                section += "- **Regla Lingüística:** Usa español de España (tuteo, vosotros, modismos ibéricos).\n"
+            elif dialect == "mexicano":
+                section += "- **Regla Lingüística:** Usa español mexicano (modismos suaves, tono cálido).\n"
+
         if adaptation.get("learned_preferences"):
             prefs = "\n".join([f"  - {p}" for p in adaptation["learned_preferences"]])
             section += f"- **Preferencias Aprendidas:**\n{prefs}"

@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import time
 from datetime import datetime
 from typing import Any
@@ -73,6 +74,18 @@ class ConsolidationManager:
 
         return False
 
+    def _extract_json(self, text: str) -> dict[str, Any]:
+        """Extrae un objeto JSON de un bloque de texto usando regex."""
+        try:
+            # Buscar el primer '{' y el último '}'
+            match = re.search(r"(\{[\s\S]*\})", text)
+            if match:
+                return json.loads(match.group(1))
+            return json.loads(text)  # Fallback a loads directo
+        except Exception as e:
+            logger.error(f"Error extrayendo JSON: {e}")
+            raise
+
     async def consolidate_session(self, chat_id: str):
         """
         4.3, 4.4, 4.5: Proceso completo de consolidación.
@@ -104,7 +117,7 @@ class ConsolidationManager:
                 "session_summary": summary,
             })
 
-            evolution_data = json.loads(str(response.content).strip())
+            evolution_data = self._extract_json(str(response.content).strip())
             await self._apply_evolution(chat_id, profile, evolution_data)
 
         except Exception as e:

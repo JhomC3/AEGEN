@@ -199,6 +199,11 @@ class RoutingAnalyzer:
         if context.get("previous_specialist"):
             parts.append(f"Especialista previo: {context['previous_specialist']}")
 
+        # A.2: Inyectar contenido real de los últimos mensajes para continuidad narrativa
+        if context.get("recent_messages_content"):
+            history_str = "\n".join(context["recent_messages_content"])
+            parts.append(f"\nÚLTIMOS MENSAJES (Diálogo):\n{history_str}")
+
         return " | ".join(parts) if parts else "Sesión nueva"
 
     def _create_fallback_decision(self, message: str) -> RoutingDecision:
