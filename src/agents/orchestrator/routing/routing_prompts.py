@@ -39,6 +39,11 @@ CRITERIOS DE ROUTING:
 • planning → planificación, cronogramas.
 • chat → Conversación general que no encaja en lo anterior.
 
+REGLA DE CONTINUIDAD (STICKINESS):
+- Si el usuario está respondiendo a una pregunta o siguiendo un hilo del ESPECIALISTA PREVIO (ej: respondiendo a un ejercicio de TCC), MANTÉN a ese mismo especialista.
+- Solo cambia si el usuario solicita explícitamente otro especialista o cambia drásticamente de tema.
+- El contexto "ÚLTIMOS MENSAJES" es tu guía para detectar esta continuidad.
+
 CONTEXTO CONVERSACIONAL: {context}
 
 IMPORTANTE: Debes llamar OBLIGATORIAMENTE a la función route_user_message con:

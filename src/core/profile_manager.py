@@ -53,6 +53,12 @@ class UserProfileManager:
                 "path_traveled": [],  # Registro del "camino recorrido"
             },
             "active_tags": ["bienvenida"],
+            "localization": {
+                "country_code": None,
+                "timezone": None,
+                "language_code": None,
+                "dialect": "neutro",
+            },
             "timeline": [
                 {
                     "date": now,
@@ -193,6 +199,46 @@ class UserProfileManager:
                 "history_limit": 20,
                 "learned_preferences": [],
             },
+        )
+
+    async def update_localization(self, chat_id: str, language_code: str | None):
+        """C.9: Actualiza la información de localización en el perfil."""
+        if not language_code:
+            return
+
+        profile = await self.load_profile(chat_id)
+        loc = profile.get("localization", {})
+
+        # Solo actualizar si es nuevo o diferente
+        if loc.get("language_code") == language_code:
+            return
+
+        loc["language_code"] = language_code
+
+        # Mapeo básico de dialectos y zonas horarias (Simplificado para Fase C)
+        # Esto podría escalarse a una tabla de mapeo completa en src/core/localization.py
+        dialect_map = {
+            "es-ar": "argentino",
+            "es-es": "español",
+            "es-mx": "mexicano",
+            "es-co": "colombiano",
+        }
+
+        normalized_code = language_code.lower()
+        loc["dialect"] = dialect_map.get(normalized_code, "neutro")
+
+        # Zona horaria (placeholder - idealmente usar librería pytz)
+        timezone_map = {
+            "es-ar": "America/Argentina/Buenos_Aires",
+            "es-es": "Europe/Madrid",
+            "es-mx": "America/Mexico_City",
+        }
+        loc["timezone"] = timezone_map.get(normalized_code, "UTC")
+
+        profile["localization"] = loc
+        await self.save_profile(chat_id, profile)
+        logger.info(
+            f"Localización actualizada para {chat_id}: {language_code} -> {loc['dialect']}"
         )
 
 

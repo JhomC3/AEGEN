@@ -97,6 +97,22 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
     ) -> str:
         """Aplica la decisión de routing al state con sistema multi-nivel."""
 
+        # A.4: Lógica de Stickiness (Afinidad)
+        # Si el especialista sugerido es el mismo que el anterior, y la confianza es media,
+        # aplicamos un boost para mantener la continuidad del hilo.
+        last_specialist = state.get("payload", {}).get("last_specialist")
+        if (
+            last_specialist
+            and decision.target_specialist == last_specialist
+            and 0.5 <= decision.confidence < 0.8
+        ):
+            old_conf = decision.confidence
+            decision.confidence = 0.8  # Boost a confianza moderada-alta
+            logger.info(
+                f"Stickiness: Boost de confianza para {last_specialist} "
+                f"({old_conf:.2f} -> {decision.confidence:.2f})"
+            )
+
         # Verificar confianza mínima global
         if decision.confidence < MIN_CONFIDENCE_THRESHOLD:
             logger.warning(
