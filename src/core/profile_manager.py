@@ -3,6 +3,8 @@ import logging
 from datetime import datetime
 from typing import Any
 
+from src.core.localization import get_country_info, resolve_localization
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,10 +56,13 @@ class UserProfileManager:
             },
             "active_tags": ["bienvenida"],
             "localization": {
-                "country_code": None,
-                "timezone": None,
-                "language_code": None,
-                "dialect": "neutro",
+                "country_code": None,  # ISO (ej: "CO")
+                "region": None,  # Ciudad/Región (ej: "medellin")
+                "timezone": "UTC",  # IANA Timezone
+                "language_code": None,  # Código de Telegram
+                "dialect": "neutro",  # Dialecto derivado
+                "dialect_hint": None,  # Matiz regional (ej: "paisa")
+                "confirmed_by_user": False,  # Si el usuario lo validó
             },
             "timeline": [
                 {
@@ -67,7 +72,7 @@ class UserProfileManager:
                 }
             ],
             "metadata": {
-                "version": "1.0.0",
+                "version": "1.1.0",
                 "last_updated": now,
             },
         }
@@ -202,43 +207,77 @@ class UserProfileManager:
         )
 
     async def update_localization(self, chat_id: str, language_code: str | None):
-        """C.9: Actualiza la información de localización en el perfil."""
+        """
+        C.9: Actualiza la información de localización en el perfil (Pasivo).
+        Optimizado para no disparar sync a cloud innecesarios.
+        """
         if not language_code:
             return
 
         profile = await self.load_profile(chat_id)
         loc = profile.get("localization", {})
 
+        # Si ya fue confirmado por el usuario, no sobrescribimos con data pasiva
+        if loc.get("confirmed_by_user"):
+            return
+
         # Solo actualizar si es nuevo o diferente
         if loc.get("language_code") == language_code:
             return
 
-        loc["language_code"] = language_code
+        # Resolver nueva localización
+        new_loc = resolve_localization(language_code)
+        new_loc["language_code"] = language_code
+        new_loc["confirmed_by_user"] = False
 
-        # Mapeo básico de dialectos y zonas horarias (Simplificado para Fase C)
-        # Esto podría escalarse a una tabla de mapeo completa en src/core/localization.py
-        dialect_map = {
-            "es-ar": "argentino",
-            "es-es": "español",
-            "es-mx": "mexicano",
-            "es-co": "colombiano",
-        }
+        profile["localization"] = new_loc
 
-        normalized_code = language_code.lower()
-        loc["dialect"] = dialect_map.get(normalized_code, "neutro")
+        # Guardar solo en Redis (Optimización Fase 3)
+        from src.core.dependencies import redis_connection
 
-        # Zona horaria (placeholder - idealmente usar librería pytz)
-        timezone_map = {
-            "es-ar": "America/Argentina/Buenos_Aires",
-            "es-es": "Europe/Madrid",
-            "es-mx": "America/Mexico_City",
-        }
-        loc["timezone"] = timezone_map.get(normalized_code, "UTC")
+        if redis_connection:
+            profile["metadata"]["last_updated"] = datetime.now().isoformat()
+            key = self._redis_key(chat_id)
+            await redis_connection.set(key, json.dumps(profile, ensure_ascii=False))
+
+        logger.debug(
+            f"Localización pasiva para {chat_id}: {language_code} -> {new_loc['dialect']}"
+        )
+
+    async def update_location_from_user_input(
+        self, chat_id: str, country_code: str, region: str | None = None
+    ):
+        """
+        Actualiza localización basada en entrada explícita del usuario.
+        Esta actualización SI se sincroniza con la nube.
+        """
+        profile = await self.load_profile(chat_id)
+        loc = profile.get("localization", {})
+
+        country_info = get_country_info(country_code)
+        if not country_info:
+            logger.warning(f"País no soportado: {country_code}")
+            return
+
+        loc["country_code"] = country_code.upper()
+        loc["confirmed_by_user"] = True
+
+        if region and region.lower() in country_info["regions"]:
+            reg_info = country_info["regions"][region.lower()]
+            loc["region"] = region.lower()
+            loc["dialect_hint"] = reg_info["dialect_hint"]
+            loc["timezone"] = reg_info["timezone"]
+        else:
+            loc["region"] = None
+            loc["dialect_hint"] = None
+            loc["timezone"] = country_info["timezone"]
+
+        loc["dialect"] = country_info["dialect"]
 
         profile["localization"] = loc
         await self.save_profile(chat_id, profile)
         logger.info(
-            f"Localización actualizada para {chat_id}: {language_code} -> {loc['dialect']}"
+            f"Localización confirmada por usuario para {chat_id}: {country_code}, {region}"
         )
 
 

@@ -30,6 +30,7 @@ async def test_telegram_webhook_success_flow(
                 file_id="file-id",
                 content=None,
                 timestamp="2023-01-01T00:00:00",
+                language_code="es",
             ),
             "payload": {"response": "Este es un texto de prueba."},
             "error_message": None,
