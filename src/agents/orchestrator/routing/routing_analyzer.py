@@ -155,8 +155,20 @@ class RoutingAnalyzer:
         if self._intent_validator.has_clear_intent_evidence(message, decision.intent):
             decision.confidence = min(decision.confidence + 0.15, 1.0)
 
+        # ✅ PERFORMANCE/ROBUSTNESS FIX: Resolver nombre de tool a name de specialist
+        # El LLM a veces devuelve el nombre de la tool vinculada (ej: cbt_therapeutic_guidance_tool)
+        # en lugar del nombre del nodo specialist (ej: cbt_specialist).
+        tool_to_specialist = cache.get_tool_to_specialist_map()
+
+        if decision.target_specialist in tool_to_specialist:
+            resolved_specialist = tool_to_specialist[decision.target_specialist]
+            logger.info(
+                f"Traduciendo target '{decision.target_specialist}' (tool) → '{resolved_specialist}' (specialist)"
+            )
+            decision.target_specialist = resolved_specialist
+
         # Validar que el especialista del LLM exista, sino usar fallback por intent
-        available_specialists = list(cache.get_tool_to_specialist_map().values())
+        available_specialists = list(tool_to_specialist.values())
 
         if decision.target_specialist not in available_specialists:
             logger.warning(

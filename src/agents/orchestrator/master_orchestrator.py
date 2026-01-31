@@ -75,6 +75,7 @@ class MasterOrchestrator:
     async def _route_meta(self, state: GraphStateV2) -> GraphStateV2:
         """
         Meta routing delegado a FunctionCallingRouter o EventRouter.
+        También procesa perfilamiento pasivo si hay texto.
 
         Args:
             state: Estado del grafo
@@ -86,7 +87,15 @@ class MasterOrchestrator:
         logger.info(f"[{session_id}] Iniciando meta-routing...")
         event = state["event"]
 
-        # Seleccionar strategy apropiada basada en event_type
+        # 1. Procesar perfilamiento proactivo (Detección de ubicación)
+        if event.event_type == "text" and event.content:
+            from src.core.profiling_manager import profiling_manager
+
+            await profiling_manager.process_potential_location_data(
+                str(event.chat_id), str(event.content)
+            )
+
+        # 2. Seleccionar strategy apropiada basada en event_type
         if event.event_type == "text":
             if "function_calling" in self._routing_strategies:
                 await self._routing_strategies["function_calling"].route(state)
