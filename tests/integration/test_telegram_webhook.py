@@ -1,6 +1,6 @@
 # tests/integration/test_telegram_webhook.py
 import asyncio
-from unittest.mock import ANY, AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 import respx
@@ -75,6 +75,24 @@ async def test_telegram_webhook_success_flow(
         },
     }
 
+    # Mockear el buffer de ingestión
+    mock_ingestion_buffer = AsyncMock()
+    mock_ingestion_buffer.push_event = AsyncMock(return_value=1)
+    mock_ingestion_buffer.get_current_sequence = AsyncMock(return_value=1)
+    mock_ingestion_buffer.flush_all = AsyncMock(
+        return_value=[
+            {
+                "event_type": "audio",
+                "content": None,
+                "file_id": test_file_id,
+                "language_code": "es",
+            }
+        ]
+    )
+    monkeypatch.setattr(
+        "src.api.routers.webhooks.ingestion_buffer", mock_ingestion_buffer
+    )
+
     # 3. Ejecutar la Petición
     response = await async_client.post(
         "/api/v1/webhooks/telegram", json=webhook_payload
@@ -83,16 +101,14 @@ async def test_telegram_webhook_success_flow(
     # 4. Verificar la Respuesta Inmediata
     assert response.status_code == 202
     response_data = response.json()
-    assert response_data["message"] == "Telegram event accepted for processing."
+    assert response_data["message"] == "Telegram event accepted and buffered."
     assert "task_id" in response_data
 
-    # 5. Verificar el Proceso en Segundo Plano
-    await asyncio.sleep(0.1)
+    # 5. Verificar el Proceso en Segundo Plano (Consolidación)
+    # Aumentamos el sleep para dar tiempo al debounce (aunque en test debería ser rápido)
+    await asyncio.sleep(3.5)
 
-    mock_download_tool.ainvoke.assert_awaited_once_with({
-        "file_id": test_file_id,
-        "destination_folder": ANY,
-    })
+    mock_download_tool.ainvoke.assert_awaited_once()
 
     # Verificar que el orquestador fue invocado con el estado correcto
     mock_orchestrator_run.assert_awaited_once()

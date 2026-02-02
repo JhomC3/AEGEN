@@ -88,11 +88,56 @@ class LongTermMemoryManager:
 
         count = await buffer.get_message_count(chat_id)
 
+        # PHASE 2.3: Extracción incremental (cada 5 mensajes)
+        if count > 0 and count % 5 == 0:
+            logger.info(
+                f"Triggering incremental fact extraction for {chat_id} (count: {count})"
+            )
+            import asyncio
+
+            asyncio.create_task(self._incremental_fact_extraction(chat_id))
+
         if await consolidation_manager.should_consolidate(chat_id, count):
             logger.info(f"Triggering background consolidation for {chat_id}")
             import asyncio
 
             asyncio.create_task(consolidation_manager.consolidate_session(chat_id))
+
+    async def _incremental_fact_extraction(self, chat_id: str):
+        """
+        Realiza una extracción de hechos parcial sin limpiar el buffer.
+        """
+        try:
+            from src.memory.fact_extractor import fact_extractor
+            from src.memory.knowledge_base import knowledge_base_manager
+
+            # 1. Obtener mensajes recientes del buffer
+            buffer = await self.get_buffer()
+            raw_buffer = await buffer.get_messages(chat_id)
+
+            if not raw_buffer:
+                return
+
+            # Usar los últimos 10 mensajes para contexto (en caso de que el buffer sea largo)
+            recent_msgs = raw_buffer[-10:]
+            conversation_text = "\n".join([
+                f"{m['role']}: {m['content']}" for m in recent_msgs
+            ])
+
+            # 2. Cargar conocimiento actual
+            current_knowledge = await knowledge_base_manager.load_knowledge(chat_id)
+
+            # 3. Extraer hechos
+            updated_knowledge = await fact_extractor.extract_facts(
+                conversation_text, current_knowledge
+            )
+
+            # 4. Guardar (y sincronizar a la nube)
+            await knowledge_base_manager.save_knowledge(chat_id, updated_knowledge)
+            logger.info(f"Incremental fact extraction complete for {chat_id}")
+
+        except Exception as e:
+            logger.error(f"Error in incremental fact extraction for {chat_id}: {e}")
 
     async def update_memory(self, chat_id: str):
         """

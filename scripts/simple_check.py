@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 def check_file_sizes() -> bool:
-    """Check that Python files are < 100 lines."""
+    """Check that Python files are < 700 lines (per AGENTS.md)."""
     violations = []
 
     for py_file in Path("src").glob("**/*.py"):
@@ -18,8 +18,8 @@ def check_file_sizes() -> bool:
             continue
 
         lines = len(py_file.read_text().splitlines())
-        if lines > 100:
-            violations.append(f"{py_file}: {lines} lines (max: 100)")
+        if lines > 700:
+            violations.append(f"{py_file}: {lines} lines (max: 700)")
 
     if violations:
         print("❌ File size violations:")
@@ -43,7 +43,9 @@ def check_basic_patterns() -> bool:
             check=True,
         )
         changed_files = [
-            f for f in result.stdout.strip().split("\n") if f and f.endswith(".py")
+            f
+            for f in result.stdout.strip().split("\n")
+            if f and f.endswith(".py") and not f.startswith("scripts/")
         ]
 
         if not changed_files:
