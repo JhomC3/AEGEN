@@ -4,7 +4,7 @@ import logging
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 from uuid import uuid4
 
 from fastapi import APIRouter, BackgroundTasks, status
@@ -19,6 +19,29 @@ from src.tools import telegram_interface
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+async def _download_event_files(
+    event: schemas.CanonicalEventV1, temp_path: Path
+) -> dict[str, Any]:
+    """Descarga archivos (audio/imagen) del evento si existen."""
+    payload_updates = {}
+    if event.file_id:
+        if event.event_type == "audio":
+            audio_file_path = await telegram_interface.download_telegram_audio.ainvoke({
+                "file_id": event.file_id,
+                "destination_folder": str(temp_path),
+            })
+            payload_updates["audio_file_path"] = audio_file_path
+            logger.info(f"Audio descargado en {audio_file_path}")
+        elif event.event_type == "image":
+            image_file_path = await telegram_interface.download_telegram_audio.ainvoke({
+                "file_id": event.file_id,
+                "destination_folder": str(temp_path),
+            })
+            payload_updates["image_file_path"] = image_file_path
+            logger.info(f"Imagen descargada en {image_file_path}")
+    return payload_updates
 
 
 async def process_event_task(event: schemas.CanonicalEventV1):
@@ -38,6 +61,7 @@ async def process_event_task(event: schemas.CanonicalEventV1):
     # Cargar sesión existente o inicializar historial vacío
     existing_session = await session_manager.get_session(chat_id)
     payload = {}
+    conversation_history = []
     if existing_session:
         logger.info(
             f"[TaskID: {task_id}] Memoria cargada: {len(existing_session['conversation_history'])} mensajes. "
@@ -52,9 +76,8 @@ async def process_event_task(event: schemas.CanonicalEventV1):
         }
     else:
         logger.info(f"[TaskID: {task_id}] Nueva sesión conversacional")
-        conversation_history = []
 
-    # Crear el estado inicial del grafo con el historial correcto
+    # Crear el estado inicial del grafo
     initial_state = GraphStateV2(
         event=event,
         payload=payload,
@@ -69,29 +92,8 @@ async def process_event_task(event: schemas.CanonicalEventV1):
             temp_path = Path(temp_dir)
             logger.info(f"[TaskID: {task_id}] Directorio temporal creado: {temp_dir}")
 
-            if event.file_id:
-                if event.event_type == "audio":
-                    audio_file_path = (
-                        await telegram_interface.download_telegram_audio.ainvoke({
-                            "file_id": event.file_id,
-                            "destination_folder": str(temp_path),
-                        })
-                    )
-                    initial_state["payload"]["audio_file_path"] = audio_file_path
-                    logger.info(
-                        f"[TaskID: {task_id}] Audio descargado en {audio_file_path}"
-                    )
-                elif event.event_type == "image":
-                    image_file_path = (
-                        await telegram_interface.download_telegram_audio.ainvoke({
-                            "file_id": event.file_id,
-                            "destination_folder": str(temp_path),
-                        })
-                    )
-                    initial_state["payload"]["image_file_path"] = image_file_path
-                    logger.info(
-                        f"[TaskID: {task_id}] Imagen descargada en {image_file_path}"
-                    )
+            file_payload = await _download_event_files(event, temp_path)
+            initial_state["payload"].update(file_payload)
 
             logger.info(f"[TaskID: {task_id}] Invocando al MasterOrchestrator.")
             final_state = await master_orchestrator.run(initial_state)
@@ -106,18 +108,12 @@ async def process_event_task(event: schemas.CanonicalEventV1):
             "Ocurrió un error inesperado al procesar tu solicitud."
         )
 
-    if final_state.get("error_message"):
-        message = final_state["error_message"]
-    else:
-        response_content = final_state.get("payload", {}).get("response")
-        logger.info(
-            f"[TaskID: {task_id}] Response content retrieved: {str(response_content)[:100]}..."
-        )
-        message = (
-            str(response_content)
-            if response_content and str(response_content).strip()
-            else "La tarea se completó, pero el agente generó una respuesta vacía."
-        )
+    response_content = final_state.get("payload", {}).get("response")
+    message = (
+        final_state.get("error_message") or str(response_content)
+        if response_content and str(response_content).strip()
+        else "La tarea se completó, pero el agente generó una respuesta vacía."
+    )
 
     logger.info(f"[TaskID: {task_id}] Enviando respuesta al chat {chat_id}.")
     try:
@@ -135,6 +131,25 @@ async def process_event_task(event: schemas.CanonicalEventV1):
         logger.info(f"[TaskID: {task_id}] Memoria guardada: {history_len} mensajes")
     else:
         logger.warning(f"[TaskID: {task_id}] Fallo al guardar memoria conversacional")
+
+    # PHASE 1: Connect the Broken Link (Buffer para consolidación en Google Cloud)
+    try:
+        from src.memory.long_term_memory import long_term_memory
+
+        # 1. Guardar mensaje del usuario
+        user_content = event.content or "[Contenido no textual]"
+        await long_term_memory.store_raw_message(chat_id, "user", user_content)
+
+        # 2. Guardar respuesta del asistente
+        await long_term_memory.store_raw_message(chat_id, "assistant", message)
+
+        logger.info(
+            f"[TaskID: {task_id}] Mensajes enviados al buffer de consolidación."
+        )
+    except Exception as e:
+        logger.error(
+            f"[TaskID: {task_id}] Error al enviar mensajes al buffer de consolidación: {e}"
+        )
 
     logger.info(f"[TaskID: {task_id}] Orquestación finalizada.")
 

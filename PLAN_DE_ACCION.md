@@ -35,6 +35,13 @@ Este documento resume el estado actual del proyecto AEGEN, los logros recientes 
 - **C.9 - Estructura de Perfil:** Realizado en `profile_manager.py`.
 - **C.10 - Inyección de Jerga y Zona Horaria:** Realizado en `prompt_builder.py`.
 
+### FASE D: Memoria Híbrida y Precisión Clínica ✅
+- **D.11 - Conectar Eslabón Roto:** Conexión `webhooks.py` -> `LongTermMemory` para buffering garantizado.
+- **D.12 - Extractor de Hechos (FactExtractor):** Extracción estructurada de entidades, datos médicos y preferencias con precisión clínica.
+- **D.13 - Bóveda de Conocimiento (KnowledgeBase):** Almacenamiento dual (Redis working copy + Google Cloud RAG).
+- **D.14 - Extracción Incremental:** Disparo de extracción cada 5 mensajes para mantener frescura de datos.
+- **D.15 - Inyección en Specialists:** Contexto de hechos confirmados inyectado en el system prompt de MAGI y TCC.
+
 ---
 
 ## 🗺️ Roadmap Actualizado: Fase 4 (Skill Ecosystem)

@@ -92,6 +92,8 @@ class ConsolidationManager:
         """
         logger.info(f"Iniciando consolidación de sesión para {chat_id}")
 
+        from src.memory.fact_extractor import fact_extractor
+        from src.memory.knowledge_base import knowledge_base_manager
         from src.memory.long_term_memory import long_term_memory
 
         data = await long_term_memory.get_summary(chat_id)
@@ -100,11 +102,29 @@ class ConsolidationManager:
         if not raw_buffer:
             return
 
-        # 1. Generar resumen y actualizar memoria (Ya lo hace long_term_memory.update_memory)
-        # Pero aquí lo haremos de forma más integral para el perfil evolutivo.
+        # 1. Generar resumen y actualizar memoria episódica
         await long_term_memory.update_memory(chat_id)
 
-        # 2. 4.4: Detectar evolución y actualizar perfil
+        # 2. EXTRAER HECHOS ESTRUCTURADOS (Hybrid Memory)
+        try:
+            current_knowledge = await knowledge_base_manager.load_knowledge(chat_id)
+
+            # Convertir buffer a texto para el extractor
+            conversation_text = "\n".join([
+                f"{m['role']}: {m['content']}" for m in raw_buffer
+            ])
+
+            updated_knowledge = await fact_extractor.extract_facts(
+                conversation_text, current_knowledge
+            )
+            await knowledge_base_manager.save_knowledge(chat_id, updated_knowledge)
+            logger.info(f"Hechos estructurados actualizados para {chat_id}")
+        except Exception as e:
+            logger.error(
+                f"Error extrayendo hechos durante consolidación para {chat_id}: {e}"
+            )
+
+        # 3. 4.4: Detectar evolución y actualizar perfil
         # Obtenemos el nuevo resumen consolidado
         new_data = await long_term_memory.get_summary(chat_id)
         summary = new_data["summary"]
@@ -123,7 +143,7 @@ class ConsolidationManager:
         except Exception as e:
             logger.error(f"Error detectando evolución para {chat_id}: {e}")
 
-        # 3. 4.5: Subir Log de Sesión a la Nube
+        # 4. 4.5: Subir Log de Sesión a la Nube
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             log_content = {

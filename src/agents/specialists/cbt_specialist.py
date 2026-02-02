@@ -15,14 +15,46 @@ from src.core.message_utils import dict_to_langchain_messages
 from src.core.profile_manager import user_profile_manager
 from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV2
+from src.memory.knowledge_base import knowledge_base_manager
 from src.memory.long_term_memory import long_term_memory
 from src.personality.prompt_builder import system_prompt_builder
 from src.tools.google_file_search import file_search_tool
 
 logger = logging.getLogger(__name__)
 
-# --- Managed Prompts ---
-# Eliminado CBT_THERAPEUTIC_TEMPLATE - Usando SystemPromptBuilder
+
+def format_knowledge_for_prompt(knowledge: dict[str, Any]) -> str:
+    """Formatea la Bóveda de Conocimiento para el prompt."""
+    sections = []
+
+    if knowledge.get("entities"):
+        ents = "\n".join([
+            f"- {e['name']} ({e['type']}): {e.get('attributes', {})}"
+            for e in knowledge["entities"]
+        ])
+        sections.append(f"ENTIDADES:\n{ents}")
+
+    if knowledge.get("medical"):
+        meds = "\n".join([
+            f"- {m['name']} ({m['type']}): {m.get('details', '')}"
+            for m in knowledge["medical"]
+        ])
+        sections.append(f"DATOS MÉDICOS:\n{meds}")
+
+    if knowledge.get("relationships"):
+        rels = "\n".join([
+            f"- {r['person']} ({r['relation']}): {r.get('attributes', {})}"
+            for r in knowledge["relationships"]
+        ])
+        sections.append(f"RELACIONES:\n{rels}")
+
+    if knowledge.get("preferences"):
+        prefs = "\n".join([
+            f"- {p['category']}: {p['value']}" for p in knowledge["preferences"]
+        ])
+        sections.append(f"PREFERENCIAS:\n{prefs}")
+
+    return "\n\n".join(sections) if sections else "No hay hechos confirmados aún."
 
 
 @tool
@@ -53,9 +85,12 @@ async def cbt_therapeutic_guidance_tool(
     # 1. Cargar perfil (Diskless/Multi-user)
     profile = await user_profile_manager.load_profile(chat_id)
 
-    # 2. Recuperar Memoria de Largo Plazo (Resumen)
+    # 2. Recuperar Memoria de Largo Plazo (Resumen + Hechos Estructurados)
     memory_data = await long_term_memory.get_summary(chat_id)
     history_summary = memory_data.get("summary", "Sin historial previo.")
+
+    knowledge_data = await knowledge_base_manager.load_knowledge(chat_id)
+    structured_knowledge = format_knowledge_for_prompt(knowledge_data)
 
     # 3. Smart RAG (Conocimiento TCC)
     try:
@@ -91,6 +126,7 @@ async def cbt_therapeutic_guidance_tool(
         runtime_context={
             "history_summary": history_summary,
             "knowledge_context": knowledge_context,
+            "structured_knowledge": structured_knowledge,
         },
     )
 

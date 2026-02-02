@@ -165,6 +165,9 @@ REGLA DE ORO: Mantén tu esencia MAGI (casual, directa, con opinión) incluso cu
                 f"\n## Conocimiento Relevante (RAG)\n{context['knowledge_context']}\n"
             )
 
+        if context.get("structured_knowledge"):
+            section += f"\n## Bóveda de Conocimiento (Hechos Confirmados)\n{context['structured_knowledge']}\n"
+
         return section
 
 
