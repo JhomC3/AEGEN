@@ -10,10 +10,12 @@ services:
       - LLM_PROVIDER=${LLM_PROVIDER:-groq}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - GROQ_MODEL_NAME=${GROQ_MODEL_NAME:-moonshotai/kimi-k2-instruct-0905}
+      - GROQ_BACKUP_MODEL_NAME=${GROQ_BACKUP_MODEL_NAME:-gpt-oss-120}
       - OPENROUTER_MODEL_NAME=${OPENROUTER_MODEL_NAME:-openai/gpt-oss-120b:free}
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - APP_ENV=${APP_ENV:-production}
+      - TZ=America/Bogota
     volumes:
       - .env:/app/.env
       - ./storage:/app/storage
@@ -22,7 +24,7 @@ services:
     restart: unless-stopped
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/system/health" ]
-      interval: 30s
+      interval: 6h
       timeout: 10s
       retries: 3
       start_period: 15s
@@ -34,6 +36,8 @@ services:
     image: redis:alpine3.21
     container_name: magi_redis
     command: redis-server --appendonly yes --appendfsync everysec --maxmemory 256mb --maxmemory-policy allkeys-lru
+    environment:
+      - TZ=America/Bogota
     networks:
       - magi_network
     volumes:

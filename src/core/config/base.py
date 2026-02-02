@@ -28,6 +28,7 @@ class BaseAppSettings(BaseSettings):
     LLM_PROVIDER: str = "groq"  # Options: "groq", "google", "openrouter"
     OPENROUTER_MODEL_NAME: str = "openai/gpt-oss-120b:free"
     GROQ_MODEL_NAME: str = "moonshotai/kimi-k2-instruct-0905"
+    GROQ_BACKUP_MODEL_NAME: str = "gpt-oss-120"
     ALCHEMY_API_KEY: SecretStr | None = None
     ETHERSCAN_API_KEY: SecretStr | None = None
     TAVILY_API_KEY: SecretStr | None = None

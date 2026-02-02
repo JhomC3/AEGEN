@@ -109,16 +109,13 @@ class SessionManager:
             session_dict = json.loads(session_data)
             session = ConversationSession(**session_dict)
 
-            # Return full session info - caller will build GraphStateV2
+            # Return only the conversation history - caller will build GraphStateV2
             session_info = {
                 "conversation_history": session.conversation_history,
-                "last_specialist": session.last_specialist,
-                "last_intent": session.last_intent,
-                "session_context": session.session_context,
             }
 
             logger.info(
-                f"Session retrieved for chat_id: {chat_id}, {len(session.conversation_history)} messages, Last specialist: {session.last_specialist}"
+                f"Session retrieved for chat_id: {chat_id}, {len(session.conversation_history)} messages"
             )
             return session_info
 
