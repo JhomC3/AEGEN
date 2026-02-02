@@ -33,8 +33,11 @@ class KnowledgeBaseManager:
         return f"knowledge:{chat_id}"
 
     async def load_knowledge(self, chat_id: str) -> dict[str, Any]:
-        """Carga la bóveda desde Redis."""
+        """
+        Carga la bóveda desde Redis. Si no existe, intenta recuperación vía RAG.
+        """
         from src.core.dependencies import redis_connection
+        from src.memory.recovery_manager import recovery_manager
 
         if redis_connection is None:
             return self._get_default_knowledge()
@@ -48,6 +51,16 @@ class KnowledgeBaseManager:
                 return json.loads(raw_data)
         except Exception as e:
             logger.error(f"Error cargando conocimiento de Redis para {chat_id}: {e}")
+
+        # --- AUTO-RECUPERACIÓN (Hybrid Memory Phase 2) ---
+        logger.info(
+            f"Conocimiento no encontrado en Redis para {chat_id}. Recuperando..."
+        )
+        recovered_knowledge = await recovery_manager.recover_knowledge(chat_id)
+
+        if recovered_knowledge:
+            await self.save_knowledge(chat_id, recovered_knowledge)
+            return recovered_knowledge
 
         return self._get_default_knowledge()
 
