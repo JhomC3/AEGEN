@@ -39,6 +39,8 @@ Este documento resume el estado actual del proyecto AEGEN, los logros recientes 
 
 ## 🗺️ Roadmap Actualizado: Fase 4 (Skill Ecosystem)
 
+### 0. Evitar urgentemente que el asistente nunca alucine
+
 ### 1. Observabilidad Profunda (PRÓXIMO PASO) 🔄
 - Integración con **LangSmith** para trazabilidad completa.
 

@@ -40,9 +40,10 @@ CRITERIOS DE ROUTING:
 • chat → Conversación general que no encaja en lo anterior.
 
 REGLA DE CONTINUIDAD (STICKINESS):
-- Si el usuario está respondiendo a una pregunta o siguiendo un hilo del ESPECIALISTA PREVIO (ej: respondiendo a un ejercicio de TCC), MANTÉN a ese mismo especialista.
-- Solo cambia si el usuario solicita explícitamente otro especialista o cambia drásticamente de tema.
-- El contexto "ÚLTIMOS MENSAJES" es tu guía para detectar esta continuidad.
+- El sistema te proporciona un `Especialista previo` en el contexto.
+- Si el usuario está respondiendo a una pregunta, siguiendo un hilo del especialista previo (ej: respondiendo a un ejercicio de TCC) o si su mensaje es corto/ambiguo (ej: "ok", "sí", "¿por qué?"), DEBES MANTENER a ese mismo especialista.
+- Solo cambia de especialista si el usuario solicita explícitamente otro tema o si hay un cambio drástico y claro de contexto.
+- Tu prioridad es la fluidez de la conversación actual.
 
 CONTEXTO CONVERSACIONAL: {context}
 
