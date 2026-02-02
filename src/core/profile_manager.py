@@ -84,9 +84,10 @@ class UserProfileManager:
     async def load_profile(self, chat_id: str) -> dict[str, Any]:
         """
         3.6: Carga el perfil desde Redis (Caché caliente).
-        Si no existe, retorna el default.
+        Si no existe, intenta recuperación desde la nube (Alternativa C).
         """
         from src.core.dependencies import redis_connection
+        from src.memory.recovery_manager import recovery_manager
 
         if redis_connection is None:
             logger.warning("Redis no disponible, usando perfil default.")
@@ -102,8 +103,19 @@ class UserProfileManager:
         except Exception as e:
             logger.error(f"Error cargando perfil de Redis para {chat_id}: {e}")
 
-        # Si no existe en Redis, retornamos default (Phase 3.6 - Cloud fallback pending)
-        logger.info(f"Perfil no encontrado para {chat_id}. Usando default.")
+        # --- AUTO-RECUPERACIÓN (Phase 3.6+) ---
+        logger.info(
+            f"Perfil no encontrado en Redis para {chat_id}. Iniciando recuperación..."
+        )
+        recovered_profile = await recovery_manager.recover_profile(chat_id)
+
+        if recovered_profile:
+            # Rehidratar Redis para futuras consultas
+            await self.save_profile(chat_id, recovered_profile)
+            return recovered_profile
+
+        # Si falla la recuperación, retornamos default
+        logger.info(f"Recuperación fallida para {chat_id}. Usando default.")
         return self._get_default_profile()
 
     async def save_profile(self, chat_id: str, profile: dict[str, Any]):
