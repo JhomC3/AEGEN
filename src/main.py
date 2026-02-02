@@ -98,12 +98,19 @@ app.add_middleware(CorrelationIdMiddleware)
 
 @app.middleware("http")
 async def log_all_requests(request: Request, call_next):
-    """Middleware para ver TODAS las peticiones que llegan al servidor."""
-    logger.info(f">>> REQUEST INCOMING: {request.method} {request.url.path}")
+    """Middleware para ver TODAS las peticiones que llegan al servidor (excepto Health Check)."""
+    # Silenciar logs de health check para reducir ruido
+    is_health_check = request.url.path == "/system/health"
+
+    if not is_health_check:
+        logger.info(f">>> REQUEST INCOMING: {request.method} {request.url.path}")
+
     response = await call_next(request)
-    logger.info(
-        f"<<< RESPONSE OUTGOING: {request.method} {request.url.path} - Status: {response.status_code}"
-    )
+
+    if not is_health_check:
+        logger.info(
+            f"<<< RESPONSE OUTGOING: {request.method} {request.url.path} - Status: {response.status_code}"
+        )
     return response
 
 

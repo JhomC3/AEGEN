@@ -1,4 +1,4 @@
-# tests/conftest.py
+# ruff: noqa: UP043
 from collections.abc import AsyncGenerator
 
 import pytest
@@ -8,7 +8,7 @@ from src.main import app
 
 
 @pytest.fixture
-async def async_client() -> AsyncGenerator[AsyncClient, None]:  # ruff: noqa: UP043
+async def async_client() -> AsyncGenerator[AsyncClient, None]:  # noqa: UP043
     """Async test client para la app FastAPI."""
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
