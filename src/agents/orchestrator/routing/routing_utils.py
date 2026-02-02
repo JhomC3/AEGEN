@@ -158,11 +158,21 @@ def extract_context_from_state(state: GraphStateV2) -> dict[str, Any]:
         context["recent_interactions"] = 0
         context["recent_messages_content"] = []
 
-    # Información de routing previo
+    # Información de ruteo previo (desde la sesión persistente)
     payload = state.get("payload", {})
-    if payload.get("intent"):
-        context["previous_intent"] = payload["intent"]
-    if payload.get("next_node"):
-        context["previous_specialist"] = payload["next_node"]
+
+    # Intent previo
+    prev_intent = payload.get("last_intent") or payload.get("intent")
+    if prev_intent:
+        context["previous_intent"] = prev_intent
+
+    # Especialista previo
+    prev_specialist = payload.get("last_specialist") or payload.get("next_node")
+    if prev_specialist:
+        context["previous_specialist"] = prev_specialist
+
+    # Inyectar contexto de sesión si existe
+    if payload.get("session_context"):
+        context["session_context"] = payload["session_context"]
 
     return context

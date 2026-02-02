@@ -26,6 +26,9 @@ class ConversationSession(BaseModel):
     chat_id: str
     conversation_history: list[V2ChatMessage]
     last_update: str  # ISO timestamp
+    last_specialist: str | None = None
+    last_intent: str | None = None
+    session_context: dict[str, Any] = {}
     metadata: dict[str, Any] = {}
 
 
@@ -66,6 +69,23 @@ class SessionManager:
         """Generate Redis key for session."""
         return f"session:chat:{chat_id}"
 
+    def _calculate_ttl(self, state: dict[str, Any]) -> int:
+        """
+        Calcula el TTL adaptativo basado en el contexto de la sesión.
+        - 24h para sesiones de terapia (cbt_specialist)
+        - 8h para conversaciones largas (>10 mensajes)
+        - 4h base para el resto
+        """
+        last_specialist = state.get("payload", {}).get("last_specialist")
+        history_len = len(state.get("conversation_history", []))
+
+        if last_specialist == "cbt_specialist":
+            return 86400  # 24 horas
+        elif history_len > 10:
+            return 28800  # 8 horas
+
+        return 14400  # 4 horas (valor base mejorado vs 1h anterior)
+
     async def get_session(self, chat_id: str) -> dict[str, Any] | None:
         """
         Retrieve session state from Redis.
@@ -89,13 +109,16 @@ class SessionManager:
             session_dict = json.loads(session_data)
             session = ConversationSession(**session_dict)
 
-            # Return only the conversation history - caller will build GraphStateV2
+            # Return full session info - caller will build GraphStateV2
             session_info = {
                 "conversation_history": session.conversation_history,
+                "last_specialist": session.last_specialist,
+                "last_intent": session.last_intent,
+                "session_context": session.session_context,
             }
 
             logger.info(
-                f"Session retrieved for chat_id: {chat_id}, {len(session.conversation_history)} messages"
+                f"Session retrieved for chat_id: {chat_id}, {len(session.conversation_history)} messages, Last specialist: {session.last_specialist}"
             )
             return session_info
 
@@ -105,41 +128,52 @@ class SessionManager:
 
     async def save_session(self, chat_id: str, state: dict[str, Any]) -> bool:
         """
-        Save session state to Redis.
+        Save session state to Redis with adaptive TTL and truncation.
 
         Args:
             chat_id: Chat identifier
-            state: Dict containing conversation_history
-
-        Returns:
-            True if saved successfully, False otherwise
+            state: Dict containing conversation_history and payload
         """
         try:
             redis_client = await self._get_redis()
             key = self._session_key(chat_id)
 
-            # Extract conversation history
+            # 1. Truncamiento simple (Mantener últimos 30 mensajes)
             conversation_history = state.get("conversation_history", [])
+            max_history = 30
+            if len(conversation_history) > max_history:
+                conversation_history = conversation_history[-max_history:]
 
-            # Create session object
+            # 2. Extraer metadatos de ruteo
+            payload = state.get("payload", {})
+            last_specialist = payload.get("last_specialist")
+            last_intent = payload.get("intent")
+
+            # 3. Calcular TTL Adaptativo
+            ttl = self._calculate_ttl(state)
+
             from datetime import datetime
 
             session = ConversationSession(
                 chat_id=chat_id,
                 conversation_history=conversation_history,
                 last_update=datetime.utcnow().isoformat(),
+                last_specialist=last_specialist,
+                last_intent=last_intent,
+                session_context=payload.get("session_context", {}),
                 metadata={
                     "last_event_type": getattr(state.get("event"), "event_type", None),
-                    "payload_keys": list(state.get("payload", {}).keys()),
+                    "history_truncated": len(state.get("conversation_history", []))
+                    > max_history,
                 },
             )
 
             # Serialize and save
             session_data = session.model_dump_json()
-            await redis_client.setex(key, self.ttl, session_data)
+            await redis_client.setex(key, ttl, session_data)
 
             logger.info(
-                f"Session saved for chat_id: {chat_id}, {len(conversation_history)} messages, TTL: {self.ttl}s"
+                f"Session saved for chat_id: {chat_id}, {len(conversation_history)} msgs, Specialist: {last_specialist}, TTL: {ttl}s"
             )
             return True
 

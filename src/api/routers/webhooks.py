@@ -37,11 +37,19 @@ async def process_event_task(event: schemas.CanonicalEventV1):
 
     # Cargar sesión existente o inicializar historial vacío
     existing_session = await session_manager.get_session(chat_id)
+    payload = {}
     if existing_session:
         logger.info(
-            f"[TaskID: {task_id}] Memoria cargada: {len(existing_session['conversation_history'])} mensajes"
+            f"[TaskID: {task_id}] Memoria cargada: {len(existing_session['conversation_history'])} mensajes. "
+            f"Last Specialist: {existing_session.get('last_specialist')}"
         )
         conversation_history = existing_session["conversation_history"]
+        # Inyectar contexto previo para el RoutingAnalyzer
+        payload = {
+            "last_specialist": existing_session.get("last_specialist"),
+            "last_intent": existing_session.get("last_intent"),
+            "session_context": existing_session.get("session_context", {}),
+        }
     else:
         logger.info(f"[TaskID: {task_id}] Nueva sesión conversacional")
         conversation_history = []
@@ -49,7 +57,7 @@ async def process_event_task(event: schemas.CanonicalEventV1):
     # Crear el estado inicial del grafo con el historial correcto
     initial_state = GraphStateV2(
         event=event,
-        payload={},
+        payload=payload,
         error_message=None,
         conversation_history=conversation_history,
         session_id=str(event.chat_id),
@@ -131,36 +139,17 @@ async def process_event_task(event: schemas.CanonicalEventV1):
     logger.info(f"[TaskID: {task_id}] Orquestación finalizada.")
 
 
-async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
+def _consolidate_fragments(
+    fragments: list[dict],
+) -> tuple[
+    str | None,
+    str | None,
+    str | None,
+    Literal["text", "audio", "document", "image", "unknown"],
+]:
     """
-    Tarea de fondo que espera y consolida mensajes acumulados.
-    Implementa lógica de Debounce: solo el último mensaje de una ráfaga procesa todo.
+    Consolida fragmentos de mensajes en contenido y metadatos únicos.
     """
-    # 1. Esperar el tiempo de debounce
-    await asyncio.sleep(3.0)
-
-    # 2. Verificar si somos la tarea más reciente
-    current_seq = await ingestion_buffer.get_current_sequence(str(chat_id))
-    if current_seq != task_seq:
-        logger.debug(
-            f"Interrupción de debounce para {chat_id}: Seq {task_seq} != {current_seq}. Abortando."
-        )
-        return
-
-    # 3. Recuperar y consolidar fragmentos
-    fragments = await ingestion_buffer.flush_all(str(chat_id))
-    if not fragments:
-        return
-
-    # REFRESCO DE FEEDBACK: Enviar "typing" nuevamente antes de procesar
-    # Esto mantiene el indicador activo mientras el LLM piensa
-    await telegram_interface.telegram_manager.send_chat_action(str(chat_id), "typing")
-
-    logger.info(
-        f"Consolidando {len(fragments)} mensajes acumulados para el chat {chat_id}."
-    )
-
-    # Consolidar texto y seleccionar archivo más relevante
     combined_content = []
     final_file_id = None
     final_language_code = None
@@ -169,12 +158,10 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
     for frag in fragments:
         if frag.get("content"):
             combined_content.append(frag["content"])
-
-        # Recuperar código de lenguaje del primer fragmento disponible
         if not final_language_code and frag.get("language_code"):
             final_language_code = frag["language_code"]
 
-        # Priorizar audio sobre imagen si ambos vienen en la ráfaga
+        # Prioridad de tipos
         if frag.get("event_type") == "audio":
             final_file_id = frag.get("file_id")
             final_event_type = "audio"
@@ -182,26 +169,84 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
             final_file_id = frag.get("file_id")
             final_event_type = "image"
 
-    # Crear evento canónico consolidado
-    event = schemas.CanonicalEventV1(
-        event_id=uuid4(),
-        event_type=final_event_type,
-        source="telegram",
-        chat_id=chat_id,
-        user_id=chat_id,
-        file_id=final_file_id,
-        content="\n".join(combined_content) if combined_content else None,
-        timestamp=datetime.now().isoformat(),
-        language_code=final_language_code,
-        metadata={
-            "trace_id": trace_id,
-            "consolidated": True,
-            "fragment_count": len(fragments),
-        },
-    )
+    content = "\n".join(combined_content) if combined_content else None
+    return content, final_file_id, final_language_code, final_event_type
 
-    # 4. Procesar el evento consolidado
-    await process_event_task(event)
+
+async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
+    """
+    Tarea de fondo que espera y consolida mensajes acumulados.
+    Implementa lógica de Debounce y Cerrojo de procesamiento.
+    """
+    # 1. Esperar el tiempo de debounce
+    await asyncio.sleep(3.0)
+
+    # 2. Verificar si somos la tarea más reciente (Debounce)
+    current_seq = await ingestion_buffer.get_current_sequence(str(chat_id))
+    if current_seq != task_seq:
+        logger.debug(f"Debounce: Seq {task_seq} != {current_seq}. Abortando.")
+        return
+
+    # 3. Cerrojo de Procesamiento (Lock)
+    from src.core.dependencies import redis_connection
+
+    lock_key = f"lock:processing:{chat_id}"
+
+    if redis_connection:
+        is_processing = await redis_connection.get(lock_key)
+        if is_processing:
+            logger.info(f"Chat {chat_id} ocupado. Esperando ráfaga tardía...")
+            await asyncio.sleep(2.0)
+            # Re-verificar debounce tras la espera
+            current_seq = await ingestion_buffer.get_current_sequence(str(chat_id))
+            if current_seq != task_seq:
+                return
+
+    # 4. Recuperar fragmentos (Flush)
+    fragments = await ingestion_buffer.flush_all(str(chat_id))
+    if not fragments:
+        return
+
+    # 5. Ejecución con Protección (Try/Finally)
+    if redis_connection:
+        await redis_connection.setex(lock_key, 60, "true")
+
+    try:
+        # Feedback visual
+        await telegram_interface.telegram_manager.send_chat_action(
+            str(chat_id), "typing"
+        )
+        logger.info(f"Consolidando {len(fragments)} mensajes para el chat {chat_id}.")
+
+        content, file_id, language_code, event_type_val = _consolidate_fragments(
+            fragments
+        )
+
+        # Crear y procesar evento canónico
+        event = schemas.CanonicalEventV1(
+            event_id=uuid4(),
+            event_type=event_type_val,
+            source="telegram",
+            chat_id=chat_id,
+            user_id=chat_id,
+            file_id=file_id,
+            content=content,
+            timestamp=datetime.now().isoformat(),
+            language_code=language_code,
+            metadata={
+                "trace_id": trace_id,
+                "consolidated": True,
+                "fragment_count": len(fragments),
+            },
+        )
+
+        await process_event_task(event)
+
+    except Exception as e:
+        logger.error(f"Error procesando ráfaga para {chat_id}: {e}", exc_info=True)
+    finally:
+        if redis_connection:
+            await redis_connection.delete(lock_key)
 
 
 @router.post(

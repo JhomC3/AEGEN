@@ -33,6 +33,7 @@ services:
   redis:
     image: redis:alpine3.21
     container_name: magi_redis
+    command: redis-server --appendonly yes --appendfsync everysec --maxmemory 256mb --maxmemory-policy allkeys-lru
     networks:
       - magi_network
     volumes:
