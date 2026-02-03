@@ -96,7 +96,7 @@ async def cbt_therapeutic_guidance_tool(
     try:
         active_tags = user_profile_manager.get_active_tags(profile)
         knowledge_context = await file_search_tool.query_files(
-            user_message, chat_id, tags=active_tags
+            user_message, chat_id, tags=active_tags, intent_type="vulnerability"
         )
     except Exception as e:
         logger.warning(f"Error en RAG TCC: {e}")

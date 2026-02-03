@@ -88,8 +88,14 @@ async def conversational_chat_tool(
     # 2. Smart RAG
     try:
         active_tags = user_profile_manager.get_active_tags(profile)
+
+        # Determinar intent para RAG: Si hay monitoreo emocional, activar PDFs de apoyo
+        rag_intent = (
+            "monitoring" if "monitor_emotional_cues" in next_actions else "chat"
+        )
+
         knowledge_context = await file_search_tool.query_files(
-            user_message, chat_id, tags=active_tags
+            user_message, chat_id, tags=active_tags, intent_type=rag_intent
         )
     except Exception:
         knowledge_context = ""

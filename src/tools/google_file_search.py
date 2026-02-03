@@ -1,7 +1,10 @@
 import asyncio
 import io
 import logging
+import mimetypes
+import re
 import time
+import unicodedata
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +14,11 @@ from google.genai import types
 from src.core.config import settings
 
 logger = logging.getLogger(__name__)
+
+# Límites de contexto para evitar errores de "bytes too large" (400 INVALID_ARGUMENT)
+MAX_USER_FILES = 5  # Perfil, Bóveda, Vault, etc.
+MAX_GLOBAL_PDFS = 2  # Protocolos terapéuticos pesados
+MAX_TOTAL_FILES = 8  # Límite de seguridad para la API
 
 
 class GoogleFileSearchTool:
@@ -34,6 +42,21 @@ class GoogleFileSearchTool:
         logger.info(
             f"GoogleFileSearchTool inicializada. SDK google.genai version: {getattr(genai, '__version__', 'unknown')}"
         )
+
+    def _sanitize_name(self, name: str) -> str:
+        """
+        Sanitiza el nombre del archivo para evitar errores de codificación y caracteres no permitidos.
+        Elimina acentos, convierte a ASCII y limpia caracteres especiales.
+        """
+        # Normalizar caracteres unicode (eliminar acentos)
+        nfkd_form = unicodedata.normalize("NFKD", name)
+        ascii_name = nfkd_form.encode("ASCII", "ignore").decode("ASCII")
+
+        # Reemplazar cualquier cosa que no sea alfanumérico, punto, guion o slash por guion bajo
+        sanitized = re.sub(r"[^a-zA-Z0-9./_-]", "_", ascii_name)
+
+        # Limitar longitud para evitar errores de API (Google suele limitar a 128 o 256)
+        return sanitized[:120]
 
     async def list_files(self):
         """
@@ -67,11 +90,26 @@ class GoogleFileSearchTool:
                 raise FileNotFoundError(f"Archivo no encontrado: {file_path}")
 
             # 1.4: Añadir prefijo {chat_id}/ para aislamiento
-            name = f"{chat_id}/{display_name or path.name}"
-            logger.info(f"Subiendo archivo {path.name} como '{name}'...")
+            raw_name = f"{chat_id}/{display_name or path.name}"
+            name = self._sanitize_name(raw_name)
+            logger.info(f"Subiendo archivo a Google API como '{name}'...")
 
+            # Leemos el archivo en un thread para no bloquear el loop (ASYNC101 fix)
+            def read_file():
+                with open(path, "rb") as f:
+                    return f.read()
+
+            content_bytes = await asyncio.to_thread(read_file)
+            file_io = io.BytesIO(content_bytes)
+
+            mime_type, _ = mimetypes.guess_type(path)
             uploaded_file = await asyncio.to_thread(
-                self.client.files.upload, file=file_path, config={"display_name": name}
+                self.client.files.upload,
+                file=file_io,
+                config={
+                    "display_name": name,
+                    "mime_type": mime_type or "application/octet-stream",
+                },
             )
 
             self._file_cache = None  # Invalidar cache
@@ -79,7 +117,7 @@ class GoogleFileSearchTool:
             asyncio.create_task(self._wait_for_active(uploaded_file))
             return uploaded_file
         except Exception as e:
-            logger.error(f"Error subiendo archivo {file_path}: {e}")
+            logger.error(f"Error subiendo archivo: {e}")
             raise
 
     async def upload_from_string(
@@ -91,7 +129,8 @@ class GoogleFileSearchTool:
         """
         try:
             # 1.4: Prefijo chat_id
-            display_name = f"{chat_id}/{filename}"
+            raw_display_name = f"{chat_id}/{filename}"
+            display_name = self._sanitize_name(raw_display_name)
             logger.info(f"Subiendo contenido string como '{display_name}'...")
 
             # Convertir string a stream de bytes
@@ -159,58 +198,99 @@ class GoogleFileSearchTool:
         return uploaded_file
 
     async def get_relevant_files(
-        self, chat_id: str, tags: list[str] | None = None
+        self,
+        chat_id: str,
+        tags: list[str] | None = None,
+        query: str | None = None,
+        intent_type: str | None = None,
     ) -> list[Any]:
         """
-        Identifica qué archivos son relevantes basado en chat_id (prefijo) y tags.
+        Identifica qué archivos son relevantes basado en chat_id (prefijo), tags e intent_type.
+        Implementa una estrategia por niveles para evitar errores de 'bytes too large'.
         """
         all_files = await self.list_files()
-        relevant = []
 
-        # Prefijo obligatorio para aislamiento
+        user_files = []
+        global_pdfs = []
+        tagged_files = []
+
         prefix = f"{chat_id}/"
         tags_upper = [t.upper() for t in (tags or [])]
 
+        # Determinar si la consulta requiere conocimiento terapéutico
+        # Se activa por intención explícita ("vulnerability" o "monitoring") o por tags explícitos
+        needs_therapy = intent_type in ["vulnerability", "monitoring"] or any(
+            t in ["TCC", "THERAPY", "PSYCHOLOGY"] for t in tags_upper
+        )
+
         for f in all_files:
             f_display_name = getattr(f, "display_name", "")
+            f_mime = getattr(f, "mime_type", "")
+            f_state = str(getattr(f, "state", "")).upper()
 
-            # 1. Aislamiento por chat_id (Obligatorio para archivos de usuario)
+            # Filtro base: Solo ACTIVE y no JSON (no soportado por RAG)
+            if "ACTIVE" not in f_state or f_mime == "application/json":
+                continue
+
+            # NIVEL 1: Aislamiento por chat_id (Archivos del usuario: perfil, bóveda, vault)
             if f_display_name.startswith(prefix):
-                relevant.append(f)
+                user_files.append(f)
                 continue
 
-            # 2. CORE KERNEL & KNOWLEDGE (Global para todos los usuarios)
+            # NIVEL 2: PDFs globales (Protocolos terapéuticos en knowledge/)
+            is_global_pdf = (
+                f_display_name.startswith("knowledge/") and f_mime == "application/pdf"
+            )
+            if is_global_pdf and needs_therapy:
+                global_pdfs.append(f)
+                continue
+
+            # NIVEL 3: Match por tags explícitos (Match directo en nombre de archivo)
+            if is_global_pdf:
+                continue
+
             f_name_upper = f_display_name.upper()
-            is_global = any(
-                term in f_name_upper
-                for term in ["CORE", "STOIC", "KNOWLEDGE", "GLOBAL"]
-            ) or f_display_name.startswith("knowledge/")
+            is_tag_match = tags_upper and any(tag in f_name_upper for tag in tags_upper)
 
-            if is_global:
-                relevant.append(f)
-                continue
+            if is_tag_match:
+                tagged_files.append(f)
 
-            # 3. TAG MATCH (Si no tiene prefijo pero coincide con tag global)
-            if tags_upper and any(tag in f_name_upper for tag in tags_upper):
-                relevant.append(f)
+        # Construir resultado final respetando límites
+        result = []
 
-        # Filtrar solo activos, limitar y EXCLUIR application/json (no soportado por Gemini RAG)
-        active_files = [
-            f
-            for f in relevant
-            if "ACTIVE" in str(getattr(f, "state", "")).upper()
-            and getattr(f, "mime_type", "") != "application/json"
-        ]
-        return active_files[:10]  # Aumentado a 10 para mayor contexto
+        # 1. Prioridad: Usuario (hasta MAX_USER_FILES)
+        result.extend(user_files[:MAX_USER_FILES])
+
+        # 2. PDFs terapéuticos (si hay espacio y se necesitan)
+        if len(result) < MAX_TOTAL_FILES:
+            slots = MAX_TOTAL_FILES - len(result)
+            result.extend(global_pdfs[: min(MAX_GLOBAL_PDFS, slots)])
+
+        # 3. Otros archivos tageados (relleno)
+        if len(result) < MAX_TOTAL_FILES:
+            slots = MAX_TOTAL_FILES - len(result)
+            result.extend(tagged_files[:slots])
+
+        logger.info(
+            f"Filtro de archivos ({chat_id}): {len(user_files)} user, {len(global_pdfs)} therapy, {len(tagged_files)} tagged. "
+            f"Seleccionados: {len(result)} para RAG."
+        )
+        return result
 
     async def query_files(
-        self, query: str, chat_id: str, tags: list[str] | None = None
+        self,
+        query: str,
+        chat_id: str,
+        tags: list[str] | None = None,
+        intent_type: str | None = None,
     ) -> str:
         """
         Realiza búsqueda semántica inteligente (Smart RAG) en archivos relevantes.
-        Usa gemini-2.5-flash-lite para máxima eficiencia en recuperación.
+        Usa gemini-2.5-flash-lite para optimización de costos y precisión.
         """
-        relevant_files = await self.get_relevant_files(chat_id, tags)
+        relevant_files = await self.get_relevant_files(
+            chat_id, tags, query=query, intent_type=intent_type
+        )
         if not relevant_files:
             logger.info(f"No hay archivos relevantes para {chat_id} con tags {tags}")
             return ""
@@ -222,8 +302,8 @@ class GoogleFileSearchTool:
         )
 
         try:
-            # Forzamos el uso de gemini-2.0-flash para recuperación semántica
-            model_name = "gemini-2.0-flash"
+            # Forzamos el uso de gemini-2.5-flash-lite para recuperación semántica
+            model_name = "gemini-2.5-flash-lite"
 
             config = types.GenerateContentConfig(
                 temperature=0.1,  # Menor temperatura para mayor precisión clínica
@@ -248,8 +328,9 @@ class GoogleFileSearchTool:
             system_instruction = (
                 "Eres un experto en recuperación de memoria y análisis de perfiles de usuario.\n"
                 "Tu objetivo es extraer información precisa de los archivos proporcionados.\n"
-                "Prioriza archivos JSON como 'user_profile.json' y 'knowledge_base.json'.\n"
+                "Prioriza archivos Markdown como 'user_profile.md' y 'knowledge_base.md'.\n"
                 "Si encuentras el nombre del usuario, sus preferencias o metas, descríbelas fielmente.\n"
+                "Responde siempre en el mismo idioma en el que se te hace la consulta.\n"
                 "Si la información no está presente en los archivos, responde 'No encontrado'.\n"
             )
 
