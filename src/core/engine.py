@@ -39,16 +39,14 @@ def _create_groq_llm(model_name: str | None = None):
 
     target_model = model_name or settings.GROQ_MODEL_NAME
     logger.info(f"Initializing Groq with model: {target_model}")
-    api_key = (
-        settings.GROQ_API_KEY.get_secret_value() if settings.GROQ_API_KEY else None
-    )
+    api_key = settings.GROQ_API_KEY if settings.GROQ_API_KEY else None
 
     return ChatGroq(
         model=target_model,
         temperature=0.7,
         api_key=api_key,
         max_retries=3,
-        request_timeout=60,
+        timeout=60,
     )
 
 

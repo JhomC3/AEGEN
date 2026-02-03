@@ -34,10 +34,10 @@ class KnowledgeBaseManager:
 
     async def load_knowledge(self, chat_id: str) -> dict[str, Any]:
         """
-        Carga la bóveda desde Redis. Si no existe, intenta recuperación vía RAG.
+        Carga la bóveda desde Redis. Si no existe, intenta recuperación vía Gateway.
         """
         from src.core.dependencies import redis_connection
-        from src.memory.recovery_manager import recovery_manager
+        from src.memory.cloud_gateway import cloud_gateway
 
         if redis_connection is None:
             return self._get_default_knowledge()
@@ -52,11 +52,13 @@ class KnowledgeBaseManager:
         except Exception as e:
             logger.error(f"Error cargando conocimiento de Redis para {chat_id}: {e}")
 
-        # --- AUTO-RECUPERACIÓN (Hybrid Memory Phase 2) ---
+        # --- AUTO-RECUPERACIÓN UNIFICADA (Gateway) ---
         logger.info(
-            f"Conocimiento no encontrado en Redis para {chat_id}. Recuperando..."
+            f"Conocimiento no encontrado en Redis para {chat_id}. Recuperando de Cloud..."
         )
-        recovered_knowledge = await recovery_manager.recover_knowledge(chat_id)
+        recovered_knowledge = await cloud_gateway.download_memory(
+            chat_id, "knowledge_base"
+        )
 
         if recovered_knowledge:
             await self.save_knowledge(chat_id, recovered_knowledge)
@@ -65,8 +67,9 @@ class KnowledgeBaseManager:
         return self._get_default_knowledge()
 
     async def save_knowledge(self, chat_id: str, knowledge: dict[str, Any]):
-        """Guarda la bóveda en Redis y sincroniza con Google Cloud."""
+        """Guarda la bóveda en Redis y sincroniza unificada con Google Cloud."""
         from src.core.dependencies import redis_connection
+        from src.memory.cloud_gateway import cloud_gateway
 
         if redis_connection is None:
             return
@@ -79,31 +82,28 @@ class KnowledgeBaseManager:
             payload = json.dumps(knowledge, ensure_ascii=False)
             await redis_connection.set(key, payload)
 
-            # 2. Sync a Google Cloud (Background)
+            # 2. Sincronización Unificada
             import asyncio
 
-            asyncio.create_task(self.sync_to_cloud(chat_id, knowledge))
+            asyncio.create_task(
+                cloud_gateway.upload_memory(
+                    chat_id=chat_id,
+                    filename="knowledge_base",
+                    data=knowledge,
+                    mem_type="knowledge_base",
+                )
+            )
 
         except Exception as e:
             logger.error(f"Error guardando conocimiento para {chat_id}: {e}")
 
     async def sync_to_cloud(self, chat_id: str, knowledge: dict[str, Any]):
-        """Sincroniza la bóveda con Google File Search."""
-        from src.tools.google_file_search import file_search_tool
+        """OBSOLETO: Se mantiene por compatibilidad."""
+        from src.memory.cloud_gateway import cloud_gateway
 
-        try:
-            content = json.dumps(knowledge, indent=2, ensure_ascii=False)
-            await file_search_tool.upload_from_string(
-                content=content,
-                filename="knowledge_base.json",
-                chat_id=chat_id,
-                mime_type="application/json",
-            )
-            logger.info(
-                f"Bóveda de conocimiento sincronizada con Google Cloud para {chat_id}"
-            )
-        except Exception as e:
-            logger.warning(f"Error en sync_to_cloud (knowledge) para {chat_id}: {e}")
+        await cloud_gateway.upload_memory(
+            chat_id, "knowledge_base", knowledge, "knowledge_base"
+        )
 
 
 # Singleton
