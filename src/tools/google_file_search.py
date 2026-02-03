@@ -75,7 +75,9 @@ class GoogleFileSearchTool:
             )
 
             self._file_cache = None  # Invalidar cache
-            return await self._wait_for_active(uploaded_file)
+            # 1.3: No esperamos bloqueando el flujo principal
+            asyncio.create_task(self._wait_for_active(uploaded_file))
+            return uploaded_file
         except Exception as e:
             logger.error(f"Error subiendo archivo {file_path}: {e}")
             raise
@@ -104,7 +106,9 @@ class GoogleFileSearchTool:
             )
 
             self._file_cache = None
-            return await self._wait_for_active(uploaded_file)
+            # 1.3: No esperamos bloqueando el flujo principal
+            asyncio.create_task(self._wait_for_active(uploaded_file))
+            return uploaded_file
         except Exception as e:
             logger.error(f"Error en upload_from_string para {filename}: {e}")
             raise
@@ -139,10 +143,10 @@ class GoogleFileSearchTool:
                     self.client.files.get, name=uploaded_file.name
                 )
                 state = str(getattr(current_file, "state", "")).upper()
-                if state == "ACTIVE":
+                if "ACTIVE" in state:
                     logger.info(f"Archivo {uploaded_file.name} listo (ACTIVE).")
                     return current_file
-                elif state == "FAILED":
+                elif "FAILED" in state:
                     raise ValueError(f"Procesamiento falló: {uploaded_file.name}")
 
                 logger.debug(
@@ -190,9 +194,12 @@ class GoogleFileSearchTool:
             if tags_upper and any(tag in f_name_upper for tag in tags_upper):
                 relevant.append(f)
 
-        # Filtrar solo activos y limitar
+        # Filtrar solo activos, limitar y EXCLUIR application/json (no soportado por Gemini RAG)
         active_files = [
-            f for f in relevant if str(getattr(f, "state", "")).upper() == "ACTIVE"
+            f
+            for f in relevant
+            if "ACTIVE" in str(getattr(f, "state", "")).upper()
+            and getattr(f, "mime_type", "") != "application/json"
         ]
         return active_files[:10]  # Aumentado a 10 para mayor contexto
 
@@ -215,8 +222,8 @@ class GoogleFileSearchTool:
         )
 
         try:
-            # Forzamos el uso de gemini-2.5-flash-lite para recuperación semántica
-            model_name = "gemini-2.5-flash-lite"
+            # Forzamos el uso de gemini-2.0-flash para recuperación semántica
+            model_name = "gemini-2.0-flash"
 
             config = types.GenerateContentConfig(
                 temperature=0.1,  # Menor temperatura para mayor precisión clínica
@@ -225,14 +232,18 @@ class GoogleFileSearchTool:
 
             # Construir el prompt con contexto de archivos
             user_parts = []
+            seen_uris = set()
             for f in relevant_files:
-                # FIX: La File API no soporta application/json para RAG.
-                # Forzamos text/plain para que Gemini pueda leer el contenido de los JSON.
-                mtype = f.mime_type
-                if mtype == "application/json":
-                    mtype = "text/plain"
+                if f.uri in seen_uris:
+                    continue
+                seen_uris.add(f.uri)
 
-                user_parts.append(types.Part.from_uri(file_uri=f.uri, mime_type=mtype))
+                # FIX: La File API no soporta application/json para RAG.
+                # Si es JSON, Gemini suele fallar al leerlo vía URI si el mtype no es texto.
+                # Pero no podemos mentir sobre el mtype en from_uri si la API lo valida contra el archivo.
+                user_parts.append(
+                    types.Part.from_uri(file_uri=f.uri, mime_type=f.mime_type)
+                )
 
             system_instruction = (
                 "Eres un experto en recuperación de memoria y análisis de perfiles de usuario.\n"
@@ -248,6 +259,7 @@ class GoogleFileSearchTool:
 
             contents = [types.Content(role="user", parts=user_parts)]
 
+            # type: ignore[arg-type]
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=model_name,

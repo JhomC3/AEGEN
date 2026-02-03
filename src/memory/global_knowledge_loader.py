@@ -1,5 +1,6 @@
 # src/memory/global_knowledge_loader.py
 import logging
+import os
 from pathlib import Path
 
 from src.tools.google_file_search import file_search_tool
@@ -14,7 +15,12 @@ class GlobalKnowledgeLoader:
     """
 
     def __init__(self, knowledge_dir: str = "knowledge"):
-        self.knowledge_path = Path(knowledge_dir)
+        # Detectar entorno Docker para ajustar ruta
+        if os.getenv("DOCKER_ENV") == "true":
+            self.knowledge_path = Path("/app") / knowledge_dir
+        else:
+            self.knowledge_path = Path(knowledge_dir)
+
         logger.info(
             f"GlobalKnowledgeLoader inicializado en: {self.knowledge_path.absolute()}"
         )

@@ -45,6 +45,9 @@ class MemoryMaintenanceJob:
         # Google File API expira a las 48h. Refrescamos si tienen > 24h.
         for f in files:
             creation_time = f.create_time  # datetime object
+            if not creation_time:
+                continue
+
             age = now - creation_time
 
             if age > timedelta(hours=24):
