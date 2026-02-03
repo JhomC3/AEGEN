@@ -201,6 +201,7 @@ class GoogleFileSearchTool:
     ) -> str:
         """
         Realiza búsqueda semántica inteligente (Smart RAG) en archivos relevantes.
+        Usa gemini-2.5-flash-lite para máxima eficiencia en recuperación.
         """
         relevant_files = await self.get_relevant_files(chat_id, tags)
         if not relevant_files:
@@ -214,23 +215,31 @@ class GoogleFileSearchTool:
         )
 
         try:
-            model_name = settings.DEFAULT_LLM_MODEL
-            if model_name.startswith("models/"):
-                model_name = model_name.replace("models/", "")
+            # Forzamos el uso de gemini-2.5-flash-lite para recuperación semántica
+            model_name = "gemini-2.5-flash-lite"
 
-            config = types.GenerateContentConfig(temperature=0.3)
+            config = types.GenerateContentConfig(
+                temperature=0.1,  # Menor temperatura para mayor precisión clínica
+                top_p=0.95,
+            )
 
             # Construir el prompt con contexto de archivos
             user_parts = []
             for f in relevant_files:
-                user_parts.append(
-                    types.Part.from_uri(file_uri=f.uri, mime_type=f.mime_type)
-                )
+                # FIX: La File API no soporta application/json para RAG.
+                # Forzamos text/plain para que Gemini pueda leer el contenido de los JSON.
+                mtype = f.mime_type
+                if mtype == "application/json":
+                    mtype = "text/plain"
+
+                user_parts.append(types.Part.from_uri(file_uri=f.uri, mime_type=mtype))
 
             system_instruction = (
-                "Eres un asistente que recupera información histórica y técnica con precisión clínica.\n"
-                "Usa los archivos proporcionados para responder a la consulta.\n"
-                "Si la información no está, di 'No encontrado'.\n"
+                "Eres un experto en recuperación de memoria y análisis de perfiles de usuario.\n"
+                "Tu objetivo es extraer información precisa de los archivos proporcionados.\n"
+                "Prioriza archivos JSON como 'user_profile.json' y 'knowledge_base.json'.\n"
+                "Si encuentras el nombre del usuario, sus preferencias o metas, descríbelas fielmente.\n"
+                "Si la información no está presente en los archivos, responde 'No encontrado'.\n"
             )
 
             user_parts.append(
@@ -247,11 +256,16 @@ class GoogleFileSearchTool:
             )
 
             if response and response.text:
-                return response.text.strip()
+                text = response.text.strip()
+                if "No encontrado" in text and len(text) < 20:
+                    return ""
+                return text
             return ""
 
         except Exception as e:
-            logger.error(f"Error en Smart RAG: {e}", exc_info=True)
+            logger.error(
+                f"Error en Smart RAG con gemini-2.5-flash-lite: {e}", exc_info=True
+            )
             return ""
 
     async def search_user_history(self, chat_id: str, query: str) -> str:

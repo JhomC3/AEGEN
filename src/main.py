@@ -68,6 +68,18 @@ async def lifespan(app: FastAPI):
         "cbt_therapeutic_response.txt",
     ])
 
+    # --- NUEVO: Arquitectura de Memoria Unificada ---
+    # 1. Bootstrap de conocimiento global
+    from src.memory.global_knowledge_loader import global_knowledge_loader
+
+    await global_knowledge_loader.check_and_bootstrap()
+
+    # 2. Iniciar job de mantenimiento de memoria (Auto-Refresh 24h)
+    from src.memory.maintenance_job import memory_maintenance_job
+
+    memory_maintenance_job.run_in_background()
+
+    logger.info("Lifespan: Unified Memory Architecture Active.")
     logger.info("Lifespan: Application startup complete.")
     yield
     logger.info(f"Lifespan: Shutting down {settings.APP_NAME}...")

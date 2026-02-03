@@ -53,6 +53,7 @@ dependencies = [
     "python-pptx",
     "openpyxl",
     "aiofiles",
+    "pyyaml>=6.0.2",
 ]
 
 [project.optional-dependencies]

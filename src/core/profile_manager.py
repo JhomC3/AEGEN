@@ -84,10 +84,10 @@ class UserProfileManager:
     async def load_profile(self, chat_id: str) -> dict[str, Any]:
         """
         3.6: Carga el perfil desde Redis (Caché caliente).
-        Si no existe, intenta recuperación desde la nube (Alternativa C).
+        Si no existe, intenta recuperación determinística desde la nube (Gateway).
         """
         from src.core.dependencies import redis_connection
-        from src.memory.recovery_manager import recovery_manager
+        from src.memory.cloud_gateway import cloud_gateway
 
         if redis_connection is None:
             logger.warning("Redis no disponible, usando perfil default.")
@@ -103,11 +103,11 @@ class UserProfileManager:
         except Exception as e:
             logger.error(f"Error cargando perfil de Redis para {chat_id}: {e}")
 
-        # --- AUTO-RECUPERACIÓN (Phase 3.6+) ---
+        # --- AUTO-RECUPERACIÓN UNIFICADA (Gateway) ---
         logger.info(
-            f"Perfil no encontrado en Redis para {chat_id}. Iniciando recuperación..."
+            f"Perfil no encontrado en Redis para {chat_id}. Recuperando de Cloud..."
         )
-        recovered_profile = await recovery_manager.recover_profile(chat_id)
+        recovered_profile = await cloud_gateway.download_memory(chat_id, "user_profile")
 
         if recovered_profile:
             # Rehidratar Redis para futuras consultas
@@ -120,9 +120,10 @@ class UserProfileManager:
 
     async def save_profile(self, chat_id: str, profile: dict[str, Any]):
         """
-        3.7: Guarda el perfil en Redis y dispara sincronización a la nube.
+        3.7: Guarda el perfil en Redis y dispara sincronización unificada a la nube.
         """
         from src.core.dependencies import redis_connection
+        from src.memory.cloud_gateway import cloud_gateway
 
         if redis_connection is None:
             return
@@ -135,31 +136,30 @@ class UserProfileManager:
             payload = json.dumps(profile, ensure_ascii=False)
             await redis_connection.set(key, payload)
 
-            # 2. 3.8: Sync a Google Cloud (Background)
+            # 2. Sincronización Unificada (Markdown + YAML)
             import asyncio
 
-            asyncio.create_task(self.sync_to_cloud(chat_id, profile))
+            asyncio.create_task(
+                cloud_gateway.upload_memory(
+                    chat_id=chat_id,
+                    filename="user_profile",
+                    data=profile,
+                    mem_type="user_profile",
+                )
+            )
 
         except Exception as e:
             logger.error(f"Error guardando perfil para {chat_id}: {e}")
 
     async def sync_to_cloud(self, chat_id: str, profile: dict[str, Any]):
         """
-        3.8: Sincroniza el perfil con Google File Search.
+        OBSOLETO: Se mantiene por compatibilidad temporal pero redirige al Gateway.
         """
-        from src.tools.google_file_search import file_search_tool
+        from src.memory.cloud_gateway import cloud_gateway
 
-        try:
-            content = json.dumps(profile, indent=2, ensure_ascii=False)
-            await file_search_tool.upload_from_string(
-                content=content,
-                filename="user_profile.json",
-                chat_id=chat_id,
-                mime_type="application/json",
-            )
-            logger.info(f"Perfil sincronizado con Google Cloud para {chat_id}")
-        except Exception as e:
-            logger.warning(f"Error en sync_to_cloud para {chat_id}: {e}")
+        await cloud_gateway.upload_memory(
+            chat_id, "user_profile", profile, "user_profile"
+        )
 
     async def add_evolution_entry(
         self, chat_id: str, event: str, type: str = "milestone"
