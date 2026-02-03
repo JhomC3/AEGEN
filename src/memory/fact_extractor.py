@@ -31,13 +31,13 @@ class FactExtractor:
                     "3. NO ALUCINACIONES: Si el usuario dice 'mi perro', no asumas que es un Golden Retriever a menos que lo diga.\n"
                     "4. DATOS MÉDICOS: Captura condiciones, medicación, dosis y profesionales con rigor.\n\n"
                     "FORMATO DE SALIDA (JSON ESTRICTO):\n"
-                    "{\n"
-                    "  'entities': [{'name', 'type', 'attributes', 'confidence'}],\n"
-                    "  'preferences': [{'category', 'value', 'strength'}],\n"
-                    "  'medical': [{'type', 'name', 'details', 'date'}],\n"
-                    "  'relationships': [{'person', 'relation', 'attributes'}],\n"
-                    "  'milestones': [{'description', 'date', 'category'}]\n"
-                    "}"
+                    "{{\n"
+                    "  'entities': [{{'name', 'type', 'attributes', 'confidence'}}],\n"
+                    "  'preferences': [{{'category', 'value', 'strength'}}],\n"
+                    "  'medical': [{{'type', 'name', 'details', 'date'}}],\n"
+                    "  'relationships': [{{'person', 'relation', 'attributes'}}],\n"
+                    "  'milestones': [{{'description', 'date', 'category'}}]\n"
+                    "}}"
                 ),
             ),
             (
