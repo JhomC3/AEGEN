@@ -215,20 +215,19 @@ class GoogleFileSearchTool:
         """
         Identifica qué archivos son relevantes basado en chat_id, tags e intent_type.
         Implementa deduplicación por display_name priorizando lo más reciente.
+        Prioriza archivos de conocimiento manual.
         """
         all_files = await self.list_files()
 
-        # Paso 1: Deduplicar por display_name (solo el más reciente basado en el orden de la API)
+        # Paso 1: Deduplicar por display_name
         unique_files_map = {}
         for f in all_files:
             if not self._is_valid_rag_file(f):
                 continue
-
             d_name = getattr(f, "display_name", "")
-            # Al sobreescribir en el mapa, nos aseguramos de que si hay duplicados, no se cuenten doble en los límites.
             unique_files_map[d_name] = f
 
-        user_files, global_pdfs, tagged_files = [], [], []
+        manual_files, user_files, global_pdfs, tagged_files = [], [], [], []
         prefix = f"{chat_id}/"
         tags_upper = [t.upper() for t in (tags or [])]
         needs_therapy = intent_type in ["vulnerability", "monitoring"] or any(
@@ -238,8 +237,13 @@ class GoogleFileSearchTool:
         for disp_name, f in unique_files_map.items():
             mime = getattr(f, "mime_type", "")
 
+            # Aislamiento por chat_id
             if disp_name.startswith(prefix):
-                user_files.append(f)
+                # Sub-categoría: Conocimiento Manual (Prioridad Máxima)
+                if "manual/" in disp_name or "_manual_" in disp_name.lower():
+                    manual_files.append(f)
+                else:
+                    user_files.append(f)
             elif (
                 disp_name.startswith("knowledge/")
                 and mime == "application/pdf"
@@ -249,10 +253,17 @@ class GoogleFileSearchTool:
             elif tags_upper and any(tag in disp_name.upper() for tag in tags_upper):
                 tagged_files.append(f)
 
-        return self._compose_result(user_files, global_pdfs, tagged_files, chat_id)
+        return self._compose_result(
+            manual_files, user_files, global_pdfs, tagged_files, chat_id
+        )
 
     def _compose_result(
-        self, user_files: list, global_pdfs: list, tagged_files: list, chat_id: str
+        self,
+        manual_files: list,
+        user_files: list,
+        global_pdfs: list,
+        tagged_files: list,
+        chat_id: str,
     ) -> list[Any]:
         """Compone la lista final de archivos respetando límites y unicidad."""
         result: list[Any] = []
@@ -268,13 +279,18 @@ class GoogleFileSearchTool:
                     seen_uris.add(f.uri)
                     added += 1
 
+        # Nivel 0: Manual (Sin límite estricto, hasta llenar el total)
+        add(manual_files)
+        # Nivel 1: Usuario (Auto-generados)
         add(user_files, MAX_USER_FILES)
+        # Nivel 2: Terapia
         add(global_pdfs, MAX_GLOBAL_PDFS)
+        # Nivel 3: Otros
         add(tagged_files)
 
         logger.info(
-            f"RAG Filter ({chat_id}): {len(user_files)} user, {len(global_pdfs)} therapy, "
-            f"{len(tagged_files)} tagged. Selected: {len(result)}"
+            f"RAG Filter ({chat_id}): {len(manual_files)} manual, {len(user_files)} user, "
+            f"{len(global_pdfs)} therapy, {len(tagged_files)} tagged. Selected: {len(result)}"
         )
         return result
 
