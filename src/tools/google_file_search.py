@@ -82,19 +82,21 @@ class GoogleFileSearchTool:
         self, file_path: str, chat_id: str, display_name: str | None = None
     ):
         """
-        Sube un archivo a la Google File API con aislamiento por chat_id.
+        Sube un archivo a la Google File API eliminando versiones anteriores.
         """
         try:
             path = Path(file_path)
             if not path.exists():
                 raise FileNotFoundError(f"Archivo no encontrado: {file_path}")
 
-            # 1.4: Añadir prefijo {chat_id}/ para aislamiento
             raw_name = f"{chat_id}/{display_name or path.name}"
             name = self._sanitize_name(raw_name)
+
+            # Limpiar versiones previas antes de subir
+            await self.delete_by_display_name(name)
+
             logger.info(f"Subiendo archivo a Google API como '{name}'...")
 
-            # Leemos el archivo en un thread para no bloquear el loop (ASYNC101 fix)
             def read_file():
                 with open(path, "rb") as f:
                     return f.read()
@@ -124,16 +126,16 @@ class GoogleFileSearchTool:
         self, content: str, filename: str, chat_id: str, mime_type: str = "text/plain"
     ):
         """
-        1.2: Sube contenido directamente desde un string (Diskless).
-        Asegura aislamiento por chat_id.
+        Sube contenido string eliminando versiones anteriores con el mismo nombre.
         """
         try:
-            # 1.4: Prefijo chat_id
             raw_display_name = f"{chat_id}/{filename}"
             display_name = self._sanitize_name(raw_display_name)
-            logger.info(f"Subiendo contenido string como '{display_name}'...")
 
-            # Convertir string a stream de bytes
+            # Limpiar versiones previas
+            await self.delete_by_display_name(display_name)
+
+            logger.info(f"Subiendo contenido string como '{display_name}'...")
             content_bytes = content.encode("utf-8")
             file_io = io.BytesIO(content_bytes)
 
@@ -197,6 +199,12 @@ class GoogleFileSearchTool:
         logger.error(f"TIMEOUT: {uploaded_file.name} no pasó a ACTIVE tras reintentos.")
         return uploaded_file
 
+    def _is_valid_rag_file(self, f: Any) -> bool:
+        """Verifica si un archivo es apto para RAG (ACTIVE y no JSON)."""
+        f_mime = getattr(f, "mime_type", "")
+        f_state = str(getattr(f, "state", "")).upper()
+        return "ACTIVE" in f_state and f_mime != "application/json"
+
     async def get_relevant_files(
         self,
         chat_id: str,
@@ -205,75 +213,68 @@ class GoogleFileSearchTool:
         intent_type: str | None = None,
     ) -> list[Any]:
         """
-        Identifica qué archivos son relevantes basado en chat_id (prefijo), tags e intent_type.
-        Implementa una estrategia por niveles para evitar errores de 'bytes too large'.
+        Identifica qué archivos son relevantes basado en chat_id, tags e intent_type.
+        Implementa deduplicación por display_name priorizando lo más reciente.
         """
         all_files = await self.list_files()
 
-        user_files = []
-        global_pdfs = []
-        tagged_files = []
+        # Paso 1: Deduplicar por display_name (solo el más reciente basado en el orden de la API)
+        unique_files_map = {}
+        for f in all_files:
+            if not self._is_valid_rag_file(f):
+                continue
 
+            d_name = getattr(f, "display_name", "")
+            # Al sobreescribir en el mapa, nos aseguramos de que si hay duplicados, no se cuenten doble en los límites.
+            unique_files_map[d_name] = f
+
+        user_files, global_pdfs, tagged_files = [], [], []
         prefix = f"{chat_id}/"
         tags_upper = [t.upper() for t in (tags or [])]
-
-        # Determinar si la consulta requiere conocimiento terapéutico
-        # Se activa por intención explícita ("vulnerability" o "monitoring") o por tags explícitos
         needs_therapy = intent_type in ["vulnerability", "monitoring"] or any(
             t in ["TCC", "THERAPY", "PSYCHOLOGY"] for t in tags_upper
         )
 
-        for f in all_files:
-            f_display_name = getattr(f, "display_name", "")
-            f_mime = getattr(f, "mime_type", "")
-            f_state = str(getattr(f, "state", "")).upper()
+        for disp_name, f in unique_files_map.items():
+            mime = getattr(f, "mime_type", "")
 
-            # Filtro base: Solo ACTIVE y no JSON (no soportado por RAG)
-            if "ACTIVE" not in f_state or f_mime == "application/json":
-                continue
-
-            # NIVEL 1: Aislamiento por chat_id (Archivos del usuario: perfil, bóveda, vault)
-            if f_display_name.startswith(prefix):
+            if disp_name.startswith(prefix):
                 user_files.append(f)
-                continue
-
-            # NIVEL 2: PDFs globales (Protocolos terapéuticos en knowledge/)
-            is_global_pdf = (
-                f_display_name.startswith("knowledge/") and f_mime == "application/pdf"
-            )
-            if is_global_pdf and needs_therapy:
+            elif (
+                disp_name.startswith("knowledge/")
+                and mime == "application/pdf"
+                and needs_therapy
+            ):
                 global_pdfs.append(f)
-                continue
-
-            # NIVEL 3: Match por tags explícitos (Match directo en nombre de archivo)
-            if is_global_pdf:
-                continue
-
-            f_name_upper = f_display_name.upper()
-            is_tag_match = tags_upper and any(tag in f_name_upper for tag in tags_upper)
-
-            if is_tag_match:
+            elif tags_upper and any(tag in disp_name.upper() for tag in tags_upper):
                 tagged_files.append(f)
 
-        # Construir resultado final respetando límites
-        result = []
+        return self._compose_result(user_files, global_pdfs, tagged_files, chat_id)
 
-        # 1. Prioridad: Usuario (hasta MAX_USER_FILES)
-        result.extend(user_files[:MAX_USER_FILES])
+    def _compose_result(
+        self, user_files: list, global_pdfs: list, tagged_files: list, chat_id: str
+    ) -> list[Any]:
+        """Compone la lista final de archivos respetando límites y unicidad."""
+        result: list[Any] = []
+        seen_uris = set()
 
-        # 2. PDFs terapéuticos (si hay espacio y se necesitan)
-        if len(result) < MAX_TOTAL_FILES:
-            slots = MAX_TOTAL_FILES - len(result)
-            result.extend(global_pdfs[: min(MAX_GLOBAL_PDFS, slots)])
+        def add(files, limit=None):
+            added = 0
+            for f in files:
+                if (limit and added >= limit) or len(result) >= MAX_TOTAL_FILES:
+                    break
+                if f.uri not in seen_uris:
+                    result.append(f)
+                    seen_uris.add(f.uri)
+                    added += 1
 
-        # 3. Otros archivos tageados (relleno)
-        if len(result) < MAX_TOTAL_FILES:
-            slots = MAX_TOTAL_FILES - len(result)
-            result.extend(tagged_files[:slots])
+        add(user_files, MAX_USER_FILES)
+        add(global_pdfs, MAX_GLOBAL_PDFS)
+        add(tagged_files)
 
         logger.info(
-            f"Filtro de archivos ({chat_id}): {len(user_files)} user, {len(global_pdfs)} therapy, {len(tagged_files)} tagged. "
-            f"Seleccionados: {len(result)} para RAG."
+            f"RAG Filter ({chat_id}): {len(user_files)} user, {len(global_pdfs)} therapy, "
+            f"{len(tagged_files)} tagged. Selected: {len(result)}"
         )
         return result
 
@@ -370,13 +371,28 @@ class GoogleFileSearchTool:
         return await self.query_files(query, chat_id, tags=[])
 
     async def delete_file(self, file_name: str):
-        """Elimina un archivo de la File API."""
+        """Elimina un archivo por su ID interno (files/...) de la File API."""
         try:
             await asyncio.to_thread(self.client.files.delete, name=file_name)
             logger.info(f"Archivo eliminado: {file_name}")
-            self._file_cache = None  # Reset cache
+            self._file_cache = None
         except Exception as e:
-            logger.error(f"Error eliminando archivo con el nuevo SDK: {e}")
+            logger.error(f"Error eliminando archivo {file_name}: {e}")
+
+    async def delete_by_display_name(self, display_name: str):
+        """Busca y elimina todos los archivos con un display_name específico."""
+        try:
+            all_files = await self.list_files()
+            to_delete = [f.name for f in all_files if f.display_name == display_name]
+
+            if to_delete:
+                logger.info(
+                    f"Limpiando {len(to_delete)} versiones antiguas de '{display_name}'..."
+                )
+                for file_id in to_delete:
+                    await self.delete_file(file_id)
+        except Exception as e:
+            logger.error(f"Error limpiando por display_name '{display_name}': {e}")
 
 
 # Instancia singleton
