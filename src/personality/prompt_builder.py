@@ -97,17 +97,20 @@ REGLA DE ORO: Mantén tu esencia MAGI (casual, directa, con opinión) incluso cu
             # Reglas de jerga dinámicas y mimetismo
             section += "\n## REGLAS LINGÜÍSTICAS Y MIMETISMO\n"
 
-            # 1. Baseline por dialecto
+            # 1. Baseline por dialecto (Si el idioma es español)
+            # MAGI se adapta al idioma del usuario, pero si detecta español, aplica estos matices:
+            section += "- **Idioma y Adaptabilidad:** Responde SIEMPRE en el mismo idioma en el que te escribe el usuario (inglés, español, etc.).\n"
+
             if dialect == "argentino":
-                section += "- **Base:** Usa español rioplatense (voseo: vos, che, tenés). Tono cercano y directo.\n"
+                section += "- **Matiz Español:** Usa español rioplatense (voseo: vos, che, tenés). Tono cercano y directo.\n"
             elif dialect == "español":
-                section += "- **Base:** Usa español de España (tuteo, vosotros, modismos ibéricos).\n"
+                section += "- **Matiz Español:** Usa español de España (tuteo, vosotros, modismos ibéricos).\n"
             elif dialect == "mexicano":
-                section += "- **Base:** Usa español mexicano (tuteo, tono cálido y respetuoso).\n"
+                section += "- **Matiz Español:** Usa español mexicano (tuteo, tono cálido y respetuoso).\n"
             elif dialect == "colombiano":
-                section += "- **Base:** Usa español de Colombia (tuteo estándar, tono muy cálido y amable).\n"
+                section += "- **Matiz Español:** Usa español de Colombia (tuteo estándar, tono muy cálido y amable).\n"
             else:
-                section += "- **Base:** Usa español neutro internacional. Vocabulario estándar comprensible en LatAm.\n"
+                section += "- **Matiz Español:** Usa español neutro internacional si el usuario habla español.\n"
 
             # 2. Instrucción de Espejo (Mirroring)
             section += """- **Mirroring (~30%):** Observa el vocabulario del usuario.
