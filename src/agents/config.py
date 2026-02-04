@@ -15,11 +15,14 @@ class AgentConfig:
     Contiene modelos, temperatura y otors parametros que lso agentes puede necesitar en tiempo de ejecucion.
     """
 
-    search_model: str = settings.DEFAULT_LLM_MODEL
-    synthesis_model: str = settings.DEFAULT_LLM_MODEL
+    search_model: str = settings.RAG_MODEL
+    synthesis_model: str = settings.REASONING_MODEL
+    chat_model: str = settings.CHAT_MODEL
+    audio_model: str = settings.AUDIO_MODEL
 
     search_temperature: float = 0.1
     synthesis_temperature: float = 0.3
+    chat_temperature: float = 0.7
 
     @classmethod
     def from_runnable_config(cls, config: RunnableConfig | None = None) -> AgentConfig:

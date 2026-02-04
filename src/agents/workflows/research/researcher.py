@@ -92,7 +92,21 @@ def main():
     os.environ["TAVILY_API_KEY"] = settings.TAVILY_API_KEY.get_secret_value()
     os.environ["GOOGLE_API_KEY"] = settings.GOOGLE_API_KEY.get_secret_value()
 
-    llm = init_chat_model("google_genai:gemini-2.5-flash")
+    # Usar el modelo de razonamiento configurado
+    model_name = settings.REASONING_MODEL
+    # Si el modelo no tiene prefijo, asumimos google_genai si es gemini, o groq si es kimi/whisper
+    if ":" not in model_name:
+        if "gemini" in model_name:
+            model_provider = "google_genai"
+        elif "kimi" in model_name or "whisper" in model_name:
+            model_provider = "groq"
+        else:
+            model_provider = "google_genai"  # Fallback
+        model_id = f"{model_provider}:{model_name}"
+    else:
+        model_id = model_name
+
+    llm = init_chat_model(model_id)
 
     agent = ResearchAgent(llm)
 
