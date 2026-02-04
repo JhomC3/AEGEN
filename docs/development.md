@@ -148,6 +148,11 @@ feat(scope): descripción imperativa
 - Los perfiles de usuario deben gestionarse exclusivamente a través de `ProfileManager` (Redis + Cloud).
 - El almacenamiento local (`/tmp`) solo se permite para procesamiento efímero de archivos (ej. transcodificación de audio) que se eliminan inmediatamente después.
 
+### Identity Structural Pattern
+- **Seed desde Plataforma:** Al primer contacto, el nombre se inicializa desde la plataforma (ej: Telegram `first_name`).
+- **Aprendizaje Conversacional:** El nombre detectado en la conversación (FactExtractor) tiene prioridad y sobrescribe al seed.
+- **Sincronización:** La Knowledge Base actúa como fuente de hechos, el Perfil como caché para el Prompt Builder.
+
 ### Personality Management Pattern
 - **Evolución obligatoria:** Toda interacción significativa debe ser analizada para actualizar el perfil de adaptación de personalidad del usuario.
 - **Base inmutable:** Nunca modificar `SOUL.md` o `IDENTITY.md` mediante código; estos son el ancla de identidad.
