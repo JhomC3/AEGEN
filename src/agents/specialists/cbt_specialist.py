@@ -27,9 +27,15 @@ def format_knowledge_for_prompt(knowledge: dict[str, Any]) -> str:
     """Formatea la Bóveda de Conocimiento para el prompt."""
     sections = []
 
+    def fmt_attrs(attrs: dict) -> str:
+        """Helper para formatear atributos de forma limpia."""
+        if not attrs:
+            return ""
+        return ", ".join([f"{k}={v}" for k, v in attrs.items()])
+
     if knowledge.get("entities"):
         ents = "\n".join([
-            f"- {e['name']} ({e['type']}): {e.get('attributes', {})}"
+            f"- {e['name']} ({e['type']}): {fmt_attrs(e.get('attributes', {}))}"
             for e in knowledge["entities"]
         ])
         sections.append(f"ENTIDADES:\n{ents}")
@@ -43,7 +49,7 @@ def format_knowledge_for_prompt(knowledge: dict[str, Any]) -> str:
 
     if knowledge.get("relationships"):
         rels = "\n".join([
-            f"- {r['person']} ({r['relation']}): {r.get('attributes', {})}"
+            f"- {r['person']} ({r['relation']}): {fmt_attrs(r.get('attributes', {}))}"
             for r in knowledge["relationships"]
         ])
         sections.append(f"RELACIONES:\n{rels}")

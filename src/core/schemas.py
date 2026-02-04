@@ -465,6 +465,10 @@ class CanonicalEventV1(BaseModel):
     timestamp: str | None = Field(
         None, description="Timestamp del evento (ISO format)."
     )
+    first_name: str | None = Field(
+        None,
+        description="Nombre de pila del usuario (si está disponible en la plataforma).",
+    )
     language_code: str | None = Field(
         None, description="Código de lenguaje del usuario (ej. 'es-AR')."
     )

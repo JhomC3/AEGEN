@@ -29,9 +29,11 @@ class FactExtractor:
                     "1. PRECISIÓN ABSOLUTA: No inventes datos. Si no hay seguridad del 90%+, ignora el hecho.\n"
                     "2. ATOMICIDAD: Cada hecho debe ser una unidad independiente.\n"
                     "3. NO ALUCINACIONES: Si el usuario dice 'mi perro', no asumas que es un Golden Retriever a menos que lo diga.\n"
-                    "4. DATOS MÉDICOS: Captura condiciones, medicación, dosis y profesionales con rigor.\n\n"
+                    "4. DATOS MÉDICOS: Captura condiciones, medicación, dosis y profesionales con rigor.\n"
+                    "5. IDENTIDAD DEL USUARIO: Si el usuario menciona explícitamente su nombre (ej: 'Me llamo X', 'Dime Y'), extráelo.\n\n"
                     "FORMATO DE SALIDA (JSON ESTRICTO):\n"
                     "{{\n"
+                    "  'user_name': 'Nombre detectado o null',\n"
                     "  'entities': [{{'name', 'type', 'attributes', 'confidence'}}],\n"
                     "  'preferences': [{{'category', 'value', 'strength'}}],\n"
                     "  'medical': [{{'type', 'name', 'details', 'date'}}],\n"
@@ -56,6 +58,7 @@ class FactExtractor:
         except Exception as e:
             logger.error(f"Error parseando JSON de FactExtractor: {e}")
             return {
+                "user_name": None,
                 "entities": [],
                 "preferences": [],
                 "medical": [],
@@ -90,6 +93,11 @@ class FactExtractor:
         Lógica de mezcla inteligente para evitar duplicados y actualizar atributos.
         """
         merged = old.copy()
+
+        # Merge explícito del nombre de usuario
+        # Si el extractor detectó un nombre nuevo (no nulo), ese tiene prioridad absoluta.
+        if new.get("user_name"):
+            merged["user_name"] = new["user_name"]
 
         # Simple merge for now, prioritizing new data for attributes
         for key in [

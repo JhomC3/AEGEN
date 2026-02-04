@@ -62,7 +62,11 @@ class SystemPromptBuilder:
 ---
 REGLA DE ORO: Mantén tu esencia MAGI (casual, directa, con opinión) incluso cuando apliques las instrucciones del skill activo.
 """
-        return prompt.strip()
+        # ESCAPADO DE SEGURIDAD PARA LANGCHAIN
+        # LangChain interpreta las llaves {} como variables de plantilla.
+        # Como este builder ya inyectó todas las variables, el texto resultante debe ser tratado como literal.
+        # Escapamos todas las llaves para evitar que LangChain intente parsear JSONs o sets como variables faltantes.
+        return prompt.strip().replace("{", "{{").replace("}", "}}")
 
     def _build_identity_section(self, identity: dict[str, str]) -> str:
         items = "\n".join([f"- **{k.capitalize()}:** {v}" for k, v in identity.items()])
@@ -77,7 +81,10 @@ REGLA DE ORO: Mantén tu esencia MAGI (casual, directa, con opinión) incluso cu
         adaptation: dict[str, Any],
         localization: dict[str, Any] | None = None,
     ) -> str:
-        user_name = profile.get("identity", {}).get("name", "Usuario")
+        user_name = profile.get("identity", {}).get("name")
+        if not user_name:
+            user_name = "Usuario"
+
         style = adaptation.get("preferred_style", "casual")
 
         section = f"""# ADAPTACIÓN AL USUARIO: {user_name}

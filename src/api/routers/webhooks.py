@@ -52,6 +52,15 @@ async def process_event_task(event: schemas.CanonicalEventV1):
     chat_id = str(event.chat_id)
     logger.info(f"[TaskID: {task_id}] Iniciando orquestación para chat {chat_id}.")
 
+    # Seed de Identidad desde Plataforma
+    # Si Telegram nos dice el nombre y en el perfil dice "Usuario", lo actualizamos.
+    if event.first_name:
+        from src.core.profile_manager import user_profile_manager
+
+        await user_profile_manager.seed_identity_from_platform(
+            chat_id, event.first_name
+        )
+
     # C.9: Actualizar localización antes de procesar
     if event.language_code:
         from src.core.profile_manager import user_profile_manager
@@ -160,14 +169,17 @@ def _consolidate_fragments(
     str | None,
     str | None,
     str | None,
+    str | None,
     Literal["text", "audio", "document", "image", "unknown"],
 ]:
     """
     Consolida fragmentos de mensajes en contenido y metadatos únicos.
+    Retorna: (content, file_id, language_code, first_name, event_type)
     """
     combined_content = []
     final_file_id = None
     final_language_code = None
+    final_first_name = None
     final_event_type: Literal["text", "audio", "document", "image", "unknown"] = "text"
 
     for frag in fragments:
@@ -175,6 +187,8 @@ def _consolidate_fragments(
             combined_content.append(frag["content"])
         if not final_language_code and frag.get("language_code"):
             final_language_code = frag["language_code"]
+        if not final_first_name and frag.get("first_name"):
+            final_first_name = frag["first_name"]
 
         # Prioridad de tipos
         if frag.get("event_type") == "audio":
@@ -185,7 +199,13 @@ def _consolidate_fragments(
             final_event_type = "image"
 
     content = "\n".join(combined_content) if combined_content else None
-    return content, final_file_id, final_language_code, final_event_type
+    return (
+        content,
+        final_file_id,
+        final_language_code,
+        final_first_name,
+        final_event_type,
+    )
 
 
 async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
@@ -233,8 +253,8 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
         )
         logger.info(f"Consolidando {len(fragments)} mensajes para el chat {chat_id}.")
 
-        content, file_id, language_code, event_type_val = _consolidate_fragments(
-            fragments
+        content, file_id, language_code, first_name, event_type_val = (
+            _consolidate_fragments(fragments)
         )
 
         # Crear y procesar evento canónico
@@ -248,6 +268,7 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
             content=content,
             timestamp=datetime.now().isoformat(),
             language_code=language_code,
+            first_name=first_name,
             metadata={
                 "trace_id": trace_id,
                 "consolidated": True,
@@ -313,14 +334,17 @@ async def telegram_webhook(
     # 1. Guardar fragmento en el buffer
     # C.8: Extraer metadatos de localización del usuario
     language_code = None
+    first_name = None
     if request.message and request.message.from_user:
         language_code = request.message.from_user.language_code
+        first_name = request.message.from_user.first_name
 
     fragment_data = {
         "event_type": event_type,
         "content": content,
         "file_id": file_id,
         "language_code": language_code,
+        "first_name": first_name,
     }
     current_seq = await ingestion_buffer.push_event(str(chat_id), fragment_data)
 

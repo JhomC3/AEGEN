@@ -81,6 +81,31 @@ class UserProfileManager:
         """3.4: Retorna la clave de Redis para el perfil."""
         return f"profile:{chat_id}"
 
+    async def seed_identity_from_platform(
+        self, chat_id: str, first_name: str | None
+    ) -> None:
+        """
+        Inicializa la identidad con datos de la plataforma (Telegram),
+        pero SOLO si el nombre actual sigue siendo el default "Usuario".
+        Esto evita sobrescribir un nombre que el usuario ya nos haya dado explícitamente.
+        """
+        if not first_name:
+            return
+
+        try:
+            profile = await self.load_profile(chat_id)
+            current_name = profile.get("identity", {}).get("name", "Usuario")
+
+            # Solo actualizamos si el nombre es el default o está vacío
+            if current_name == "Usuario" or not current_name:
+                logger.info(
+                    f"Seeding identity from platform for {chat_id}: {first_name}"
+                )
+                profile["identity"]["name"] = first_name
+                await self.save_profile(chat_id, profile)
+        except Exception as e:
+            logger.error(f"Error seeding identity for {chat_id}: {e}")
+
     async def load_profile(self, chat_id: str) -> dict[str, Any]:
         """
         3.6: Carga el perfil desde Redis (Caché caliente).

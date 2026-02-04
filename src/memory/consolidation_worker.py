@@ -119,6 +119,10 @@ class ConsolidationManager:
             )
             await knowledge_base_manager.save_knowledge(chat_id, updated_knowledge)
             logger.info(f"Hechos estructurados actualizados para {chat_id}")
+
+            # Sincronización explícita KB -> Profile
+            await self._sync_user_name_to_profile(chat_id, updated_knowledge)
+
         except Exception as e:
             logger.error(
                 f"Error extrayendo hechos durante consolidación para {chat_id}: {e}"
@@ -160,6 +164,30 @@ class ConsolidationManager:
             )
         except Exception as e:
             logger.warning(f"Error subiendo log de sesión para {chat_id}: {e}")
+
+    async def _sync_user_name_to_profile(
+        self, chat_id: str, knowledge: dict[str, Any]
+    ) -> None:
+        """
+        Sincroniza el nombre detectado en la Knowledge Base con el Perfil.
+        Si FactExtractor encontró un 'user_name' explícito, este sobrescribe cualquier dato previo.
+        """
+        detected_name = knowledge.get("user_name")
+        if not detected_name:
+            return
+
+        try:
+            profile = await user_profile_manager.load_profile(chat_id)
+            current_profile_name = profile.get("identity", {}).get("name")
+
+            if detected_name != current_profile_name:
+                logger.info(
+                    f"Sync Identity: Updating profile name from '{current_profile_name}' to '{detected_name}'"
+                )
+                profile["identity"]["name"] = detected_name
+                await user_profile_manager.save_profile(chat_id, profile)
+        except Exception as e:
+            logger.error(f"Error syncing user name to profile for {chat_id}: {e}")
 
     async def _apply_evolution(
         self, chat_id: str, profile: dict[str, Any], evo: dict[str, Any]

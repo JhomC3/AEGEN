@@ -45,18 +45,36 @@ class GoogleFileSearchTool:
 
     def _sanitize_name(self, name: str) -> str:
         """
-        Sanitiza el nombre del archivo para evitar errores de codificación y caracteres no permitidos.
-        Elimina acentos, convierte a ASCII y limpia caracteres especiales.
+        Sanitiza el nombre del archivo para evitar errores de codificación y longitud.
+        Google File API es estricta con los display_name.
         """
-        # Normalizar caracteres unicode (eliminar acentos)
+        # 1. Normalizar y convertir a ASCII
         nfkd_form = unicodedata.normalize("NFKD", name)
         ascii_name = nfkd_form.encode("ASCII", "ignore").decode("ASCII")
 
-        # Reemplazar cualquier cosa que no sea alfanumérico, punto, guion o slash por guion bajo
+        # 2. Reemplazar caracteres no seguros por guiones bajos
+        # Permitimos letras, números, puntos, guiones y slashes (para directorios virtuales)
         sanitized = re.sub(r"[^a-zA-Z0-9./_-]", "_", ascii_name)
 
-        # Limitar longitud para evitar errores de API (Google suele limitar a 128 o 256)
-        return sanitized[:120]
+        # 3. Truncado inteligente (mantener extensión si existe)
+        # Limite seguro: 64 caracteres para el nombre de archivo (excluyendo 'chat_id/')
+        parts = sanitized.split("/")
+        if len(parts) > 1:
+            directory = "/".join(parts[:-1])
+            filename = parts[-1]
+        else:
+            directory = ""
+            filename = sanitized
+
+        if len(filename) > 64:
+            base, ext = filename.rsplit(".", 1) if "." in filename else (filename, "")
+            if ext:
+                filename = f"{base[:50]}_truncated.{ext}"
+            else:
+                filename = f"{filename[:60]}_truncated"
+
+        final_name = f"{directory}/{filename}" if directory else filename
+        return final_name
 
     async def list_files(self):
         """
@@ -337,13 +355,11 @@ class GoogleFileSearchTool:
                 types.Part.from_text(text=f"{system_instruction}\nConsulta: {query}")
             )
 
-            contents = [types.Content(role="user", parts=user_parts)]
-
             # type: ignore[arg-type]
             response = await asyncio.to_thread(
                 self.client.models.generate_content,
                 model=model_name,
-                contents=contents,
+                contents=types.Content(role="user", parts=user_parts),
                 config=config,
             )
 
@@ -381,13 +397,17 @@ class GoogleFileSearchTool:
         """Busca y elimina todos los archivos con un display_name específico."""
         try:
             all_files = await self.list_files()
-            to_delete = [f.name for f in all_files if f.display_name == display_name]
+            # Filtrar solo archivos que coincidan y tengan nombre (ID) válido
+            to_delete = [
+                f.name for f in all_files if f.display_name == display_name and f.name
+            ]
 
             if to_delete:
                 logger.info(
                     f"Limpiando {len(to_delete)} versiones antiguas de '{display_name}'..."
                 )
                 for file_id in to_delete:
+                    # file_id ya está validado como no None por la list comprehension
                     await self.delete_file(file_id)
         except Exception as e:
             logger.error(f"Error limpiando por display_name '{display_name}': {e}")
