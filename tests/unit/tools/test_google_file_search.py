@@ -48,19 +48,27 @@ async def test_get_relevant_files_filters_by_chat_id(mock_genai_client):
     # Setup
     mock_client_instance = mock_genai_client.return_value
     mock_files = [
-        MagicMock(display_name="user123/profile.json", state="ACTIVE"),
-        MagicMock(display_name="user456/other.json", state="ACTIVE"),
-        MagicMock(display_name="CORE_KNOWLEDGE.txt", state="ACTIVE"),
+        MagicMock(
+            display_name="user123/profile.txt", state="ACTIVE", mime_type="text/plain"
+        ),
+        MagicMock(
+            display_name="user456/other.txt", state="ACTIVE", mime_type="text/plain"
+        ),
+        MagicMock(
+            display_name="knowledge/therapy.pdf",
+            state="ACTIVE",
+            mime_type="application/pdf",
+        ),
     ]
     mock_client_instance.files.list.return_value = mock_files
 
     tool = GoogleFileSearchTool()
 
-    # Execute
-    relevant = await tool.get_relevant_files("user123")
+    # Execute with intent_type='monitoring' to trigger global_pdfs inclusion
+    relevant = await tool.get_relevant_files("user123", intent_type="monitoring")
 
     # Verify
     display_names = [f.display_name for f in relevant]
-    assert "user123/profile.json" in display_names
-    assert "CORE_KNOWLEDGE.txt" in display_names
-    assert "user456/other.json" not in display_names
+    assert "user123/profile.txt" in display_names
+    assert "knowledge/therapy.pdf" in display_names
+    assert "user456/other.txt" not in display_names

@@ -20,6 +20,20 @@ MAX_USER_FILES = 5  # Perfil, Bóveda, Vault, etc.
 MAX_GLOBAL_PDFS = 2  # Protocolos terapéuticos pesados
 MAX_TOTAL_FILES = 8  # Límite de seguridad para la API
 
+# MIME types soportados por Gemini RAG (File API)
+# Referencia: https://ai.google.dev/gemini-api/docs/document-processing
+ALLOWED_RAG_MIMETYPES = [
+    "application/pdf",
+    "text/plain",
+    "text/markdown",
+    "text/csv",
+    "text/html",
+    "application/x-javascript",
+    "text/javascript",
+    "application/x-python",
+    "text/x-python",
+]
+
 
 class GoogleFileSearchTool:
     """
@@ -218,10 +232,15 @@ class GoogleFileSearchTool:
         return uploaded_file
 
     def _is_valid_rag_file(self, f: Any) -> bool:
-        """Verifica si un archivo es apto para RAG (ACTIVE y no JSON)."""
-        f_mime = getattr(f, "mime_type", "")
+        """Verifica si un archivo es apto para RAG (ACTIVE y MIME soportado)."""
+        f_mime = getattr(f, "mime_type", "").lower()
         f_state = str(getattr(f, "state", "")).upper()
-        return "ACTIVE" in f_state and f_mime != "application/json"
+
+        # Debe estar activo y ser de un tipo que Gemini pueda procesar como contexto
+        return "ACTIVE" in f_state and any(
+            f_mime.startswith(allowed) or allowed in f_mime
+            for allowed in ALLOWED_RAG_MIMETYPES
+        )
 
     async def get_relevant_files(
         self,
@@ -303,7 +322,7 @@ class GoogleFileSearchTool:
     ) -> str:
         """
         Realiza búsqueda semántica inteligente (Smart RAG) en archivos relevantes.
-        Usa gemini-2.5-flash-lite para optimización de costos y precisión.
+        Usa el modelo configurado por defecto para optimización y precisión.
         """
         relevant_files = await self.get_relevant_files(
             chat_id, tags, query=query, intent_type=intent_type
@@ -318,11 +337,23 @@ class GoogleFileSearchTool:
             f"Smart RAG: Consultando {len(relevant_files)} archivos para {chat_id}: {file_names}"
         )
 
+        # Usar modelo de configuración RAG (ej: gemini-2.5-flash-lite)
+        model_name = settings.RAG_MODEL
+        if model_name.startswith("models/"):
+            model_name = model_name.replace("models/", "")
+
         try:
-            # Forzamos el uso de gemini-2.5-flash-lite para recuperación semántica
-            model_name = "gemini-2.5-flash-lite"
+            system_instruction = (
+                "Eres un experto en recuperación de memoria y análisis de perfiles de usuario.\n"
+                "Tu objetivo es extraer información precisa de los archivos proporcionados.\n"
+                "Prioriza archivos Markdown como 'user_profile.md' y 'knowledge_base.md'.\n"
+                "Si encuentras el nombre del usuario, sus preferencias o metas, descríbelas fielmente.\n"
+                "Responde siempre en el mismo idioma en el que se te hace la consulta.\n"
+                "Si la información no está presente en los archivos, responde 'No encontrado'.\n"
+            )
 
             config = types.GenerateContentConfig(
+                system_instruction=system_instruction,
                 temperature=0.1,  # Menor temperatura para mayor precisión clínica
                 top_p=0.95,
             )
@@ -334,26 +365,11 @@ class GoogleFileSearchTool:
                 if f.uri in seen_uris:
                     continue
                 seen_uris.add(f.uri)
-
-                # FIX: La File API no soporta application/json para RAG.
-                # Si es JSON, Gemini suele fallar al leerlo vía URI si el mtype no es texto.
-                # Pero no podemos mentir sobre el mtype en from_uri si la API lo valida contra el archivo.
                 user_parts.append(
                     types.Part.from_uri(file_uri=f.uri, mime_type=f.mime_type)
                 )
 
-            system_instruction = (
-                "Eres un experto en recuperación de memoria y análisis de perfiles de usuario.\n"
-                "Tu objetivo es extraer información precisa de los archivos proporcionados.\n"
-                "Prioriza archivos Markdown como 'user_profile.md' y 'knowledge_base.md'.\n"
-                "Si encuentras el nombre del usuario, sus preferencias o metas, descríbelas fielmente.\n"
-                "Responde siempre en el mismo idioma en el que se te hace la consulta.\n"
-                "Si la información no está presente en los archivos, responde 'No encontrado'.\n"
-            )
-
-            user_parts.append(
-                types.Part.from_text(text=f"{system_instruction}\nConsulta: {query}")
-            )
+            user_parts.append(types.Part.from_text(text=f"Consulta: {query}"))
 
             # type: ignore[arg-type]
             response = await asyncio.to_thread(
@@ -371,9 +387,7 @@ class GoogleFileSearchTool:
             return ""
 
         except Exception as e:
-            logger.error(
-                f"Error en Smart RAG con gemini-2.5-flash-lite: {e}", exc_info=True
-            )
+            logger.error(f"Error en Smart RAG con {model_name}: {e}", exc_info=True)
             return ""
 
     async def search_user_history(self, chat_id: str, query: str) -> str:
