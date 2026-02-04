@@ -1,9 +1,9 @@
 # AEGEN: Plataforma de Orquestación de Agentes Multi-Especialistas
 
 > **MAGI:** El Asistente Conversacional (Interfaz Principal)
-> **Versión:** 0.2.0 (Diskless Architecture)
-> **Estado:** Arquitectura Diskless Implementada
-> **Branch Actual:** `main`
+> **Versión:** 0.2.1 (Identity Robustness)
+> **Estado:** Identidad Estructural Implementada
+> **Branch Actual:** `develop`
 
 <!-- LLM-Hint: AEGEN es la infraestructura. MAGI es el agente conversacional que el usuario ve. MAGI utiliza el MasterOrchestrator para delegar tareas a especialistas como el Agente TCC. Este documento es la Fuente de Verdad. -->
 
@@ -130,13 +130,21 @@ graph TD
 - **Enrutamiento Inteligente V2 (COMPLETADO ✅):**
     - MasterRouter con memoria de diálogo (últimos 5 mensajes).
     - Reglas de continuidad terapéutica y "Stickiness" para hilos activos.
+- **Identidad Estructural & Robustez (COMPLETADO ✅):**
+    - Captura automática de `first_name` desde Telegram.
+    - Seed de identidad inicial (Telegram -> Profile).
+    - Extracción de nombres desde conversación (FactExtractor).
+    - Sincronización bidireccional Knowledge Base <-> Profile.
+    - Blindaje de prompts contra fallos de escapado en LangChain.
 - **Localización Multi-plataforma (COMPLETADO ✅):**
     - Detección automática de jerga (AR, ES, MX) mediante indicativo telefónico.
     - Conciencia de zona horaria dinámica.
 - **Skill Ecosystem:**
     - Implementación de **Micro-Specialists** (Skills atómicas) para tareas específicas (ej: Google Search, Calendar, File Management).
     - Creación del **Skill Creator**: Herramienta automatizada para generar nuevos especialistas.
-- **Robustez RAG:** Resiliencia ante latencia de Google File API mediante Exponential Backoff.
+- **Robustez RAG (PARCIAL ✅):**
+    - Sanitización de nombres de archivos (limitado a 64 chars) para Google API.
+    - Implementación de **Exponential Backoff** para la activación de archivos en Google File API.
 
 ## 🚀 5. Guía de Desarrollo
 

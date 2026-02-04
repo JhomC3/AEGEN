@@ -5,6 +5,24 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [Unreleased]
 
+## [v0.2.2] - 2026-02-04
+### Added
+- **Structural Identity System**: Implementación del flujo completo de identidad del usuario.
+  - Captura de `first_name` desde webhooks de Telegram.
+  - Método `seed_identity_from_platform` para inicialización no destructiva del perfil.
+  - Extracción proactiva del nombre del usuario desde la conversación mediante `FactExtractor`.
+  - Sincronización automática de hechos de identidad (`Knowledge Base`) hacia el perfil persistente.
+- **Prompt Robustness**: Implementado escapado de seguridad de llaves `{}` en `SystemPromptBuilder` para prevenir crasheos de LangChain por variables de plantilla no resueltas.
+- **RAG Filename Sanitization**: Reescrita la lógica de limpieza de nombres en `GoogleFileSearchTool` con truncado inteligente (64 caracteres) para cumplir con las restricciones de la API de Google.
+
+### Changed
+- Revertido hardcode de identidad de administrador en `prompt_builder.py` en favor del sistema estructural.
+- Mejorado el tipado de eventos canónicos para incluir `first_name`.
+
+### Fixed
+- Corregido error `INVALID_PROMPT_INPUT` al inyectar JSONs o diccionarios en los system prompts.
+- Solucionados errores de longitud de nombre en la Google File API para archivos con rutas profundas.
+
 ## [v0.2.1] - 2026-01-30
 ### Added
 - **Routing Precision V2**: Mejora drástica en la continuidad de hilos conversacionales.

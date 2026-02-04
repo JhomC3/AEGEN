@@ -42,6 +42,12 @@ Este documento resume el estado actual del proyecto AEGEN, los logros recientes 
 - **D.14 - Extracción Incremental:** Disparo de extracción cada 5 mensajes para mantener frescura de datos.
 - **D.15 - Inyección en Specialists:** Contexto de hechos confirmados inyectado en el system prompt de MAGI y TCC.
 
+### FASE E: Identidad Estructural y Blindaje de Prompts ✅
+- **E.16 - Identidad desde Plataforma:** Captura de `first_name` en Telegram e inicialización no destructiva del perfil.
+- **E.17 - Sincronización Knowledge -> Profile:** El nombre aprendido en conversación actualiza automáticamente el perfil del usuario.
+- **E.18 - Escapado de Prompts:** Blindaje contra crasheos de LangChain mediante escapado de llaves `{}` en el builder central.
+- **E.19 - Robustez RAG:** Sanitización estricta de nombres de archivos para compatibilidad con Google File API.
+
 ---
 
 ## 🗺️ Roadmap Actualizado: Fase 4 (Skill Ecosystem)
