@@ -30,6 +30,23 @@ class BaseAppSettings(BaseSettings):
     GROQ_MODEL_NAME: str = "moonshotai/kimi-k2-instruct-0905"
     GROQ_BACKUP_MODEL_NAME: str = "gpt-oss-120"
     ALCHEMY_API_KEY: SecretStr | None = None
+
+    # === LLM Models por Tarea ===
+    # Chat Principal y Razonamiento
+    CHAT_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
+    CHAT_FALLBACK_MODEL: str = "gpt-oss-120"
+    REASONING_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
+
+    # Audio (Groq Whisper)
+    AUDIO_MODEL: str = "whisper-large-v3-turbo"
+
+    # RAG (Gemini por ventana de contexto y File API)
+    RAG_MODEL: str = "gemini-2.5-flash-lite"
+
+    # Routing y Default
+    ROUTING_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
+    DEFAULT_LLM_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
+
     ETHERSCAN_API_KEY: SecretStr | None = None
     TAVILY_API_KEY: SecretStr | None = None
     CHROMA_API_KEY: SecretStr | None = None
@@ -52,7 +69,6 @@ class BaseAppSettings(BaseSettings):
     REDIS_SESSION_TTL: int = 3600  # 1 hour session timeout
 
     # Configs generales
-    DEFAULT_LLM_MODEL: str = "models/gemini-2.5-flash-lite"
     DEFAULT_TEMPERATURE: float = 0.3
     DEFAULT_WHISPER_MODEL: str = "small"
     DEBUG_MODE: bool = False
