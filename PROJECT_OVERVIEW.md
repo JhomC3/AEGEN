@@ -1,8 +1,8 @@
 # AEGEN: Plataforma de Orquestación de Agentes Multi-Especialistas
 
 > **MAGI:** El Asistente Conversacional (Interfaz Principal)
-> **Versión:** 0.2.1 (Identity Robustness)
-> **Estado:** Identidad Estructural Implementada
+> **Versión:** 0.3.0 (Memory Evolution)
+> **Estado:** Migración a Memoria Local-First en Progreso 🔄
 > **Branch Actual:** `develop`
 
 <!-- LLM-Hint: AEGEN es la infraestructura. MAGI es el agente conversacional que el usuario ve. MAGI utiliza el MasterOrchestrator para delegar tareas a especialistas como el Agente TCC. Este documento es la Fuente de Verdad. -->
@@ -76,7 +76,7 @@ MAGI/
 └── 📊 Observabilidad        # ✅ Logging, Middleware, Metrics
 ```
 
-### Flujo de Datos Actual (Arquitectura Diskless)
+### Flujo de Datos Actual (Arquitectura Local-First)
 ```mermaid
 graph TD
     A[Telegram] --> B(Webhook);
@@ -89,15 +89,16 @@ graph TD
     H --> I[GraphExecution];
     I --> J[RedisMessageBuffer];
     J --> K[ConsolidationManager];
-    K --> L[Google File Search API];
-    I --> M(Response);
-    M --> A;
+    K --> L[SQLiteStore / sqlite-vec];
+    L -.-> M[Backup: Cloud Storage];
+    I --> N(Response);
+    N --> A;
 
     subgraph Memory
         J
         K
         L
-        N[Redis Profile Cache]
+        O[Redis Profile Cache]
     end
 ```
 
@@ -139,12 +140,16 @@ graph TD
 - **Localización Multi-plataforma (COMPLETADO ✅):**
     - Detección automática de jerga (AR, ES, MX) mediante indicativo telefónico.
     - Conciencia de zona horaria dinámica.
+- **Evolución de Memoria (EN PROGRESO 🔄):**
+    - Migración de Google File API -> **SQLite + sqlite-vec + FTS5**.
+    - Ingestión optimizada con chunking recursivo y deduplicación por hash.
+    - Búsqueda híbrida con ranking RRF (0.7 Vector / 0.3 Keyword).
 - **Skill Ecosystem:**
     - Implementación de **Micro-Specialists** (Skills atómicas) para tareas específicas (ej: Google Search, Calendar, File Management).
     - Creación del **Skill Creator**: Herramienta automatizada para generar nuevos especialistas.
 - **Robustez RAG (PARCIAL ✅):**
-    - Sanitización de nombres de archivos (limitado a 64 chars) para Google API.
-    - Implementación de **Exponential Backoff** para la activación de archivos en Google File API.
+    - Sanitización de nombres de archivos (limitado a 64 chars) para Google API (Legacy).
+    - Implementación de **Exponential Backoff** para la activación de archivos en Google File API (Legacy).
 
 ## 🚀 5. Guía de Desarrollo
 

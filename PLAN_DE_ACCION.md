@@ -1,8 +1,22 @@
-# Plan de Acción: AEGEN/MAGI (Enero 2026) - COMPLETADO ✅
+# Plan de Acción: AEGEN/MAGI (Febrero 2026) - EN PROGRESO 🔄
 
-Este documento resume el estado actual del proyecto AEGEN, los logros recientes y el camino hacia la Fase 4, integrando mitigaciones técnicas y mejoras de experiencia de usuario.
+Este documento resume el estado actual del proyecto AEGEN, los logros recientes y la hoja de ruta para la evolución de la arquitectura, priorizando la memoria local y la eficiencia del sistema.
 
 ---
+
+## 🚀 Fase F: Evolución de Memoria (Local-First) 🔄
+Estamos migrando la persistencia de largo plazo de **Google File API (Cloud)** a una arquitectura híbrida local optimizada para reducir latencia y mejorar la precisión.
+
+- **F.20 - Infraestructura SQLite:** Implementación de base de datos local con soporte `sqlite-vec` y `FTS5`.
+- **F.21 - Pipeline de Ingestión:** Chunking recursivo y deduplicación por hash para optimizar tokens.
+- **F.22 - Búsqueda Híbrida:** Implementación de Ranking RRF (Vectorial + Keywords).
+- **F.23 - Hooks de Sesión:** Automatización del paso Buffer (Redis) -> Long Term (SQLite).
+
+> Ver detalles en: `docs/refactors/memory_evolution/`
+
+---
+
+## 🔍 Logros Previos (COMPLETADOS ✅)
 
 ## 🔍 Análisis de Errores Críticos (RESUELTOS)
 
