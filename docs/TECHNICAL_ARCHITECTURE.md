@@ -310,38 +310,33 @@ def _transcribe():
 - **Idioma:** Forzado a español (`language="es"`)
 - **VAD:** Optimizado para conversaciones (`min_silence_duration_ms=700`)
 
-### 3.5 Arquitectura de Memoria Diskless (Fase 3C)
+### 3.5 Arquitectura de Memoria Local-First (Fase F)
 
-AEGEN ha eliminado la dependencia del sistema de archivos local para la persistencia de datos de usuario, migrando a una arquitectura 100% cloud-native y distribuida.
+AEGEN ha evolucionado de una arquitectura puramente "diskless" en la nube a una arquitectura **Local-First optimizada**, utilizando SQLite con extensiones vectoriales para garantizar latencias mínimas y alta precisión.
 
-#### Flujo de Consolidación de Memoria e Identidad
+#### Flujo de Consolidación y Búsqueda Híbrida
 ```mermaid
 graph LR
     A[Interacción] --> B[RedisMessageBuffer]
-    B --> C{Condiciones de Consolidación}
-    C -->|N >= 20 msgs| D[ConsolidationManager]
-    C -->|6h Inactividad| D
-    D --> E[FactExtractor: Identity & Facts]
-    E -->|user_name| F[Profile Sync: KB -> Profile]
-    E -->|facts| G[Google File Search API]
-    G --> H[Historial Permanente]
-    F --> I[Redis Profile Cache]
+    B --> C{Trigger de Consolidación}
+    C --> D[Ingestion Pipeline]
+    D --> E[Recursive Chunker]
+    E --> F[Deduplicator Hash]
+    F --> G[Embedding Service]
+    G --> H[SQLite Store]
+    H --> I[sqlite-vec / FTS5]
+    H -.-> J[Async Cloud Backup]
 ```
 
-**Componentes:**
-- **RedisMessageBuffer:** Almacena mensajes recientes en una lista de Redis (`chat:buffer:{chat_id}`). Permite acceso de baja latencia para el contexto inmediato.
-- **ConsolidationManager:** Procesa el buffer de forma asíncrona. Orquesta la extracción de hechos y la sincronización de perfiles.
-- **FactExtractor:** Analiza la sesión para identificar hechos atómicos y cambios en la identidad del usuario (ej: nombres nuevos).
-- **Profile Sync:** Mecanismo que garantiza que el `user_name` aprendido en la conversación se refleje en el perfil persistente del usuario, eliminando amnesias de identidad.
-- **Google File Search API:** Actúa como el almacenamiento de largo plazo, permitiendo búsquedas semánticas sobre el historial consolidado.
+**Componentes Clave:**
+- **Recursive Chunker:** Divide el conocimiento en fragmentos de 400 tokens con overlap de 80, optimizando la ventana de contexto.
+- **SQLite Store:** Motor central de persistencia local que gestiona tanto texto (FTS5) como vectores (`sqlite-vec`).
+- **Embedding Service:** Utiliza Google `text-embedding-004` para generar representaciones vectoriales de 768 dimensiones.
+- **RRF Ranking:** Algoritmo de *Reciprocal Rank Fusion* para combinar resultados semánticos y por palabras clave.
 
-### 3.6 Sistema de Perfiles Multi-Usuario Stateless
-El `ProfileManager` ha sido rediseñado para operar en entornos stateless, garantizando que cualquier instancia del motor pueda atender a cualquier usuario.
+### 3.6 Sistema de Perfiles Multi-Usuario
+El `ProfileManager` utiliza SQLite para la persistencia de perfiles con un espejo en caché de Redis para acceso ultra-rápido durante la sesión activa.
 
-- **Caché en Redis:** Los perfiles se almacenan en Redis (`profile:{chat_id}`) con un TTL para acceso rápido.
-- **Persistencia en Cloud:** Los cambios en el perfil se sincronizan con Google Cloud para persistencia a largo plazo.
-- **Identidad Estructural (v0.2.2):** El sistema implementa un flujo de tres niveles (Platform Seed -> Conversational Learning -> Profile Sync) para mantener la identidad del usuario sin hardcodes.
-- **Identidad Dinámica:** El sistema carga automáticamente el nombre y preferencias del usuario desde el perfil al inicio de cada interacción, permitiendo una personalización profunda.
 
 ### 3.7 Arquitectura de Personalidad Adaptativa y Localización (Fase 4 - ACTUALIZADO)
 
@@ -530,7 +525,8 @@ services:
 |-----------|--------|--------|
 | Text Response | <2s | ~1.5s |
 | Audio Transcription | <5s | ~3-4s |
-| Memory Retrieval | <100ms | ~50ms |
+| Memory Retrieval (SQLite) | <20ms | ~10ms |
+| Memory Retrieval (RAG) | <100ms | ~50ms |
 | Specialist Routing | <500ms | ~300ms |
 
 ### Scalability Metrics

@@ -20,7 +20,8 @@ Este documento es de **lectura obligatoria** para cualquier contribuidor (humano
 - **Desacoplamiento por Eventos:** Orquestación de flujos de trabajo a través de un bus de eventos asíncrono.
 - **Personalidad Adaptativa y Localización:** MAGI posee una identidad base que se adapta al estilo del usuario y a su localización regional (jerga, zona horaria) de forma automática.
 - **Observabilidad LLM Completa:** Sistema híbrido LangSmith + Prometheus con tracking de llamadas, latency, tokens y costos. Correlation IDs end-to-end y dashboard tiempo real.
-- **Agentes Modulares Multi-tenant:** Sistema de agentes componibles con aislamiento per-usuario y memoria vectorial ChromaDB.
+- **Agentes Modulares Multi-tenant:** Sistema de agentes componibles con aislamiento per-usuario y memoria híbrida (Redis + SQLite-vec).
+- **Memoria Local-First:** Búsqueda semántica de baja latencia (<10ms) mediante `sqlite-vec` y búsqueda por palabras clave con `FTS5`.
 - **Performance Optimizado:** Routing inteligente <2s, delegación híbrida, function calling optimizado (ADR-0009).
 - **Resiliencia Integrada:** Mecanismos de reintentos e idempotencia para un procesamiento de tareas robusto.
 - **Calidad de Código:** Pipeline de CI/CD con linters y chequeo de tipos (Ruff, Black, MyPy).

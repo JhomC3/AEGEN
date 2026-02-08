@@ -5,6 +5,21 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [Unreleased]
 
+## [v0.3.0] - 2026-02-07
+### Added
+- **Hybrid Local-First Memory Architecture (Phase F)**: Inicio de la migración hacia una persistencia local optimizada.
+  - Diseño de esquema SQLite con soporte para búsqueda vectorial (`sqlite-vec`) y texto completo (`FTS5`).
+  - Plan de implementación de 7 fases para eliminar la dependencia crítica de la Google File API.
+  - Nuevo pipeline de ingestión con chunking recursivo (400/80 tokens) y deduplicación por hash SHA-256.
+  - Algoritmo de ranking híbrido RRF (Reciprocal Rank Fusion) para combinar resultados semánticos y léxicos.
+- **Improved Documentation Structure**: Reorganización de la documentación técnica.
+  - Nueva carpeta `docs/refactors/memory_evolution/` para el seguimiento del cambio arquitectónico.
+  - Carpeta `docs/research/` para investigaciones técnicas y referencias (ej: OpenClaw).
+
+### Changed
+- **Documentation Update**: Actualizados `README.md`, `PROJECT_OVERVIEW.md` y `TECHNICAL_ARCHITECTURE.md` para reflejar la nueva dirección arquitectónica.
+- Actualizada la versión del proyecto a 0.3.0 (Memory Evolution).
+
 ## [v0.2.2] - 2026-02-04
 ### Added
 - **Structural Identity System**: Implementación del flujo completo de identidad del usuario.

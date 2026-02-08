@@ -41,8 +41,8 @@ make verify       # Validar antes de commit
 - Hardcoded LLM imports (usar src.core.engine)
 - Performance regressions sin justificación
 - Missing correlation_id propagation
-- **Uso de `aiofiles` o escritura en `storage/` local para datos de usuario**
-- **Paths de archivos hardcodeados fuera de `/tmp`**
+- **Uso de `aiofiles` o escritura directa en disco para archivos de usuario (usar SQLiteStore)**
+- **Paths de archivos hardcodeados fuera de `/tmp` o `data/`**
 
 ---
 
@@ -141,12 +141,11 @@ feat(scope): descripción imperativa
 
 ## 🏗️ Patterns de Arquitectura
 
-### Diskless-First Pattern
-- **Nunca** guardar datos de usuario o historiales en el sistema de archivos local.
-- Utilizar `RedisMessageBuffer` para persistencia temporal inmediata.
-- Confiar en la consolidación asíncrona hacia Google Cloud para almacenamiento de largo plazo.
-- Los perfiles de usuario deben gestionarse exclusivamente a través de `ProfileManager` (Redis + Cloud).
-- El almacenamiento local (`/tmp`) solo se permite para procesamiento efímero de archivos (ej. transcodificación de audio) que se eliminan inmediatamente después.
+### Local-First Memory Pattern
+- **SQLite + sqlite-vec:** Único motor permitido para persistencia estructurada local.
+- **Deduplicación obligatoria:** Siempre verificar hash SHA-256 antes de generar embeddings.
+- **Asincronía total:** Usar `aiosqlite` para no bloquear el event loop.
+- **Respaldo Cloud:** El almacenamiento local se considera efímero en MV; se debe sincronizar periódicamente con Cloud Storage.
 
 ### Identity Structural Pattern
 - **Seed desde Plataforma:** Al primer contacto, el nombre se inicializa desde la plataforma (ej: Telegram `first_name`).
