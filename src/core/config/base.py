@@ -54,6 +54,10 @@ class BaseAppSettings(BaseSettings):
     TELEGRAM_BOT_TOKEN: SecretStr | None = None
     NGROK_AUTHTOKEN: SecretStr | None = None
 
+    # SQLite Configuration
+    SQLITE_DB_PATH: str = "data/aegen_memory.db"
+    SQLITE_SCHEMA_PATH: str = "src/memory/schema.sql"
+
     # LangSmith Configuration
     # El proyecto en LangSmith se mantiene como MAGI para trazabilidad o se cambia?
     # Lo cambiaremos a AEGEN para consistencia.

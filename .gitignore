@@ -288,3 +288,6 @@ scripts/test_*.py
 
 # Storage (Diskless architecture)
 storage/
+
+# SQLite Local Storage
+data/*.db

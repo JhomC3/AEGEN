@@ -14,6 +14,7 @@ from src.core.role_manager import RoleManager
 from src.core.security.access_controller import AccessController
 from src.core.session_manager import session_manager
 from src.core.user_preferences import UserPreferences
+from src.memory.sqlite_store import SQLiteStore
 from src.memory.vector_memory_manager import VectorMemoryManager
 
 logger = logging.getLogger(__name__)
@@ -21,11 +22,23 @@ logger = logging.getLogger(__name__)
 # --- Gestión de Recursos Globales (ej. cliente Redis) ---
 redis_connection: aioredis.Redis | None = None
 event_bus: IEventBus | None = None
+sqlite_store: SQLiteStore | None = None
 
 
 async def initialize_global_resources() -> tuple[aioredis.Redis | None, IEventBus]:
     """Inicializa recursos globales como Redis y el bus de eventos."""
-    global redis_connection, event_bus
+    global redis_connection, event_bus, sqlite_store
+
+    # 1. Inicializar SQLite
+    try:
+        sqlite_store = SQLiteStore(settings.SQLITE_DB_PATH)
+        await sqlite_store.init_db(settings.SQLITE_SCHEMA_PATH)
+        logger.info("SQLiteStore initialized and schema applied.")
+    except Exception as e:
+        logger.error(f"Failed to initialize SQLiteStore: {e}")
+        # Consideramos SQLite crítico para el nuevo sistema
+        raise
+
     try:
         # Usamos decode_responses=False porque nuestro RedisEventBus maneja la (de)serialización
         redis_connection = aioredis.from_url(settings.REDIS_URL, decode_responses=False)
@@ -52,6 +65,10 @@ async def initialize_global_collections():
 
 async def shutdown_global_resources():
     """Cierra conexiones y recursos globales."""
+    if sqlite_store:
+        await sqlite_store.disconnect()
+        logger.info("SQLite connection closed.")
+
     if isinstance(event_bus, RedisEventBus) or isinstance(event_bus, InMemoryEventBus):
         await event_bus.shutdown()
         logger.info("Event Bus shut down.")
@@ -111,6 +128,13 @@ def get_access_controller() -> AccessController:
     """FastAPI dependency para AccessController."""
     logger.debug("Creating/providing AccessController instance.")
     return AccessController()
+
+
+def get_sqlite_store() -> SQLiteStore:
+    """FastAPI dependency para SQLiteStore."""
+    if sqlite_store is None:
+        raise RuntimeError("SQLiteStore has not been initialized.")
+    return sqlite_store
 
 
 def prime_dependencies():
