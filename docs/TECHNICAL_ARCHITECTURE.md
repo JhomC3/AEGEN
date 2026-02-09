@@ -333,6 +333,9 @@ graph LR
 - **SQLite Store:** Motor central de persistencia local que gestiona tanto texto (FTS5) como vectores (`sqlite-vec`).
 - **Embedding Service:** Utiliza Google `text-embedding-004` para generar representaciones vectoriales de 768 dimensiones.
 - **RRF Ranking:** Algoritmo de *Reciprocal Rank Fusion* para combinar resultados semánticos y por palabras clave.
+- **Auto-cleanup Triggers:** Sistema de 4 triggers automáticos que garantizan integridad referencial sin código duplicado:
+  - `memories_ai/ad/au`: Mantiene FTS5 sincronizado automáticamente
+  - `cleanup_vector_on_map_delete`: Elimina vectores huérfanos al borrar memorias (ventaja sobre implementación manual de OpenClaw)
 
 ### 3.6 Sistema de Perfiles Multi-Usuario
 El `ProfileManager` utiliza SQLite para la persistencia de perfiles con un espejo en caché de Redis para acceso ultra-rápido durante la sesión activa.

@@ -18,7 +18,34 @@ Migrar el sistema de memoria de AEGEN de **Google File API** a **SQLite + sqlite
 
 ---
 
-### **FASE 1: Infraestructura SQLite (3-4 horas)**
+### **FASE 1: Infraestructura SQLite** ✅ **COMPLETADA**
+
+| Tarea | Archivo | Estado |
+|-------|---------|--------|
+| 1.1 | `src/memory/sqlite_store.py` | ✅ Clase `SQLiteStore` con conexión async |
+| 1.2 | `src/memory/schema.sql` | ✅ Esquema DDL completo con triggers |
+| 1.3 | `src/memory/sqlite_store.py` | ✅ Método `init_db()` funcional |
+| 1.4 | `src/core/dependencies.py` | ⏭️ Pospuesto (no crítico para Fase 1) |
+| 1.5 | `src/core/config/base.py` | ✅ Configuración SQLite añadida |
+| 1.6 | **NUEVO:** `cleanup_vector_on_map_delete` | ✅ Trigger de limpieza automática de vectores |
+
+**Mejoras Implementadas:**
+- 🔥 **Auto-cleanup Trigger:** Sistema de 4 triggers automáticos que garantizan integridad referencial completa
+  - `memories_ai/ad/au`: Sincronización automática con FTS5
+  - `cleanup_vector_on_map_delete`: Eliminación automática de vectores huérfanos (ventaja sobre OpenClaw)
+- ✅ Monkeypatch de `sqlean` para compatibilidad con extensiones en macOS/Linux
+- ✅ Script de verificación: `scripts/verify_phase1.py`
+- ✅ Script de testing: `scripts/test_vector_cleanup.py` (100% pass)
+
+**Verificación Completada:**
+```bash
+uv run python scripts/verify_phase1.py  # ✅ Schema initialized, FTS5 y sqlite-vec funcionando
+uv run python scripts/test_vector_cleanup.py  # ✅ Triggers de limpieza validados
+```
+
+---
+
+### **FASE 1: Infraestructura SQLite (3-4 horas)** [LEGACY - VER ARRIBA]
 
 | Tarea | Archivo | Descripción |
 |-------|---------|-------------|
