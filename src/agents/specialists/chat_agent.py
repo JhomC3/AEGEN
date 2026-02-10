@@ -25,8 +25,8 @@ from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV2
 from src.memory.knowledge_base import knowledge_base_manager
 from src.memory.long_term_memory import long_term_memory
+from src.memory.vector_memory_manager import VectorMemoryManager
 from src.personality.prompt_builder import system_prompt_builder
-from src.tools.google_file_search import file_search_tool
 
 logger = logging.getLogger(__name__)
 
@@ -93,17 +93,26 @@ async def conversational_chat_tool(
 
     # 2. Smart RAG
     try:
-        active_tags = user_profile_manager.get_active_tags(profile)
-
-        # Determinar intent para RAG: Si hay monitoreo emocional, activar PDFs de apoyo
-        rag_intent = (
-            "monitoring" if "monitor_emotional_cues" in next_actions else "chat"
+        manager = VectorMemoryManager()
+        # Buscar en conocimiento global
+        global_results = await manager.retrieve_context(
+            user_id="system", query=user_message, limit=2, namespace="global"
         )
 
-        knowledge_context = await file_search_tool.query_files(
-            user_message, chat_id, tags=active_tags, intent_type=rag_intent
+        # Buscar en conocimiento del usuario
+        user_results = await manager.retrieve_context(
+            user_id=chat_id, query=user_message, limit=2, namespace="user"
         )
-    except Exception:
+
+        all_results = global_results + user_results
+
+        if all_results:
+            knowledge_context = "\n\n".join([f"- {r['content']}" for r in all_results])
+        else:
+            knowledge_context = ""
+
+    except Exception as e:
+        logger.warning(f"Error en RAG Chat: {e}")
         knowledge_context = ""
 
     # Memoria de Largo Plazo (Resumen + Hechos)

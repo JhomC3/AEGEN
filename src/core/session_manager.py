@@ -180,7 +180,7 @@ class SessionManager:
 
     async def delete_session(self, chat_id: str) -> bool:
         """
-        Delete session from Redis.
+        Delete session from Redis and trigger consolidation hook.
 
         Args:
             chat_id: Chat identifier
@@ -189,6 +189,9 @@ class SessionManager:
             True if deleted successfully, False otherwise
         """
         try:
+            # TRIGGER HOOK BEFORE DELETE (Optional, depending on flow)
+            # await self._on_session_end(chat_id)
+
             redis_client = await self._get_redis()
             key = self._session_key(chat_id)
 
@@ -201,6 +204,32 @@ class SessionManager:
         except Exception as e:
             logger.error(f"Failed to delete session for {chat_id}: {e}", exc_info=True)
             return False
+
+    async def trigger_consolidation(self, chat_id: str):
+        """
+        Explicitly triggers session consolidation to long-term memory.
+        """
+        session = await self.get_session(chat_id)
+        if not session:
+            return
+
+        from src.core.dependencies import get_sqlite_store
+        from src.memory.session_processor import SessionProcessor
+
+        try:
+            store = get_sqlite_store()
+            processor = SessionProcessor(store)
+
+            # Convert messages to dict if they are Pydantic models
+            messages = [
+                m.model_dump() if hasattr(m, "model_dump") else m
+                for m in session.get("conversation_history", [])
+            ]
+
+            await processor.process_session(chat_id, messages)
+            logger.info(f"Consolidation triggered successfully for {chat_id}")
+        except Exception as e:
+            logger.error(f"Error triggering consolidation: {e}")
 
     async def get_session_info(self, chat_id: str) -> dict[str, Any] | None:
         """

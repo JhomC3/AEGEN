@@ -17,8 +17,8 @@ from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV2
 from src.memory.knowledge_base import knowledge_base_manager
 from src.memory.long_term_memory import long_term_memory
+from src.memory.vector_memory_manager import VectorMemoryManager
 from src.personality.prompt_builder import system_prompt_builder
-from src.tools.google_file_search import file_search_tool
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,34 @@ async def query_user_history(chat_id: str, query: str) -> str:
     5.2: Consulta el historial profundo del usuario para recuperar detalles del pasado.
     Útil para recordar metas, valores o eventos conversados hace mucho tiempo.
     """
-    return await file_search_tool.search_user_history(chat_id, query)
+    manager = VectorMemoryManager()
+    results = await manager.retrieve_context(user_id=chat_id, query=query, limit=5)
+
+    if not results:
+        return "No se encontraron detalles relevantes en el historial."
+
+    context_parts = [f"[{r['created_at']}] {r['content']}" for r in results]
+    return "\n\n".join(context_parts)
+
+
+def _build_routing_instructions(next_actions: list[str]) -> str:
+    """Helper para construir instrucciones de enrutamiento sin aumentar la complejidad de la tool."""
+    if not next_actions:
+        return ""
+
+    instructions = "\n\nINSTRUCCIONES DE ENRUTAMIENTO PRIORITARIAS:\n"
+    mapping = {
+        "depth_empathy": "- Prioriza la validación emocional profunda antes de cualquier técnica.\n",
+        "clarify_emotional_state": "- El estado emocional es ambiguo. Haz una pregunta suave para clarificar cómo se siente realmente.\n",
+        "active_listening": "- Usa escucha activa reflexiva. Parafrasea lo que el usuario dijo.\n",
+        "gentle_probe": "- Indaga con delicadeza sobre pensamientos automáticos subyacentes.\n",
+    }
+
+    for action in next_actions:
+        if action in mapping:
+            instructions += mapping[action]
+
+    return instructions
 
 
 @tool
@@ -100,30 +127,30 @@ async def cbt_therapeutic_guidance_tool(
 
     # 3. Smart RAG (Conocimiento TCC)
     try:
-        active_tags = user_profile_manager.get_active_tags(profile)
-        knowledge_context = await file_search_tool.query_files(
-            user_message, chat_id, tags=active_tags, intent_type="vulnerability"
+        manager = VectorMemoryManager()
+        # Buscar en conocimiento global (TCC)
+        global_results = await manager.retrieve_context(
+            user_id="system", query=user_message, limit=3, namespace="global"
         )
+
+        # Buscar en conocimiento del usuario
+        user_results = await manager.retrieve_context(
+            user_id=chat_id, query=user_message, limit=2, namespace="user"
+        )
+
+        all_results = global_results + user_results
+        knowledge_context = (
+            "\n\n".join([f"- {r['content']}" for r in all_results])
+            if all_results
+            else "No hay contexto documental disponible."
+        )
+
     except Exception as e:
         logger.warning(f"Error en RAG TCC: {e}")
         knowledge_context = "No hay contexto documental disponible."
 
     # 4. Construir instrucciones adicionales basadas en next_actions
-    routing_instructions = ""
-    if next_actions:
-        routing_instructions = "\n\nINSTRUCCIONES DE ENRUTAMIENTO PRIORITARIAS:\n"
-        if "depth_empathy" in next_actions:
-            routing_instructions += "- Prioriza la validación emocional profunda antes de cualquier técnica.\n"
-        if "clarify_emotional_state" in next_actions:
-            routing_instructions += "- El estado emocional es ambiguo. Haz una pregunta suave para clarificar cómo se siente realmente.\n"
-        if "active_listening" in next_actions:
-            routing_instructions += (
-                "- Usa escucha activa reflexiva. Parafrasea lo que el usuario dijo.\n"
-            )
-        if "gentle_probe" in next_actions:
-            routing_instructions += (
-                "- Indaga con delicadeza sobre pensamientos automáticos subyacentes.\n"
-            )
+    routing_instructions = _build_routing_instructions(next_actions)
 
     persona_template = await system_prompt_builder.build(
         chat_id=chat_id,
@@ -142,15 +169,10 @@ async def cbt_therapeutic_guidance_tool(
 
     try:
         config = create_observable_config(call_type="cbt_therapeutic_response")
-
-        # Configurar límite de historial desde el perfil
         adaptation = user_profile_manager.get_personality_adaptation(profile)
         history_limit = adaptation.get("history_limit", 20)
-
-        # Convertir historial a mensajes de LangChain
         messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
 
-        # Usamos un template más simple ya que el builder construye casi todo
         conversational_prompt = ChatPromptTemplate.from_messages([
             ("system", persona_template),
             MessagesPlaceholder(variable_name="messages"),
@@ -158,14 +180,9 @@ async def cbt_therapeutic_guidance_tool(
         ])
 
         chain = conversational_prompt | llm
-
-        prompt_input = {
-            "user_message": user_message,
-            "messages": messages,
-        }
-
         response = await chain.ainvoke(
-            prompt_input, config=cast(RunnableConfig, config)
+            {"user_message": user_message, "messages": messages},
+            config=cast(RunnableConfig, config),
         )
         return str(response.content).strip()
 

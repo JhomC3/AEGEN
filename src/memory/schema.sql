@@ -54,6 +54,13 @@ CREATE TABLE IF NOT EXISTS embedding_cache (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabla de Perfiles de Usuario (Local-First)
+CREATE TABLE IF NOT EXISTS profiles (
+    chat_id TEXT PRIMARY KEY,
+    data TEXT NOT NULL,              -- JSON del perfil
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Trigger de limpieza automática: borra el vector físico cuando se elimina su referencia
 -- Esto completa la cascada de limpieza: memories → vector_memory_map → memory_vectors
 CREATE TRIGGER IF NOT EXISTS cleanup_vector_on_map_delete

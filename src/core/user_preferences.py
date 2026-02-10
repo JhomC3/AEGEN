@@ -44,12 +44,13 @@ class UserPreferences:
         try:
             content = f"User preferences: {', '.join(f'{k}: {v}' for k, v in preferences.items())}"
 
-            return await self.vector_manager.store_context(
+            stored_count = await self.vector_manager.store_context(
                 user_id=user_id,
                 content=content,
                 context_type=MemoryType.PREFERENCE,
-                metadata={"preferences": preferences},
+                metadata={"type": "preference_update"},
             )
+            return stored_count > 0
 
         except Exception as e:
             logger.error(f"Failed to update user preferences: {e}", exc_info=True)

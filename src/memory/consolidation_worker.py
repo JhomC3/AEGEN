@@ -7,9 +7,10 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
+from src.core.dependencies import get_sqlite_store
 from src.core.engine import llm
 from src.core.profile_manager import user_profile_manager
-from src.tools.google_file_search import file_search_tool
+from src.memory.ingestion_pipeline import IngestionPipeline
 
 logger = logging.getLogger(__name__)
 
@@ -147,7 +148,7 @@ class ConsolidationManager:
         except Exception as e:
             logger.error(f"Error detectando evolución para {chat_id}: {e}")
 
-        # 4. 4.5: Subir Log de Sesión a la Nube
+        # 4. 4.5: Almacenar Log de Sesión en SQLite (Local-First)
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             log_content = {
@@ -155,15 +156,23 @@ class ConsolidationManager:
                 "timestamp": timestamp,
                 "summary": summary,
                 "raw_messages_count": len(raw_buffer),
+                "type": "session_log",
             }
-            await file_search_tool.upload_from_string(
-                content=json.dumps(log_content, ensure_ascii=False),
-                filename=f"sessions/session_{timestamp}.json",
+
+            store = get_sqlite_store()
+            pipeline = IngestionPipeline(store)
+
+            await pipeline.process_text(
                 chat_id=chat_id,
-                mime_type="application/json",
+                text=json.dumps(log_content, ensure_ascii=False),
+                memory_type="document",
+                metadata={"filename": f"session_{timestamp}.json", "type": "log"},
             )
+            logger.info(f"Log de sesión guardado en SQLite para {chat_id}")
         except Exception as e:
-            logger.warning(f"Error subiendo log de sesión para {chat_id}: {e}")
+            logger.warning(
+                f"Error guardando log de sesión en SQLite para {chat_id}: {e}"
+            )
 
     async def _sync_user_name_to_profile(
         self, chat_id: str, knowledge: dict[str, Any]

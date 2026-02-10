@@ -96,12 +96,13 @@ class RoleManager:
 
             content = f"User role: {role.value}, granted by: {granted_by}"
 
-            success = await self.vector_manager.store_context(
+            stored_count = await self.vector_manager.store_context(
                 user_id=user_id,
                 content=content,
                 context_type=MemoryType.PREFERENCE,
                 metadata=role_metadata,
             )
+            success = stored_count > 0
 
             if success:
                 self.logger.info(

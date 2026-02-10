@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 from typing import Any
 
+from src.core.dependencies import get_sqlite_store
 from src.core.localization import get_country_info, resolve_localization
 
 logger = logging.getLogger(__name__)
@@ -109,82 +110,65 @@ class UserProfileManager:
     async def load_profile(self, chat_id: str) -> dict[str, Any]:
         """
         3.6: Carga el perfil desde Redis (Caché caliente).
-        Si no existe, intenta recuperación determinística desde la nube (Gateway).
+        Si no existe, intenta recuperación desde SQLite (Local-First).
         """
         from src.core.dependencies import redis_connection
-        from src.memory.cloud_gateway import cloud_gateway
 
-        if redis_connection is None:
-            logger.warning("Redis no disponible, usando perfil default.")
-            return self._get_default_profile()
+        # 1. Intentar desde Redis (Caché caliente)
+        if redis_connection:
+            key = self._redis_key(chat_id)
+            try:
+                raw_data = await redis_connection.get(key)
+                if raw_data:
+                    if isinstance(raw_data, bytes):
+                        raw_data = raw_data.decode("utf-8")
+                    return json.loads(raw_data)
+            except Exception as e:
+                logger.error(f"Error cargando perfil de Redis para {chat_id}: {e}")
 
-        key = self._redis_key(chat_id)
+        # 2. Intentar desde SQLite (Persistencia Local)
         try:
-            raw_data = await redis_connection.get(key)
-            if raw_data:
-                if isinstance(raw_data, bytes):
-                    raw_data = raw_data.decode("utf-8")
-                return json.loads(raw_data)
+            store = get_sqlite_store()
+            sqlite_profile = await store.load_profile(chat_id)
+            if sqlite_profile:
+                # Rehidratar Redis para futuras consultas
+                if redis_connection:
+                    key = self._redis_key(chat_id)
+                    await redis_connection.set(
+                        key, json.dumps(sqlite_profile, ensure_ascii=False)
+                    )
+                return sqlite_profile
         except Exception as e:
-            logger.error(f"Error cargando perfil de Redis para {chat_id}: {e}")
+            logger.error(f"Error cargando perfil de SQLite para {chat_id}: {e}")
 
-        # --- AUTO-RECUPERACIÓN UNIFICADA (Gateway) ---
-        logger.info(
-            f"Perfil no encontrado en Redis para {chat_id}. Recuperando de Cloud..."
-        )
-        recovered_profile = await cloud_gateway.download_memory(chat_id, "user_profile")
-
-        if recovered_profile:
-            # Rehidratar Redis para futuras consultas
-            await self.save_profile(chat_id, recovered_profile)
-            return recovered_profile
-
-        # Si falla la recuperación, retornamos default
-        logger.info(f"Recuperación fallida para {chat_id}. Usando default.")
+        # 3. Fallback: Default
+        logger.info(f"Perfil no encontrado para {chat_id}. Usando default.")
         return self._get_default_profile()
 
     async def save_profile(self, chat_id: str, profile: dict[str, Any]):
         """
-        3.7: Guarda el perfil en Redis y dispara sincronización unificada a la nube.
+        3.7: Guarda el perfil en Redis y SQLite (Local-First).
         """
         from src.core.dependencies import redis_connection
-        from src.memory.cloud_gateway import cloud_gateway
-
-        if redis_connection is None:
-            return
 
         profile["metadata"]["last_updated"] = datetime.now().isoformat()
-        key = self._redis_key(chat_id)
 
+        # 1. Guardar en Redis (Caché caliente)
+        if redis_connection:
+            key = self._redis_key(chat_id)
+            try:
+                payload = json.dumps(profile, ensure_ascii=False)
+                await redis_connection.set(key, payload)
+            except Exception as e:
+                logger.error(f"Error guardando perfil en Redis para {chat_id}: {e}")
+
+        # 2. Guardar en SQLite (Persistencia Local-First)
         try:
-            # 1. Guardar en Redis
-            payload = json.dumps(profile, ensure_ascii=False)
-            await redis_connection.set(key, payload)
-
-            # 2. Sincronización Unificada (Markdown + YAML)
-            import asyncio
-
-            asyncio.create_task(
-                cloud_gateway.upload_memory(
-                    chat_id=chat_id,
-                    filename="user_profile",
-                    data=profile,
-                    mem_type="user_profile",
-                )
-            )
-
+            store = get_sqlite_store()
+            await store.save_profile(chat_id, profile)
+            logger.debug(f"Perfil guardado en SQLite para {chat_id}")
         except Exception as e:
-            logger.error(f"Error guardando perfil para {chat_id}: {e}")
-
-    async def sync_to_cloud(self, chat_id: str, profile: dict[str, Any]):
-        """
-        OBSOLETO: Se mantiene por compatibilidad temporal pero redirige al Gateway.
-        """
-        from src.memory.cloud_gateway import cloud_gateway
-
-        await cloud_gateway.upload_memory(
-            chat_id, "user_profile", profile, "user_profile"
-        )
+            logger.error(f"Error guardando perfil en SQLite para {chat_id}: {e}")
 
     async def add_evolution_entry(
         self, chat_id: str, event: str, type: str = "milestone"
