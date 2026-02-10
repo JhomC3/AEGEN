@@ -74,11 +74,6 @@ async def lifespan(app: FastAPI):
 
     await global_knowledge_loader.check_and_bootstrap()
 
-    # 2. Iniciar job de mantenimiento de memoria (Auto-Refresh 24h)
-    from src.memory.maintenance_job import memory_maintenance_job
-
-    memory_maintenance_job.run_in_background()
-
     logger.info("Lifespan: Unified Memory Architecture Active.")
     logger.info("Lifespan: Application startup complete.")
     yield
