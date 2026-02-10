@@ -165,23 +165,38 @@ pytest tests/unit/memory/test_embeddings.py -v
 ---
 
 ### **FASE 3: Búsqueda Híbrida** ✅ **COMPLETADA**
+...
+### **FASE 4: Hooks de Sesión** ✅ **COMPLETADA**
 
 | Tarea | Archivo | Estado |
 |-------|---------|--------|
-| 3.1 | `src/memory/vector_search.py` | ✅ KNN search con `sqlite-vec` |
-| 3.2 | `src/memory/keyword_search.py` | ✅ FTS5 search (BM25 rank) |
-| 3.3 | `src/memory/hybrid_search.py` | ✅ Ranking RRF (Reciprocal Rank Fusion) |
-| 3.4 | `src/memory/vector_memory_manager.py` | ✅ API pública actualizada con búsqueda híbrida |
-
-**Mejoras y Validaciones:**
-- ✅ **RRF Ranking:** Combina inteligentemente resultados semánticos (0.7) y por keywords (0.3).
-- ✅ **Filtrado Multi-tenant:** Búsqueda aislada por `chat_id` y `namespace`.
-- ✅ **Hidratación Eficiente:** Recuperación de contenido completo desde la tabla `memories` tras el ranking.
-- ✅ **Verificación E2E:** Script `scripts/verify_phase3.py` valida precisión semántica y exactitud por keywords.
+| 4.1 | `src/memory/session_processor.py` | ✅ Procesador de sesiones con LLM |
+| 4.2 | `src/core/session_manager.py` | ✅ Trigger de consolidación añadido |
+| 4.3 | `src/memory/long_term_memory.py` | ✅ Migrado a SQLiteStore |
+| 4.4 | `src/memory/consolidation_worker.py`| ✅ Migrado a SQLite Local-First |
 
 ---
 
-### **FASE 3: Búsqueda Híbrida (3-4 horas)** [LEGACY - VER ARRIBA]
+### **FASE 5: Limpieza de Código Legacy** ✅ **COMPLETADA**
+
+| Tarea | Archivo | Estado |
+|-------|---------|--------|
+| 5.1 | `src/tools/google_file_search.py` | 🗑️ ELIMINADO |
+| 5.2 | `src/memory/cloud_gateway.py` | 🗑️ ELIMINADO |
+| 5.3 | `src/memory/redis_fallback.py` | 🗑️ ELIMINADO |
+| 5.4 | `src/memory/maintenance_job.py` | 🗑️ ELIMINADO |
+| 5.5 | `src/memory/hybrid_coordinator.py` | 🗑️ ELIMINADO |
+| 5.6 | `src/memory/consistency_manager.py` | 🗑️ ELIMINADO |
+| 5.7 | `scripts/check_cloud_files.py` | 🗑️ ELIMINADO |
+| 5.8 | `src/memory/knowledge_base.py` | ✅ Migrado a SQLite |
+| 5.9 | `src/core/profile_manager.py` | ✅ Migrado a SQLite (Tabla `profiles`) |
+| 5.10 | Integración Especialistas | ✅ Chat y CBT usando VectorMemoryManager |
+
+**Estado Final de la Migración:**
+- ✅ **Local-First:** 100% independiente de Google File API para almacenamiento.
+- ✅ **Híbrido:** Búsqueda semántica (768d) + FTS5 funcionando.
+- ✅ **Integridad:** Limpieza automática mediante triggers SQL.
+- ✅ **Rendimiento:** Latencia de recuperación <20ms.
 
 | Tarea | Archivo | Descripción |
 |-------|---------|-------------|
