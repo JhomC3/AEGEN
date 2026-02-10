@@ -63,7 +63,31 @@ def test_connectivity():
         print(f"✅ API Local OK (Status: {resp.status})")
     except Exception as e:
         print(f"❌ API Local NO RESPONDE: {e}")
-        print("   Asegúrate de que 'docker-compose up' esté corriendo.")
+        print("\n--- 💡 Posibles causas de 'Connection reset' ---")
+        print(
+            "1. El contenedor 'magi_app_prod' está crasheando. (docker compose logs magi_app_prod)"
+        )
+        print("2. Falta de RAM en la e2-micro (OOM killer).")
+        print("3. Problema de permisos en el volumen 'storage/'.")
+
+    # 5. Permisos de Storage
+    print("\n5. Verificando permisos de 'storage/'...")
+    st = Path("storage")
+    if st.exists():
+        print("   Directorio storage/: Existe")
+        # Listar contenido si es posible
+        try:
+            items = list(st.glob("*"))
+            print(f"   Contenido: {[i.name for i in items]}")
+        except Exception:
+            print("   ❌ No se pudo listar el contenido (¿Permisos?)")
+    else:
+        print("   ❌ Directorio storage/ no encontrado.")
+
+    print("\n--- 📝 SUGERENCIA ---")
+    print("Pásame la salida de estos comandos:")
+    print("1. docker compose ps")
+    print("2. docker compose logs magi_app_prod --tail=50")
 
 
 if __name__ == "__main__":
