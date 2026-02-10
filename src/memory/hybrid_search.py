@@ -1,10 +1,4 @@
-# src/memory/hybrid_search.py
-"""
-Hybrid search module combining vector and keyword results.
-
-Uses Reciprocal Rank Fusion (RRF) to rank documents from multiple sources.
-"""
-
+import asyncio
 import logging
 from typing import Any
 
@@ -39,28 +33,18 @@ class HybridSearch:
     ) -> list[dict[str, Any]]:
         """
         Realiza una búsqueda híbrida y combina resultados con RRF.
-
-        Args:
-            query: Consulta en texto
-            limit: Número máximo de resultados finales
-            chat_id: Opcional, filtrar por chat
-            namespace: Opcional, filtrar por namespace
-            rrf_k: Constante para suavizar el ranking RRF
-            vector_weight: Peso para los resultados vectoriales
-            keyword_weight: Peso para los resultados por keyword
-
-        Returns:
-            Lista de diccionarios con contenido de memoria y metadatos
         """
         # 1. Obtener embedding para la búsqueda vectorial
         query_embedding = await self.embedding_service.embed_query(query)
 
-        # 2. Ejecutar búsquedas en paralelo (si fuera posible, aquí secuencial por simplicidad)
-        vector_results = await self.vector_search.search(
-            query_embedding, limit=limit * 2, chat_id=chat_id, namespace=namespace
-        )
-        keyword_results = await self.keyword_search.search(
-            query, limit=limit * 2, chat_id=chat_id, namespace=namespace
+        # 2. Ejecutar búsquedas en paralelo para reducir latencia
+        vector_results, keyword_results = await asyncio.gather(
+            self.vector_search.search(
+                query_embedding, limit=limit * 2, chat_id=chat_id, namespace=namespace
+            ),
+            self.keyword_search.search(
+                query, limit=limit * 2, chat_id=chat_id, namespace=namespace
+            ),
         )
 
         # 3. Combinar resultados con RRF

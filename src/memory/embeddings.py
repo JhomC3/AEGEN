@@ -20,23 +20,34 @@ class EmbeddingService:
     Genera vectores de 768 dimensiones usando gemini-embedding-001.
     """
 
+    _configured: bool = False
+
     def __init__(self, model_name: str = "models/gemini-embedding-001"):
         """
-        Inicializa el cliente de Google GenAI.
+        Inicializa el cliente de Google GenAI una sola vez (Singleton-like config).
         """
         self.model_name = model_name
-        api_key = (
-            settings.GOOGLE_API_KEY.get_secret_value()
-            if settings.GOOGLE_API_KEY
-            else None
-        )
 
-        if not api_key:
-            logger.error("GOOGLE_API_KEY not found in settings")
-            raise ValueError("GOOGLE_API_KEY is required for EmbeddingService")
+        if not EmbeddingService._configured:
+            api_key = (
+                settings.GOOGLE_API_KEY.get_secret_value()
+                if settings.GOOGLE_API_KEY
+                else None
+            )
 
-        genai.configure(api_key=api_key)
-        logger.info(f"EmbeddingService initialized with model: {model_name}")
+            if not api_key:
+                logger.error("GOOGLE_API_KEY not found in settings")
+                raise ValueError("GOOGLE_API_KEY is required for EmbeddingService")
+
+            genai.configure(api_key=api_key)
+            EmbeddingService._configured = True
+            logger.info(
+                f"EmbeddingService configured for first time with model: {model_name}"
+            )
+        else:
+            logger.debug(
+                f"EmbeddingService already configured. Reusing connection for {model_name}"
+            )
 
     async def embed_texts(
         self, texts: list[str], task_type: str = "RETRIEVAL_DOCUMENT"

@@ -213,8 +213,10 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
     Tarea de fondo que espera y consolida mensajes acumulados.
     Implementa lógica de Debounce y Cerrojo de procesamiento.
     """
-    # 1. Esperar el tiempo de debounce
-    await asyncio.sleep(3.0)
+    # 1. Esperar el tiempo de debounce configurado
+    from src.core.config import settings
+
+    await asyncio.sleep(settings.MESSAGE_DEBOUNCE_SECONDS)
 
     # 2. Verificar si somos la tarea más reciente (Debounce)
     current_seq = await ingestion_buffer.get_current_sequence(str(chat_id))

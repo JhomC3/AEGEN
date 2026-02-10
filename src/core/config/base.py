@@ -81,6 +81,7 @@ class BaseAppSettings(BaseSettings):
     DEFAULT_WHISPER_MODEL: str = "small"
     DEBUG_MODE: bool = False
     ALLOWED_HOSTS: list[str] = ["*"]
+    MESSAGE_DEBOUNCE_SECONDS: float = 1.2
 
     # Umbrales para el MigrationDecisionEngine
     CPU_THRESHOLD_PERCENT: float = 80.0
