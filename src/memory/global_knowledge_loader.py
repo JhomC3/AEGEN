@@ -5,7 +5,7 @@ from pathlib import Path
 
 import aiofiles
 
-from src.memory.vector_memory_manager import MemoryType, VectorMemoryManager
+from src.memory.vector_memory_manager import MemoryType
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +23,19 @@ class GlobalKnowledgeLoader:
         else:
             self.knowledge_path = Path(knowledge_dir)
 
-        self.manager = VectorMemoryManager()
+        self._manager = None
         logger.info(
             f"GlobalKnowledgeLoader inicializado en: {self.knowledge_path.absolute()}"
         )
+
+    @property
+    def manager(self):
+        """Lazy load del gestor de memoria para usar el singleton global."""
+        if self._manager is None:
+            from src.core.dependencies import get_vector_memory_manager
+
+            self._manager = get_vector_memory_manager()
+        return self._manager
 
     def _extract_pdf_text(self, pdf_path: Path) -> str:
         """
