@@ -1,13 +1,13 @@
-# Polling Service v0.2.0 - Async & Resilient
-import asyncio
+# Polling Service v0.3.0 - StdLib Only + Resilient Offset
+import json
 import logging
 import os
 import signal
 import sys
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
-from typing import Any, Optional
-
-import httpx
 
 # --- Configuración de Logging ---
 logging.basicConfig(
@@ -17,11 +17,10 @@ logging.basicConfig(
 )
 logger = logging.getLogger("polling_service")
 
+
 # --- Utils ---
-
-
 def load_env_file():
-    """Carga variables de .env manualmente."""
+    """Carga variables de .env manualmente para no depender de python-dotenv."""
     try:
         env_path = Path(__file__).resolve().parent.parent.parent / ".env"
         if not env_path.exists():
@@ -34,158 +33,145 @@ def load_env_file():
                     continue
                 if line.startswith("export "):
                     line = line.replace("export ", "", 1)
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
                 key, value = line.split("=", 1)
-                os.environ[key] = value.strip().strip("'").strip('"')
+                value = value.strip().strip("'").strip('"')
+                os.environ[key] = value
     except Exception as e:
         logger.warning(f"No se pudo leer .env: {e}")
 
 
-# --- Core Service ---
-
-
-class PollingService:
-    def __init__(self):
-        load_env_file()
-        self.token = os.getenv("TELEGRAM_BOT_TOKEN")
-        self.api_url = os.getenv(
-            "LOCAL_API_URL", "http://127.0.0.1:8000/api/v1/webhooks/telegram"
-        )
-        self.proxy = (
+def make_request(url, method="GET", data=None, timeout=30):
+    """Realiza peticiones HTTP usando solo la librería estándar."""
+    try:
+        proxy_url = (
             os.getenv("TELEGRAM_PROXY")
             or os.getenv("https_proxy")
             or os.getenv("HTTPS_PROXY")
         )
 
-        if not self.token:
-            logger.error("TELEGRAM_BOT_TOKEN no encontrado en .env")
-            sys.exit(1)
+        opener = urllib.request.build_opener()
+        if proxy_url and "api.telegram.org" in url:
+            proxy_handler = urllib.request.ProxyHandler({
+                "http": proxy_url,
+                "https": proxy_url,
+            })
+            opener = urllib.request.build_opener(proxy_handler)
 
-        self.telegram_api = f"https://api.telegram.org/bot{self.token}"
-        self.offset = None
-        self.running = True
+        req = urllib.request.Request(url, method=method)
+        req.add_header("Content-Type", "application/json")
 
-        # Cliente HTTP asíncrono persistente
-        self.client = httpx.AsyncClient(
-            proxy=self.proxy if self.proxy else None,
-            timeout=httpx.Timeout(40.0, connect=10.0),
-            limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
-        )
+        if data:
+            json_data = json.dumps(data).encode("utf-8")
+            req.data = json_data
 
-    async def shutdown(self):
-        """Cierre limpio del servicio."""
-        logger.info("Deteniendo servicio de polling...")
-        self.running = False
-        await self.client.aclose()
-
-    async def make_telegram_request(
-        self,
-        method: str,
-        endpoint: str,
-        data: Optional[dict[str, Any]] = None,
-    ):
-        """Realiza peticiones a la API de Telegram."""
-        url = f"{self.telegram_api}/{endpoint}"
-        try:
-            if method == "POST":
-                resp = await self.client.post(url, json=data)
-            else:
-                resp = await self.client.get(url, params=data)
-
-            resp.raise_for_status()
-            return resp.json()
-        except Exception as e:
-            logger.error(f"Error en Telegram {endpoint}: {e}")
+        with opener.open(req, timeout=timeout) as response:
+            return json.loads(response.read().decode())
+    except urllib.error.URLError as e:
+        if "api.telegram.org" in url:
+            logger.error(f"FALLO DE RED TELEGRAM: {e.reason}")
+        return None
+    except urllib.error.HTTPError as e:
+        if "deleteWebhook" in url:
             return None
-
-    async def forward_to_local_api(self, update: dict):
-        """Envía el update a la API de AEGEN de forma asíncrona."""
-        update_id = update.get("update_id")
-        logger.info(f"Forwarding Update {update_id}...")
-
-        try:
-            # Petición local (sin proxy)
-            async with httpx.AsyncClient(timeout=20.0) as local_client:
-                resp = await local_client.post(self.api_url, json=update)
-                if resp.status_code in [200, 202]:
-                    logger.info(f"✅ Update {update_id} enviado exitosamente.")
-                    return True
-                else:
-                    logger.error(
-                        f"❌ API Local respondió {resp.status_code}: {resp.text}"
-                    )
-                    return False
-        except Exception as e:
-            logger.error(f"❌ Error crítico reenviando Update {update_id}: {e}")
-            return False
-
-    async def run(self):
-        logger.info("Iniciando Polling Service v0.2.0 (Async)...")
-        logger.info(f"Target API: {self.api_url}")
-        if self.proxy:
-            logger.info(f"Proxy detectado: {self.proxy}")
-
-        # Limpiar webhooks previos para permitir polling
-        await self.make_telegram_request("POST", "deleteWebhook")
-
-        while self.running:
-            try:
-                params = {"timeout": 30}
-                if self.offset:
-                    params["offset"] = self.offset
-
-                updates_resp = await self.make_telegram_request(
-                    "GET", "getUpdates", params
-                )
-
-                if not updates_resp or not updates_resp.get("ok"):
-                    await asyncio.sleep(5)
-                    continue
-
-                updates = updates_resp.get("result", [])
-                if updates:
-                    logger.info(f"Recibidos {len(updates)} updates.")
-
-                for update in updates:
-                    success = await self.forward_to_local_api(update)
-                    if success:
-                        # Solo incrementamos el offset si se entregó con éxito
-                        # Esto asegura que si la API está reiniciando, el mensaje se reintente
-                        self.offset = update["update_id"] + 1
-                    else:
-                        # Si falló, esperamos un poco y NO incrementamos offset
-                        # El siguiente getUpdates volverá a traer este mismo mensaje
-                        logger.warning(
-                            f"Retrasando offset para reintentar update {update['update_id']}"
-                        )
-                        await asyncio.sleep(2)
-                        break  # Salimos del bucle para re-consultar Telegram
-
-            except Exception as e:
-                logger.error(f"Error en bucle principal: {e}")
-                await asyncio.sleep(5)
+        logger.error(f"HTTP Error {e.code} en {url}: {e.reason}")
+        return None
+    except Exception as e:
+        logger.error(f"Error inesperado en {url}: {e}")
+        return None
 
 
-# --- Entrypoint ---
+# --- Main Logic ---
+load_env_file()
+TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+API_URL = os.getenv("LOCAL_API_URL", "http://127.0.0.1:8000/api/v1/webhooks/telegram")
+
+if not TOKEN:
+    logger.error("TELEGRAM_BOT_TOKEN no encontrado en .env")
+    sys.exit(1)
+
+TELEGRAM_API = f"https://api.telegram.org/bot{TOKEN}"
 
 
-async def main():
-    service = PollingService()
+def delete_webhook():
+    logger.info("Eliminando webhook existente...")
+    make_request(f"{TELEGRAM_API}/deleteWebhook", method="POST")
 
-    # Manejo de señales
-    loop = asyncio.get_running_loop()
-    for sig in (signal.SIGINT, signal.SIGTERM):
-        loop.add_signal_handler(sig, lambda: asyncio.create_task(service.shutdown()))
 
+def get_updates(offset=None):
+    url = f"{TELEGRAM_API}/getUpdates?timeout=30"
+    if offset:
+        url += f"&offset={offset}"
+    return make_request(url, timeout=35)
+
+
+def forward_update(update):
+    """Reenvía un update a la API local. Retorna True si fue exitoso."""
+    update_id = update.get("update_id")
+    logger.info(f"Forwarding Update {update_id} to {API_URL}...")
     try:
-        await service.run()
-    except asyncio.CancelledError:
-        pass
-    finally:
-        await service.shutdown()
+        result = make_request(API_URL, method="POST", data=update, timeout=15)
+        if result is not None:
+            logger.info(f"✅ Update {update_id} entregado exitosamente.")
+            return True
+        else:
+            logger.error(
+                f"❌ API Local no pudo procesar Update {update_id}. "
+                f"¿Está el contenedor corriendo y el puerto 8000 expuesto?"
+            )
+            return False
+    except Exception as e:
+        logger.error(f"❌ Error crítico reenviando Update {update_id}: {e}")
+        return False
+
+
+def main():
+    logger.info("Iniciando Polling Service v0.3.0 (StdLib + Resilient)...")
+    logger.info(f"Target: {API_URL}")
+
+    def signal_handler(sig, frame):
+        logger.info("Deteniendo polling...")
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    delete_webhook()
+
+    offset = None
+    while True:
+        try:
+            updates = get_updates(offset)
+            if updates is None:
+                logger.warning("⚠️ Sin respuesta de Telegram. Posible problema de red.")
+                time.sleep(5)
+                continue
+
+            if updates.get("ok"):
+                result_list = updates.get("result", [])
+                if result_list:
+                    logger.info(f"Recibidos {len(result_list)} updates de Telegram.")
+                for update in result_list:
+                    success = forward_update(update)
+                    if success:
+                        # Solo incrementar offset si la entrega fue exitosa
+                        offset = update["update_id"] + 1
+                    else:
+                        # NO incrementar offset: Telegram reenviará este mensaje
+                        logger.warning(
+                            f"⏳ Reintentando update {update['update_id']} en 3s..."
+                        )
+                        time.sleep(3)
+                        break  # Salir del for para re-consultar desde este offset
+            else:
+                error_msg = updates.get("description", "Unknown error")
+                logger.error(f"❌ Telegram API Error: {error_msg}")
+                time.sleep(5)
+        except Exception as e:
+            logger.error(f"Error en ciclo principal: {e}")
+            time.sleep(5)
 
 
 if __name__ == "__main__":
-    try:
-        asyncio.run(main())
-    except KeyboardInterrupt:
-        pass
+    main()
