@@ -4,6 +4,11 @@
 # En una e2-micro, el handshake TLS (4-6 round trips a Amsterdam) falla ~50%.
 # SOLUCIÓN: http.client.HTTPSConnection mantiene el socket TLS abierto (keep-alive),
 # haciendo el handshake costoso UNA SOLA VEZ.
+#
+# NOTA: Este script corre FUERA de Docker con el Python del sistema.
+# Debe ser compatible con Python >= 3.7 (usar `from __future__ import annotations`).
+
+from __future__ import annotations
 
 import http.client
 import json
@@ -55,6 +60,9 @@ API_URL = os.getenv("LOCAL_API_URL", "http://127.0.0.1:8000/api/v1/webhooks/tele
 if not TOKEN:
     logger.error("TELEGRAM_BOT_TOKEN no encontrado.")
     sys.exit(1)
+
+# Type narrowing for static analysis
+assert TOKEN is not None
 
 TELEGRAM_HOST = "api.telegram.org"
 POLLING_TIMEOUT = 20  # Reducido a 20s para mayor margen con GCE

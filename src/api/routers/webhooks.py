@@ -28,14 +28,14 @@ async def _download_event_files(
     payload_updates = {}
     if event.file_id:
         if event.event_type == "audio":
-            audio_file_path = await telegram_interface.download_telegram_audio.ainvoke({
+            audio_file_path = await telegram_interface.download_telegram_file.ainvoke({
                 "file_id": event.file_id,
                 "destination_folder": str(temp_path),
             })
             payload_updates["audio_file_path"] = audio_file_path
             logger.info(f"Audio descargado en {audio_file_path}")
         elif event.event_type == "image":
-            image_file_path = await telegram_interface.download_telegram_audio.ainvoke({
+            image_file_path = await telegram_interface.download_telegram_file.ainvoke({
                 "file_id": event.file_id,
                 "destination_folder": str(temp_path),
             })
