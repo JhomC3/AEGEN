@@ -5,9 +5,10 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
+from src.core.dependencies import get_sqlite_store
 from src.core.engine import llm
+from src.memory.ingestion_pipeline import IngestionPipeline
 from src.memory.redis_buffer import RedisMessageBuffer
-from src.tools.google_file_search import file_search_tool
 
 logger = logging.getLogger(__name__)
 
@@ -183,17 +184,20 @@ class LongTermMemoryManager:
             buffer = await self.get_buffer()
             await buffer.clear_buffer(chat_id)
 
-            # 3. Sincronizar con Google File Search (Cloud Vault) - Diskless!
+            # 3. Sincronizar con SQLite (Nueva Memoria Local-First)
             try:
-                cloud_content = (
-                    f"Historial consolidado del usuario {chat_id}:\n\n{new_summary}"
+                store = get_sqlite_store()
+                pipeline = IngestionPipeline(store)
+
+                new_chunks = await pipeline.process_text(
+                    chat_id=chat_id,
+                    text=new_summary,
+                    memory_type="conversation",
+                    metadata={"source": "long_term_memory_summary"},
                 )
-                await file_search_tool.upload_from_string(
-                    content=cloud_content, filename="vault.txt", chat_id=chat_id
-                )
-                logger.info(f"Bóveda en la nube actualizada (diskless) para {chat_id}")
+                logger.info(f"Summary persisted to SQLite. New chunks: {new_chunks}")
             except Exception as fe:
-                logger.warning(f"No se pudo sincronizar con Google File API: {fe}")
+                logger.warning(f"No se pudo sincronizar con SQLite: {fe}")
 
             logger.info(f"Memoria consolidada exitosamente para {chat_id}")
 

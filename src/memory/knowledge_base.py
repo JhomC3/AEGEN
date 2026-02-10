@@ -4,6 +4,9 @@ import logging
 from datetime import datetime
 from typing import Any
 
+from src.core.dependencies import get_sqlite_store
+from src.memory.ingestion_pipeline import IngestionPipeline
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,45 +37,47 @@ class KnowledgeBaseManager:
 
     async def load_knowledge(self, chat_id: str) -> dict[str, Any]:
         """
-        Carga la bóveda desde Redis. Si no existe, intenta recuperación vía Gateway.
+        Carga la bóveda desde Redis. Si no existe, intenta recuperación desde SQLite.
         """
         from src.core.dependencies import redis_connection
-        from src.memory.cloud_gateway import cloud_gateway
 
-        if redis_connection is None:
-            return self._get_default_knowledge()
+        # 1. Intentar desde Redis
+        if redis_connection:
+            key = self._redis_key(chat_id)
+            try:
+                raw_data = await redis_connection.get(key)
+                if raw_data:
+                    if isinstance(raw_data, bytes):
+                        raw_data = raw_data.decode("utf-8")
+                    return json.loads(raw_data)
+            except Exception as e:
+                logger.error(
+                    f"Error cargando conocimiento de Redis para {chat_id}: {e}"
+                )
 
-        key = self._redis_key(chat_id)
+        # 2. Intentar desde SQLite (Búsqueda por tipo para obtener el más reciente)
         try:
-            raw_data = await redis_connection.get(key)
-            if raw_data:
-                if isinstance(raw_data, bytes):
-                    raw_data = raw_data.decode("utf-8")
-                return json.loads(raw_data)
+            from src.memory.hybrid_search import HybridSearch
+
+            store = get_sqlite_store()
+            search = HybridSearch(store)
+            results = await search.search_by_type(
+                memory_type="fact", limit=1, chat_id=chat_id, namespace="user"
+            )
+            if results:
+                # El contenido es el JSON de la KB
+                kb_data = json.loads(results[0]["content"])
+                return kb_data
         except Exception as e:
-            logger.error(f"Error cargando conocimiento de Redis para {chat_id}: {e}")
-
-        # --- AUTO-RECUPERACIÓN UNIFICADA (Gateway) ---
-        logger.info(
-            f"Conocimiento no encontrado en Redis para {chat_id}. Recuperando de Cloud..."
-        )
-        recovered_knowledge = await cloud_gateway.download_memory(
-            chat_id, "knowledge_base"
-        )
-
-        if recovered_knowledge:
-            await self.save_knowledge(chat_id, recovered_knowledge)
-            return recovered_knowledge
+            logger.error(
+                f"Error recuperando conocimiento de SQLite para {chat_id}: {e}"
+            )
 
         return self._get_default_knowledge()
 
     async def save_knowledge(self, chat_id: str, knowledge: dict[str, Any]):
-        """Guarda la bóveda en Redis y sincroniza unificada con Google Cloud."""
+        """Guarda la bóveda en Redis y SQLite (Local-First)."""
         from src.core.dependencies import redis_connection
-        from src.memory.cloud_gateway import cloud_gateway
-
-        if redis_connection is None:
-            return
 
         knowledge["last_updated"] = datetime.now().isoformat()
         key = self._redis_key(chat_id)
@@ -80,30 +85,32 @@ class KnowledgeBaseManager:
         try:
             # 1. Guardar en Redis
             payload = json.dumps(knowledge, ensure_ascii=False)
-            await redis_connection.set(key, payload)
+            if redis_connection:
+                await redis_connection.set(key, payload)
 
-            # 2. Sincronización Unificada
-            import asyncio
+            # 2. Sincronización con SQLite (Nueva Memoria Local-First)
+            try:
+                store = get_sqlite_store()
+                pipeline = IngestionPipeline(store)
 
-            asyncio.create_task(
-                cloud_gateway.upload_memory(
+                # Ingerir el conocimiento estructurado como un documento
+                # Esto permite que sea recuperable vía búsqueda híbrida
+                await pipeline.process_text(
                     chat_id=chat_id,
-                    filename="knowledge_base",
-                    data=knowledge,
-                    mem_type="knowledge_base",
+                    text=payload,
+                    memory_type="fact",
+                    metadata={"source": "knowledge_base", "type": "structured"},
                 )
-            )
+                logger.debug(f"Knowledge Base synchronized with SQLite for {chat_id}")
+            except Exception as se:
+                logger.warning(f"Error synchronizing Knowledge Base with SQLite: {se}")
 
         except Exception as e:
             logger.error(f"Error guardando conocimiento para {chat_id}: {e}")
 
     async def sync_to_cloud(self, chat_id: str, knowledge: dict[str, Any]):
-        """OBSOLETO: Se mantiene por compatibilidad."""
-        from src.memory.cloud_gateway import cloud_gateway
-
-        await cloud_gateway.upload_memory(
-            chat_id, "knowledge_base", knowledge, "knowledge_base"
-        )
+        """OBSOLETO: No realiza ninguna acción en arquitectura Local-First."""
+        pass
 
 
 # Singleton
