@@ -6,7 +6,7 @@ Uses Reciprocal Rank Fusion (RRF) to rank documents from multiple sources.
 """
 
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.memory.embeddings import EmbeddingService
 from src.memory.keyword_search import KeywordSearch
@@ -31,12 +31,12 @@ class HybridSearch:
         self,
         query: str,
         limit: int = 10,
-        chat_id: Optional[str] = None,
+        chat_id: str | None = None,
         namespace: str = "user",
         rrf_k: int = 60,
         vector_weight: float = 0.7,
         keyword_weight: float = 0.3,
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Realiza una búsqueda híbrida y combina resultados con RRF.
 
@@ -65,7 +65,7 @@ class HybridSearch:
 
         # 3. Combinar resultados con RRF
         # rrf_scores[memory_id] = score
-        rrf_scores: Dict[int, float] = {}
+        rrf_scores: dict[int, float] = {}
 
         # Procesar resultados vectoriales
         for rank, (memory_id, _) in enumerate(vector_results, 1):
@@ -131,15 +131,15 @@ class HybridSearch:
         self,
         memory_type: str,
         limit: int = 10,
-        chat_id: Optional[str] = None,
+        chat_id: str | None = None,
         namespace: str = "user",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Recupera memorias filtrando solo por tipo (sin búsqueda semántica).
         """
         db = await self.store.get_db()
         query = "SELECT * FROM memories WHERE memory_type = ?"
-        params: List[Any] = [memory_type]
+        params: list[Any] = [memory_type]
 
         if chat_id:
             query += " AND chat_id = ?"

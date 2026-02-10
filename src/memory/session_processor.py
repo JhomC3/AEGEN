@@ -6,7 +6,7 @@ Processes conversational buffers when a session ends or triggers consolidation.
 """
 
 import logging
-from typing import Any, Dict, List
+from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -40,7 +40,7 @@ class SessionProcessor:
         ])
 
     async def process_session(
-        self, chat_id: str, messages: List[Dict[str, Any]]
+        self, chat_id: str, messages: list[dict[str, Any]]
     ) -> int:
         """
         Consolida una sesión de conversación en la memoria de largo plazo.

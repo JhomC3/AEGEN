@@ -46,7 +46,7 @@ class GlobalKnowledgeLoader:
             logger.info(f"Procesando conocimiento global: {file_path.name}")
             try:
                 # Leer contenido del archivo de forma asíncrona
-                async with aiofiles.open(file_path, mode="r", encoding="utf-8") as f:
+                async with aiofiles.open(file_path, encoding="utf-8") as f:
                     content = await f.read()
 
                 # Ingerir en SQLite con namespace global
