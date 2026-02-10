@@ -131,7 +131,9 @@ def get_vector_memory_manager() -> VectorMemoryManager:
     """FastAPI dependency para VectorMemoryManager."""
     from src.memory.vector_memory_manager import VectorMemoryManager
 
-    return VectorMemoryManager()
+    # Inyectar el store global para evitar re-inicialización de sqlite-vec
+    store = get_sqlite_store()
+    return VectorMemoryManager(store=store)
 
 
 def get_access_controller() -> AccessController:

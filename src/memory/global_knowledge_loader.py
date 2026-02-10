@@ -56,6 +56,17 @@ class GlobalKnowledgeLoader:
                 f"Directorio de conocimiento no encontrado: {self.knowledge_path}. "
                 "Asegúrese de que existan archivos en storage/knowledge/"
             )
+            # Depuración: Listar contenido del padre para ver qué está montado
+            try:
+                parent = self.knowledge_path.parent
+                if parent.exists():
+                    logger.info(
+                        f"Contenido de {parent}: {[x.name for x in parent.glob('*')]}"
+                    )
+                else:
+                    logger.warning(f"El directorio padre {parent} tampoco existe.")
+            except Exception as e:
+                logger.error(f"Error listando directorio: {e}")
             return
 
         # 2. Escanear archivos locales
