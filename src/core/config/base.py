@@ -58,6 +58,10 @@ class BaseAppSettings(BaseSettings):
     SQLITE_DB_PATH: str = "data/aegen_memory.db"
     SQLITE_SCHEMA_PATH: str = "src/memory/schema.sql"
 
+    # Cloud Backup (GCS)
+    GCS_BACKUP_BUCKET: str | None = None
+    GCS_CREDENTIALS_JSON: SecretStr | None = None
+
     # LangSmith Configuration
     # El proyecto en LangSmith se mantiene como MAGI para trazabilidad o se cambia?
     # Lo cambiaremos a AEGEN para consistencia.

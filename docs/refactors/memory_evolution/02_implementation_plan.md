@@ -298,7 +298,21 @@ grep -r "google_file_search\|cloud_gateway\|file_search_tool" src/
 
 ---
 
-### **FASE 7: Respaldo Cloud (Opcional, post-MVP)** ⏳ **PENDIENTE**
+### **FASE 7: Respaldo Cloud (Continuidad de Negocio)** ✅ **COMPLETADA**
+
+| Tarea | Descripción | Estado |
+|-------|-------------|--------|
+| 7.1 | Añadir `google-cloud-storage` a `pyproject.toml` | ✅ Añadido |
+| 7.2 | Configurar `GCS_BACKUP_BUCKET` en settings | ✅ Añadido |
+| 7.3 | Implementar `CloudBackupManager` (`backup.py`) | ✅ Snapshot, Gzip, Upload, Restore |
+| 7.4 | Integrar Auto-Restore en `dependencies.py` | ✅ Restauración en bootstrap |
+| 7.5 | Integrar Auto-Backup en `consolidation_worker.py` | ✅ Backup tras consolidación |
+| 7.6 | Validar lógica (Mocked GCS) | ✅ Test exitoso (Snapshot + Restore) |
+
+**Estrategia de Costo Cero:**
+- ✅ **Gzip:** Reducción de almacenamiento y transferencia.
+- ✅ **Lifecycle:** Dependencia de políticas de GCS (7 días) para autolimpieza de nubes.
+- ✅ **Asíncrono:** Backups ejecutados en segundo plano para no impactar UX.
 
 | Tarea | Descripción |
 |-------|-------------|

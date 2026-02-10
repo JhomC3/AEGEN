@@ -169,6 +169,16 @@ class ConsolidationManager:
                 metadata={"filename": f"session_{timestamp}.json", "type": "log"},
             )
             logger.info(f"Log de sesión guardado en SQLite para {chat_id}")
+
+            # 5. Trigger Cloud Backup (Fase 7)
+            import asyncio
+
+            from src.memory.backup import CloudBackupManager
+
+            backup_mgr = CloudBackupManager(store)
+            # Ejecutar en segundo plano para no bloquear la respuesta
+            asyncio.create_task(backup_mgr.create_backup())
+
         except Exception as e:
             logger.warning(
                 f"Error guardando log de sesión en SQLite para {chat_id}: {e}"

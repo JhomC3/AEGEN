@@ -57,6 +57,7 @@ dependencies = [
     "aiosqlite>=0.22.1",
     "sqlite-vec>=0.1.6",
     "sqlean-driver>=0.2.0",
+    "google-cloud-storage",
 ]
 
 [project.optional-dependencies]
