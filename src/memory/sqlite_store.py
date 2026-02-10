@@ -82,3 +82,83 @@ class SQLiteStore:
     async def get_db(self) -> aiosqlite.Connection:
         """Retorna la conexión activa, conectando si es necesario."""
         return await self.connect()
+
+    async def insert_memory(
+        self,
+        chat_id: str,
+        content: str,
+        content_hash: str,
+        memory_type: str,
+        namespace: str = "user",
+        metadata: dict | None = None,
+    ) -> int:
+        """
+        Inserta una memoria en la base de datos.
+        Retorna el ID de la memoria insertada.
+        """
+        import json
+        import sqlite3
+
+        db = await self.get_db()
+        metadata_json = json.dumps(metadata or {})
+
+        try:
+            cursor = await db.execute(
+                """
+                INSERT INTO memories (chat_id, namespace, content, content_hash, memory_type, metadata)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (chat_id, namespace, content, content_hash, memory_type, metadata_json),
+            )
+            memory_id = cursor.lastrowid
+            await db.commit()
+            return memory_id if memory_id is not None else -1
+        except sqlite3.IntegrityError:
+            # Probablemente duplicado por hash
+            logger.debug(f"Memory with hash {content_hash} already exists.")
+            async with db.execute(
+                "SELECT id FROM memories WHERE content_hash = ?", (content_hash,)
+            ) as cursor:
+                row = await cursor.fetchone()
+                return row[0] if row else -1
+        except Exception as e:
+            logger.error(f"Error inserting memory: {e}")
+            await db.rollback()
+            raise
+
+    async def insert_vector(self, memory_id: int, embedding: list[float]) -> int:
+        """
+        Inserta un vector y lo vincula con una memoria.
+        """
+        import struct
+
+        db = await self.get_db()
+        vector_blob = struct.pack(f"{len(embedding)}f", *embedding)
+
+        try:
+            # 1. Insertar en tabla vectorial
+            cursor = await db.execute(
+                "INSERT INTO memory_vectors(embedding) VALUES (?)", (vector_blob,)
+            )
+            vector_id = cursor.lastrowid
+
+            # 2. Vincular en tabla de mapeo
+            await db.execute(
+                "INSERT INTO vector_memory_map (vector_id, memory_id) VALUES (?, ?)",
+                (vector_id, memory_id),
+            )
+            await db.commit()
+            return vector_id if vector_id is not None else -1
+        except Exception as e:
+            logger.error(f"Error inserting vector: {e}")
+            await db.rollback()
+            raise
+
+    async def hash_exists(self, content_hash: str) -> bool:
+        """Verifica si un hash de contenido ya existe en la DB."""
+        db = await self.get_db()
+        async with db.execute(
+            "SELECT 1 FROM memories WHERE content_hash = ?", (content_hash,)
+        ) as cursor:
+            row = await cursor.fetchone()
+            return row is not None
