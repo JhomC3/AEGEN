@@ -164,7 +164,24 @@ pytest tests/unit/memory/test_embeddings.py -v
 
 ---
 
-### **FASE 3: Búsqueda Híbrida (3-4 horas)**
+### **FASE 3: Búsqueda Híbrida** ✅ **COMPLETADA**
+
+| Tarea | Archivo | Estado |
+|-------|---------|--------|
+| 3.1 | `src/memory/vector_search.py` | ✅ KNN search con `sqlite-vec` |
+| 3.2 | `src/memory/keyword_search.py` | ✅ FTS5 search (BM25 rank) |
+| 3.3 | `src/memory/hybrid_search.py` | ✅ Ranking RRF (Reciprocal Rank Fusion) |
+| 3.4 | `src/memory/vector_memory_manager.py` | ✅ API pública actualizada con búsqueda híbrida |
+
+**Mejoras y Validaciones:**
+- ✅ **RRF Ranking:** Combina inteligentemente resultados semánticos (0.7) y por keywords (0.3).
+- ✅ **Filtrado Multi-tenant:** Búsqueda aislada por `chat_id` y `namespace`.
+- ✅ **Hidratación Eficiente:** Recuperación de contenido completo desde la tabla `memories` tras el ranking.
+- ✅ **Verificación E2E:** Script `scripts/verify_phase3.py` valida precisión semántica y exactitud por keywords.
+
+---
+
+### **FASE 3: Búsqueda Híbrida (3-4 horas)** [LEGACY - VER ARRIBA]
 
 | Tarea | Archivo | Descripción |
 |-------|---------|-------------|
