@@ -1,4 +1,4 @@
-# Polling Service v0.4.0 - GCE Optimized (StdLib)
+# Polling Service v0.4.1 - GCE Optimized (StdLib)
 import json
 import logging
 import os
@@ -41,6 +41,8 @@ def load_env_file():
 
 def make_request(url, method="GET", data=None, timeout=30):
     """Realiza peticiones HTTP robustas."""
+    # Limpiar URL por si acaso hay espacios invisibles
+    url = url.strip()
     try:
         proxy_url = (
             os.getenv("TELEGRAM_PROXY")
@@ -67,13 +69,15 @@ def make_request(url, method="GET", data=None, timeout=30):
             return json.loads(response.read().decode())
     except urllib.error.URLError as e:
         if "api.telegram.org" in url:
-            logger.warning(f"Fallo de red temporal en Telegram: {e.reason}")
+            logger.warning(
+                f"Fallo de red temporal en Telegram ({type(e.reason).__name__}): {e.reason}"
+            )
         else:
             logger.error(f"Error conectando a API Local: {e.reason}")
         return None
     except urllib.error.HTTPError as e:
         if "deleteWebhook" in url and e.code == 404:
-            return None  # Ignorar si no existe webhook
+            return None
         logger.error(f"HTTP Error {e.code} en {url}: {e.reason}")
         return None
     except Exception as e:
@@ -83,7 +87,9 @@ def make_request(url, method="GET", data=None, timeout=30):
 
 # --- Main Logic ---
 load_env_file()
-TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+# FORZAR STRIP DEL TOKEN (podría venir con espacios del EnvironmentFile)
+TOKEN_RAW = os.getenv("TELEGRAM_BOT_TOKEN")
+TOKEN = TOKEN_RAW.strip() if TOKEN_RAW else None
 API_URL = os.getenv("LOCAL_API_URL", "http://127.0.0.1:8000/api/v1/webhooks/telegram")
 
 if not TOKEN:
@@ -91,7 +97,6 @@ if not TOKEN:
     sys.exit(1)
 
 TELEGRAM_API = f"https://api.telegram.org/bot{TOKEN}"
-# TIMEOUT REDUCIDO: 25s long polling < 30s GCE Firewall Idle Timeout
 POLLING_TIMEOUT = 25
 
 
@@ -101,7 +106,6 @@ def delete_webhook():
 
 
 def get_updates(offset=None):
-    # Solicitamos 25s, pero el socket espera hasta 30s para dar margen
     url = f"{TELEGRAM_API}/getUpdates?timeout={POLLING_TIMEOUT}"
     if offset:
         url += f"&offset={offset}"
@@ -109,16 +113,15 @@ def get_updates(offset=None):
 
 
 def forward_update(update):
-    """Reenvía update a API local. Retorna True solo si API confirma (200/202)."""
+    """Reenvía update a API local."""
     update_id = update.get("update_id")
     try:
-        # Timeout corto (5s) para la API local
         result = make_request(API_URL, method="POST", data=update, timeout=5)
         if result is not None:
             logger.info(f"✅ Update {update_id} -> API Local: OK")
             return True
         else:
-            logger.warning(f"❌ Update {update_id} -> API Local: FALLÓ (Sin respuesta)")
+            logger.warning(f"❌ Update {update_id} -> API Local: FALLÓ")
             return False
     except Exception as e:
         logger.error(f"❌ Error crítico reenviando Update {update_id}: {e}")
@@ -127,8 +130,9 @@ def forward_update(update):
 
 def main():
     logger.info(
-        f"Iniciando Polling Service v0.4.0 (GCE Optimized / Timeout={POLLING_TIMEOUT}s)"
+        f"Iniciando Polling Service v0.4.1 (GCE Optimized / Timeout={POLLING_TIMEOUT}s)"
     )
+    logger.info(f"Token (masked): {TOKEN[:10]}...{TOKEN[-5:]}")
     logger.info(f"Target API: {API_URL}")
 
     def signal_handler(sig, frame):
@@ -138,7 +142,6 @@ def main():
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
 
-    # Limpieza inicial
     delete_webhook()
 
     offset = None
@@ -149,16 +152,14 @@ def main():
             updates = get_updates(offset)
 
             if updates is None:
-                # Estrategia de Backoff Exponencial
                 consecutive_errors += 1
-                sleep_time = min(2 * consecutive_errors, 30)  # Max 30s
+                sleep_time = min(2 * consecutive_errors, 30)
                 logger.warning(
                     f"⚠️ Error de conexión #{consecutive_errors}. Esperando {sleep_time}s..."
                 )
                 time.sleep(sleep_time)
                 continue
 
-            # Si llegamos aquí, conexión exitosa -> reset contador
             if consecutive_errors > 0:
                 logger.info("🟢 Conexión con Telegram restablecida.")
                 consecutive_errors = 0
@@ -168,25 +169,19 @@ def main():
                 for update in result_list:
                     success = forward_update(update)
                     if success:
-                        # Confirmar recepción a Telegram avanzando el offset
                         offset = update["update_id"] + 1
                     else:
-                        # Si falla local, NO avanzamos offset. Telegram reenvía.
-                        # Pausa breve para no saturar si la API local está caída
                         logger.info("⏳ API Local no disponible. Reintentando en 5s...")
                         time.sleep(5)
-                        break  # Romper ciclo de updates para reintentar el mismo
+                        break
             else:
                 error_msg = updates.get("description", "Unknown error")
                 error_code = updates.get("error_code")
                 logger.error(f"❌ Telegram API Error {error_code}: {error_msg}")
-                if error_code == 409:  # Conflict (otro bot corriendo)
-                    time.sleep(10)
-                else:
-                    time.sleep(5)
+                time.sleep(5)
 
         except Exception as e:
-            logger.error(f"🔥 Error no controlado en loop principal: {e}")
+            logger.error(f"🔥 Error no controlado: {e}")
             time.sleep(5)
 
 
