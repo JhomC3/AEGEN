@@ -16,6 +16,7 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - APP_ENV=${APP_ENV:-production}
       - TZ=America/Bogota
+      - DOCKER_ENV=true
     volumes:
       - .env:/app/.env
       - ./storage:/app/storage

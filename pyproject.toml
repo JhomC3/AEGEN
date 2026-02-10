@@ -58,6 +58,7 @@ dependencies = [
     "sqlite-vec>=0.1.6",
     "sqlean-driver>=0.2.0",
     "google-cloud-storage",
+    "pymupdf",
 ]
 
 [project.optional-dependencies]

@@ -6,6 +6,7 @@ Implements full-text search for exact and prefix matching.
 """
 
 import logging
+import re
 from typing import Any
 
 from src.memory.sqlite_store import SQLiteStore
@@ -21,6 +22,35 @@ class KeywordSearch:
     def __init__(self, store: SQLiteStore):
         self.store = store
 
+    @staticmethod
+    def _sanitize_fts5_query(query: str) -> str:
+        """
+        Escapa caracteres especiales para FTS5 MATCH para evitar errores de sintaxis.
+        Enfocado en robustez para consultas de chat (incluyendo signos de interrogación, comas, etc.).
+        """
+        # 1. Eliminar caracteres que FTS5 interpreta como operadores lógicos o de proximidad
+        # Mantenemos letras, números y espacios.
+        sanitized = re.sub(r"[^\w\s]", " ", query, flags=re.UNICODE)
+
+        # 2. Colapsar espacios múltiples
+        sanitized = re.sub(r"\s+", " ", sanitized).strip()
+
+        if not sanitized:
+            return ""
+
+        # 3. Envolver cada término en comillas para búsqueda literal y permitir prefijos si es necesario.
+        # Para chats, lo más robusto es buscar términos individuales con operador OR o AND implícito.
+        # SQLite FTS5 maneja bien "termino1" "termino2" como AND implícito.
+        terms = [f'"{t}"' for t in sanitized.split() if len(t) >= 2]
+
+        # Si no hay términos válidos tras la limpieza, devolver cadena vacía
+        if not terms:
+            return ""
+
+        # Unimos con espacios (AND implícito en FTS5) o podríamos usar OR si preferimos más flexibilidad.
+        # Usaremos espacio para mayor relevancia.
+        return " ".join(terms)
+
     async def search(
         self,
         query_text: str,
@@ -30,17 +60,13 @@ class KeywordSearch:
     ) -> list[tuple[int, float]]:
         """
         Realiza una búsqueda FTS5.
-
-        Args:
-            query_text: Texto a buscar
-            limit: Número máximo de resultados
-            chat_id: Opcional, filtrar por chat
-            namespace: Opcional, filtrar por namespace
-
-        Returns:
-            Lista de tuplas (memory_id, score) - BM25 score (menor es mejor en FTS5 rank)
         """
         if not query_text or not query_text.strip():
+            return []
+
+        # Sanitizar la entrada del usuario antes de pasarla a MATCH
+        sanitized_query = self._sanitize_fts5_query(query_text)
+        if not sanitized_query:
             return []
 
         db = await self.store.get_db()
@@ -56,7 +82,7 @@ class KeywordSearch:
             FROM memories_fts
             WHERE memories_fts MATCH ?
         """
-        params: list[Any] = [query_text]
+        params: list[Any] = [sanitized_query]
 
         # Filtros adicionales requieren JOIN con memories si no están en la tabla FTS
         # Como no están en la tabla virtual, unimos:
