@@ -1,15 +1,23 @@
-# Polling Service v0.4.1 - GCE Optimized (StdLib)
+# Polling Service v0.5.0 - Persistent TLS Connection for GCE
+#
+# PROBLEMA RESUELTO: urllib crea una conexión TCP+TLS nueva por cada request.
+# En una e2-micro, el handshake TLS (4-6 round trips a Amsterdam) falla ~50%.
+# SOLUCIÓN: http.client.HTTPSConnection mantiene el socket TLS abierto (keep-alive),
+# haciendo el handshake costoso UNA SOLA VEZ.
+
+import http.client
 import json
 import logging
 import os
 import signal
+import ssl
 import sys
 import time
 import urllib.error
 import urllib.request
 from pathlib import Path
 
-# --- Configuración de Logging ---
+# --- Logging ---
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
@@ -25,7 +33,6 @@ def load_env_file():
         env_path = Path(__file__).resolve().parent.parent.parent / ".env"
         if not env_path.exists():
             return
-
         with open(env_path) as f:
             for line in f:
                 line = line.strip()
@@ -39,117 +46,163 @@ def load_env_file():
         logger.warning(f"No se pudo leer .env: {e}")
 
 
-def make_request(url, method="GET", data=None, timeout=30):
-    """Realiza peticiones HTTP robustas."""
-    # Limpiar URL por si acaso hay espacios invisibles
-    url = url.strip()
-    try:
-        proxy_url = (
-            os.getenv("TELEGRAM_PROXY")
-            or os.getenv("https_proxy")
-            or os.getenv("HTTPS_PROXY")
-        )
-
-        opener = urllib.request.build_opener()
-        if proxy_url and "api.telegram.org" in url:
-            proxy_handler = urllib.request.ProxyHandler({
-                "http": proxy_url,
-                "https": proxy_url,
-            })
-            opener = urllib.request.build_opener(proxy_handler)
-
-        req = urllib.request.Request(url, method=method)
-        req.add_header("Content-Type", "application/json")
-
-        if data:
-            json_data = json.dumps(data).encode("utf-8")
-            req.data = json_data
-
-        with opener.open(req, timeout=timeout) as response:
-            return json.loads(response.read().decode())
-    except urllib.error.URLError as e:
-        if "api.telegram.org" in url:
-            logger.warning(
-                f"Fallo de red temporal en Telegram ({type(e.reason).__name__}): {e.reason}"
-            )
-        else:
-            logger.error(f"Error conectando a API Local: {e.reason}")
-        return None
-    except urllib.error.HTTPError as e:
-        if "deleteWebhook" in url and e.code == 404:
-            return None
-        logger.error(f"HTTP Error {e.code} en {url}: {e.reason}")
-        return None
-    except Exception as e:
-        logger.error(f"Error inesperado ({type(e).__name__}) en {url}: {e}")
-        return None
-
-
-# --- Main Logic ---
+# --- Configuración ---
 load_env_file()
-# FORZAR STRIP DEL TOKEN (podría venir con espacios del EnvironmentFile)
 TOKEN_RAW = os.getenv("TELEGRAM_BOT_TOKEN")
 TOKEN = TOKEN_RAW.strip() if TOKEN_RAW else None
 API_URL = os.getenv("LOCAL_API_URL", "http://127.0.0.1:8000/api/v1/webhooks/telegram")
 
 if not TOKEN:
-    logger.error("TELEGRAM_BOT_TOKEN no encontrado. Verifica tu .env o systemd unit.")
+    logger.error("TELEGRAM_BOT_TOKEN no encontrado.")
     sys.exit(1)
 
-TELEGRAM_API = f"https://api.telegram.org/bot{TOKEN}"
-POLLING_TIMEOUT = 25
+TELEGRAM_HOST = "api.telegram.org"
+POLLING_TIMEOUT = 20  # Reducido a 20s para mayor margen con GCE
 
 
-def delete_webhook():
-    logger.info("Eliminando webhook existente...")
-    make_request(f"{TELEGRAM_API}/deleteWebhook", method="POST", timeout=10)
+class PersistentTelegramClient:
+    """
+    Cliente HTTP con conexión TLS persistente a api.telegram.org.
+    Reutiliza el socket TLS evitando el handshake costoso en cada request.
+    """
+
+    def __init__(self, token: str):
+        self.token = token
+        self.base_path = f"/bot{token}"
+        self.conn: http.client.HTTPSConnection | None = None
+        self._connect()
+
+    def _connect(self):
+        """Crea o recrea la conexión TLS persistente."""
+        try:
+            if self.conn:
+                try:
+                    self.conn.close()
+                except Exception:
+                    pass
+
+            ctx = ssl.create_default_context()
+            self.conn = http.client.HTTPSConnection(
+                TELEGRAM_HOST,
+                timeout=POLLING_TIMEOUT + 10,  # Timeout generoso para el socket
+                context=ctx,
+            )
+            # Forzar el handshake TLS ahora (no lazy)
+            self.conn.connect()
+            logger.info("🔐 Conexión TLS persistente establecida con Telegram.")
+        except Exception as e:
+            logger.warning(f"Error creando conexión TLS: {e}")
+            self.conn = None
+
+    def request(self, method: str, params: dict | None = None) -> dict | None:
+        """
+        Realiza una petición a la API de Telegram reutilizando la conexión TLS.
+        Si la conexión se pierde, la recrea automáticamente (1 solo reintento).
+        """
+        path = f"{self.base_path}/{method}"
+        if params:
+            query = "&".join(f"{k}={v}" for k, v in params.items())
+            path = f"{path}?{query}"
+
+        for attempt in range(2):  # Máximo 1 reintento con reconexión
+            try:
+                if self.conn is None:
+                    self._connect()
+                    if self.conn is None:
+                        return None
+
+                self.conn.request("GET", path)
+                response = self.conn.getresponse()
+                data = response.read().decode()
+                return json.loads(data)
+
+            except (
+                http.client.RemoteDisconnected,
+                ConnectionResetError,
+                BrokenPipeError,
+                OSError,
+            ) as e:
+                if attempt == 0:
+                    logger.info(
+                        f"🔄 Conexión TLS perdida ({type(e).__name__}). Reconectando..."
+                    )
+                    self._connect()
+                else:
+                    logger.warning(f"Fallo de red tras reconexión: {e}")
+                    return None
+
+            except Exception as e:
+                logger.warning(f"Error inesperado en request ({type(e).__name__}): {e}")
+                self._connect()  # Reset conexión por seguridad
+                return None
+
+        return None
+
+    def close(self):
+        if self.conn:
+            try:
+                self.conn.close()
+            except Exception:
+                pass
 
 
-def get_updates(offset=None):
-    url = f"{TELEGRAM_API}/getUpdates?timeout={POLLING_TIMEOUT}"
-    if offset:
-        url += f"&offset={offset}"
-    return make_request(url, timeout=POLLING_TIMEOUT + 5)
-
-
-def forward_update(update):
-    """Reenvía update a API local."""
+def forward_to_local_api(update: dict) -> bool:
+    """Reenvía update a la API local usando urllib (conexión local, no necesita persistencia)."""
     update_id = update.get("update_id")
     try:
-        result = make_request(API_URL, method="POST", data=update, timeout=5)
-        if result is not None:
-            logger.info(f"✅ Update {update_id} -> API Local: OK")
-            return True
-        else:
-            logger.warning(f"❌ Update {update_id} -> API Local: FALLÓ")
-            return False
+        req = urllib.request.Request(
+            API_URL,
+            data=json.dumps(update).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status in (200, 202):
+                logger.info(f"✅ Update {update_id} -> API Local: OK")
+                return True
+            else:
+                logger.warning(
+                    f"❌ Update {update_id} -> API Local: Status {resp.status}"
+                )
+                return False
     except Exception as e:
-        logger.error(f"❌ Error crítico reenviando Update {update_id}: {e}")
+        logger.warning(f"❌ Update {update_id} -> API Local: {e}")
         return False
 
 
-def main():
-    logger.info(
-        f"Iniciando Polling Service v0.4.1 (GCE Optimized / Timeout={POLLING_TIMEOUT}s)"
-    )
-    logger.info(f"Token (masked): {TOKEN[:10]}...{TOKEN[-5:]}")
-    logger.info(f"Target API: {API_URL}")
+def process_updates(updates: dict, offset: int | None) -> int | None:
+    """Procesa los updates recibidos de Telegram y retorna el nuevo offset."""
+    if not updates.get("ok"):
+        error_code = updates.get("error_code")
+        error_msg = updates.get("description", "Unknown")
+        logger.error(f"❌ Telegram API Error {error_code}: {error_msg}")
+        time.sleep(10 if error_code == 409 else 5)
+        return offset
 
-    def signal_handler(sig, frame):
-        logger.info("🛑 Deteniendo servicio de polling...")
-        sys.exit(0)
+    for update in updates.get("result", []):
+        success = forward_to_local_api(update)
+        if success:
+            offset = update["update_id"] + 1
+        else:
+            logger.info("⏳ API Local no disponible. Reintentando en 5s...")
+            time.sleep(5)
+            break
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+    return offset
 
-    delete_webhook()
 
+def polling_loop(client: PersistentTelegramClient):
+    """Bucle principal de polling con backoff exponencial y manejo de errores."""
     offset = None
     consecutive_errors = 0
 
     while True:
         try:
-            updates = get_updates(offset)
+            params = {"timeout": str(POLLING_TIMEOUT)}
+            if offset:
+                params["offset"] = str(offset)
+
+            updates = client.request("getUpdates", params)
 
             if updates is None:
                 consecutive_errors += 1
@@ -161,28 +214,39 @@ def main():
                 continue
 
             if consecutive_errors > 0:
-                logger.info("🟢 Conexión con Telegram restablecida.")
+                logger.info(
+                    f"🟢 Conexión restablecida (tras {consecutive_errors} errores)."
+                )
                 consecutive_errors = 0
 
-            if updates.get("ok"):
-                result_list = updates.get("result", [])
-                for update in result_list:
-                    success = forward_update(update)
-                    if success:
-                        offset = update["update_id"] + 1
-                    else:
-                        logger.info("⏳ API Local no disponible. Reintentando en 5s...")
-                        time.sleep(5)
-                        break
-            else:
-                error_msg = updates.get("description", "Unknown error")
-                error_code = updates.get("error_code")
-                logger.error(f"❌ Telegram API Error {error_code}: {error_msg}")
-                time.sleep(5)
+            offset = process_updates(updates, offset)
 
         except Exception as e:
             logger.error(f"🔥 Error no controlado: {e}")
             time.sleep(5)
+
+
+def main():
+    logger.info(
+        f"Iniciando Polling Service v0.5.0 (Persistent TLS / Timeout={POLLING_TIMEOUT}s)"
+    )
+    logger.info(f"Token (masked): {TOKEN[:10]}...{TOKEN[-5:]}")
+    logger.info(f"Target API: {API_URL}")
+
+    client = PersistentTelegramClient(TOKEN)
+
+    def signal_handler(sig, frame):
+        logger.info("🛑 Deteniendo servicio de polling...")
+        client.close()
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    logger.info("Eliminando webhook existente...")
+    client.request("deleteWebhook")
+
+    polling_loop(client)
 
 
 if __name__ == "__main__":
