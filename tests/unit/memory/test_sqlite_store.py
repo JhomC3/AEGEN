@@ -11,9 +11,9 @@ from src.memory.sqlite_store import SQLiteStore
 @pytest.fixture
 async def temp_db():
     """Fixture para crear una DB temporal y limpiarla después."""
-    db_path = "data/test_memory.db"
-    # Asegurar que el directorio data existe
-    Path("data").mkdir(exist_ok=True)
+    db_path = "storage/test_memory.db"
+    # Asegurar que el directorio storage existe
+    Path("storage").mkdir(exist_ok=True)
 
     if os.path.exists(db_path):
         os.remove(db_path)
