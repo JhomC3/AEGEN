@@ -416,6 +416,7 @@ class TelegramUser(BaseModel):
 class TelegramMessage(BaseModel):
     chat: TelegramChat
     from_user: TelegramUser | None = Field(None, alias="from")
+    date: int | None = None
     voice: TelegramVoice | None = None
     text: str | None = None
     photo: list[TelegramPhoto] | None = None

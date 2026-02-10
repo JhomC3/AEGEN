@@ -342,18 +342,22 @@ async def telegram_webhook(
         first_name = request.message.from_user.first_name
 
     # Diagnóstico de Latencia de Red (Telegram -> Servidor)
-    if request.message and request.message.date:
-        msg_date = datetime.fromtimestamp(request.message.date)
-        now = datetime.now()
-        latency = (now - msg_date).total_seconds()
+    try:
+        msg_date_timestamp = getattr(request.message, "date", None)
+        if msg_date_timestamp is not None:
+            msg_date = datetime.fromtimestamp(float(msg_date_timestamp))
+            now = datetime.now()
+            latency = (now - msg_date).total_seconds()
 
-        if latency > 5.0:
-            logger.warning(
-                f"⚠️ ALTA LATENCIA DE RED DETECTADA: El mensaje tardó {latency:.2f}s en llegar desde Telegram. "
-                f"(Enviado: {msg_date}, Recibido: {now})"
-            )
-        else:
-            logger.info(f"Latencia de red normal: {latency:.2f}s")
+            if latency > 5.0:
+                logger.warning(
+                    f"⚠️ ALTA LATENCIA DE RED DETECTADA: El mensaje tardó {latency:.2f}s en llegar desde Telegram. "
+                    f"(Enviado: {msg_date}, Recibido: {now})"
+                )
+            else:
+                logger.info(f"Latencia de red normal: {latency:.2f}s")
+    except Exception as e:
+        logger.warning(f"No se pudo calcular la latencia de red: {e}")
 
     fragment_data = {
         "event_type": event_type,
