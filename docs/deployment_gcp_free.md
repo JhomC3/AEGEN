@@ -156,9 +156,11 @@ sudo apt-get install python3-requests
     User=jjhonn_1020
     # Asegúrate de que la ruta sea correcta a donde clonaste el repo
     WorkingDirectory=/home/jjhonn_1020/AEGEN
-    Environment="TELEGRAM_BOT_TOKEN=PON_TU_TOKEN_AQUI"
+    # Cargar variables desde el archivo .env del proyecto
+    EnvironmentFile=/home/jjhonn_1020/AEGEN/.env
     ExecStart=/usr/bin/python3 src/tools/polling.py
     Restart=always
+    RestartSec=5
 
     [Install]
     WantedBy=multi-user.target
