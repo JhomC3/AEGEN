@@ -7,7 +7,7 @@ Implements K-Nearest Neighbors (KNN) search for semantic retrieval.
 
 import logging
 import struct
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from src.memory.sqlite_store import SQLiteStore
 
@@ -24,11 +24,11 @@ class VectorSearch:
 
     async def search(
         self,
-        query_embedding: List[float],
+        query_embedding: list[float],
         limit: int = 10,
-        chat_id: Optional[str] = None,
+        chat_id: str | None = None,
         namespace: str = "user",
-    ) -> List[Tuple[int, float]]:
+    ) -> list[tuple[int, float]]:
         """
         Realiza una búsqueda KNN en la tabla de vectores.
 
@@ -58,7 +58,7 @@ class VectorSearch:
             WHERE v.embedding MATCH ?
             AND k = ?
         """
-        params: List[Any] = [vector_blob, limit]
+        params: list[Any] = [vector_blob, limit]
 
         if chat_id:
             query += " AND mem.chat_id = ?"

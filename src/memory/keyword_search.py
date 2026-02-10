@@ -6,7 +6,7 @@ Implements full-text search for exact and prefix matching.
 """
 
 import logging
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from src.memory.sqlite_store import SQLiteStore
 
@@ -25,9 +25,9 @@ class KeywordSearch:
         self,
         query_text: str,
         limit: int = 10,
-        chat_id: Optional[str] = None,
+        chat_id: str | None = None,
         namespace: str = "user",
-    ) -> List[Tuple[int, float]]:
+    ) -> list[tuple[int, float]]:
         """
         Realiza una búsqueda FTS5.
 
@@ -56,7 +56,7 @@ class KeywordSearch:
             FROM memories_fts
             WHERE memories_fts MATCH ?
         """
-        params: List[Any] = [query_text]
+        params: list[Any] = [query_text]
 
         # Filtros adicionales requieren JOIN con memories si no están en la tabla FTS
         # Como no están en la tabla virtual, unimos:

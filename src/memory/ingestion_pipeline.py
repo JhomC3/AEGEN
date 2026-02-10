@@ -78,7 +78,7 @@ class IngestionPipeline:
         embeddings = await self.embedding_service.embed_texts(texts_to_embed)
 
         # 4. Storage
-        for (chunk, content_hash), embedding in zip(to_embed, embeddings):
+        for (chunk, content_hash), embedding in zip(to_embed, embeddings, strict=False):
             try:
                 # Insertar memoria de texto
                 memory_id = await self.store.insert_memory(

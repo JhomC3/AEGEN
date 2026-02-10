@@ -7,7 +7,7 @@ Integrates IngestionPipeline and HybridSearch for high-level operations.
 
 import logging
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from src.core.config import settings
 from src.memory.hybrid_search import HybridSearch
@@ -29,7 +29,7 @@ class VectorMemoryManager:
     Gestor de memoria vectorial y de texto de alto nivel.
     """
 
-    def __init__(self, store: Optional[SQLiteStore] = None):
+    def __init__(self, store: SQLiteStore | None = None):
         """
         Inicializa el manager con una base de datos SQLite.
         """
@@ -43,10 +43,10 @@ class VectorMemoryManager:
         self,
         user_id: str,
         query: str,
-        context_type: Optional[MemoryType] = None,
+        context_type: MemoryType | None = None,
         limit: int = 5,
         namespace: str = "user",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Recupera memorias relevantes para una consulta usando búsqueda híbrida.
 
@@ -76,7 +76,7 @@ class VectorMemoryManager:
         user_id: str,
         content: str,
         context_type: MemoryType = MemoryType.CONVERSATION,
-        metadata: Optional[Dict[str, Any]] = None,
+        metadata: dict[str, Any] | None = None,
         namespace: str = "user",
     ) -> int:
         """
@@ -106,7 +106,7 @@ class VectorMemoryManager:
         memory_type: MemoryType,
         limit: int = 10,
         namespace: str = "user",
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Recupera las memorias más recientes de un tipo específico.
         """

@@ -11,7 +11,6 @@ except ImportError:
 
 import logging
 from pathlib import Path
-from typing import Optional
 
 import aiofiles
 import aiosqlite
@@ -28,7 +27,7 @@ class SQLiteStore:
 
     def __init__(self, db_path: str):
         self.db_path = db_path
-        self._connection: Optional[aiosqlite.Connection] = None
+        self._connection: aiosqlite.Connection | None = None
         logger.info(f"SQLiteStore inicializado con ruta: {db_path}")
 
     async def connect(self) -> aiosqlite.Connection:

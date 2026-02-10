@@ -21,11 +21,15 @@ async def test_rrf_logic():
     hybrid.embedding_service.embed_query = AsyncMock(return_value=[0.1] * 768)
 
     # Mock de la base de datos para hidratación
-    db = AsyncMock()
-    store.get_db.return_value = db
+    db = MagicMock()  # Usamos MagicMock para poder configurar __aenter__
+    store.get_db = AsyncMock(return_value=db)
 
     cursor = AsyncMock()
-    db.execute.return_value.__aenter__.return_value = cursor
+    # Simular el comportamiento de context manager asíncrono para db.execute
+    execute_cm = MagicMock()
+    execute_cm.__aenter__ = AsyncMock(return_value=cursor)
+    execute_cm.__aexit__ = AsyncMock(return_value=None)
+    db.execute.return_value = execute_cm
 
     # Datos simulados de la DB
     rows = [

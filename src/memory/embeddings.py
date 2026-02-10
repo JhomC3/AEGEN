@@ -6,7 +6,6 @@ Uses Google GenAI gemini-embedding-001 model with 768 dimensions.
 """
 
 import logging
-from typing import List
 
 import google.generativeai as genai
 
@@ -40,8 +39,8 @@ class EmbeddingService:
         logger.info(f"EmbeddingService initialized with model: {model_name}")
 
     async def embed_texts(
-        self, texts: List[str], task_type: str = "RETRIEVAL_DOCUMENT"
-    ) -> List[List[float]]:
+        self, texts: list[str], task_type: str = "RETRIEVAL_DOCUMENT"
+    ) -> list[list[float]]:
         """
         Genera embeddings para una lista de textos.
 
@@ -74,7 +73,7 @@ class EmbeddingService:
             logger.error(f"Error generating embeddings: {e}")
             raise
 
-    async def embed_query(self, query: str) -> List[float]:
+    async def embed_query(self, query: str) -> list[float]:
         """
         Genera embedding para una búsqueda (query).
         """
