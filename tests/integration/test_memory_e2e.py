@@ -13,8 +13,8 @@ from src.memory.vector_memory_manager import MemoryType, VectorMemoryManager
 @pytest.fixture
 async def memory_system():
     """Setup del sistema de memoria completo con DB temporal."""
-    db_path = "data/test_integration_memory.db"
-    Path("data").mkdir(exist_ok=True)
+    db_path = "storage/test_integration_memory.db"
+    Path("storage").mkdir(exist_ok=True)
 
     if os.path.exists(db_path):
         os.remove(db_path)

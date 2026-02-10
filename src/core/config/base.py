@@ -55,7 +55,7 @@ class BaseAppSettings(BaseSettings):
     NGROK_AUTHTOKEN: SecretStr | None = None
 
     # SQLite Configuration
-    SQLITE_DB_PATH: str = "data/aegen_memory.db"
+    SQLITE_DB_PATH: str = "storage/aegen_memory.db"
     SQLITE_SCHEMA_PATH: str = "src/memory/schema.sql"
 
     # Cloud Backup (GCS)
