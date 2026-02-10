@@ -108,7 +108,25 @@ python -c "from src.memory.sqlite_store import SQLiteStore; print('OK')"
 
 ---
 
-### **FASE 2: Pipeline de Ingestión (4-5 horas)**
+### **FASE 2: Pipeline de Ingestión** ✅ **COMPLETADA**
+
+| Tarea | Archivo | Estado |
+|-------|---------|--------|
+| 2.1 | `src/memory/chunker.py` | ✅ Chunker recursivo (400 tokens, 80 overlap) |
+| 2.2 | `src/memory/embeddings.py` | ✅ Wrapper para Google `gemini-embedding-001` (768 dims) |
+| 2.3 | `src/memory/deduplicator.py` | ✅ Deduplicador por hash SHA-256 |
+| 2.4 | `src/memory/ingestion_pipeline.py` | ✅ Orquestador: chunk → dedupe → embed → store |
+| 2.5 | `src/memory/sqlite_store.py` | ✅ Métodos `insert_memory()`, `insert_vector()` y `hash_exists()` |
+
+**Mejoras y Validaciones:**
+- ✅ **Batch Embeddings:** Soporte para generar múltiples embeddings en una sola llamada a la API.
+- ✅ **Optimización de Dimensiones:** Configurado explícitamente a 768 para compatibilidad con el esquema.
+- ✅ **Tests Unitarios:** Implementados para `chunker` y `embeddings` (mocked).
+- ✅ **Verificación E2E:** Script `scripts/verify_phase2.py` valida el flujo completo y la deduplicación.
+
+---
+
+### **FASE 2: Pipeline de Ingestión (4-5 horas)** [LEGACY - VER ARRIBA]
 
 | Tarea | Archivo | Descripción |
 |-------|---------|-------------|
