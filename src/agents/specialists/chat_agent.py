@@ -17,6 +17,7 @@ from langchain_core.tools import BaseTool, tool
 from langgraph.graph import END, StateGraph
 
 from src.agents.utils.state_utils import extract_user_content_from_state
+from src.core.dependencies import get_vector_memory_manager
 from src.core.engine import create_observable_config, llm
 from src.core.interfaces.specialist import SpecialistInterface
 from src.core.message_utils import dict_to_langchain_messages
@@ -25,7 +26,6 @@ from src.core.registry import specialist_registry
 from src.core.schemas import GraphStateV2
 from src.memory.knowledge_base import knowledge_base_manager
 from src.memory.long_term_memory import long_term_memory
-from src.memory.vector_memory_manager import VectorMemoryManager
 from src.personality.prompt_builder import system_prompt_builder
 
 logger = logging.getLogger(__name__)
@@ -93,7 +93,7 @@ async def conversational_chat_tool(
 
     # 2. Smart RAG
     try:
-        manager = VectorMemoryManager()
+        manager = get_vector_memory_manager()
         # Buscar en conocimiento global
         global_results = await manager.retrieve_context(
             user_id="system", query=user_message, limit=2, namespace="global"
