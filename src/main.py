@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -69,10 +70,10 @@ async def lifespan(app: FastAPI):
     ])
 
     # --- NUEVO: Arquitectura de Memoria Unificada ---
-    # 1. Bootstrap de conocimiento global
+    # 1. Bootstrap de conocimiento global (En segundo plano para no bloquear el puerto 8000)
     from src.memory.global_knowledge_loader import global_knowledge_loader
 
-    await global_knowledge_loader.check_and_bootstrap()
+    asyncio.create_task(global_knowledge_loader.check_and_bootstrap())
 
     logger.info("Lifespan: Unified Memory Architecture Active.")
     logger.info("Lifespan: Application startup complete.")
