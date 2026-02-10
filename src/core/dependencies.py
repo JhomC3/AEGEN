@@ -29,7 +29,17 @@ async def initialize_global_resources() -> tuple[aioredis.Redis | None, IEventBu
     """Inicializa recursos globales como Redis y el bus de eventos."""
     global redis_connection, event_bus, sqlite_store
 
-    # 1. Inicializar SQLite
+    import os
+
+    from src.memory.backup import CloudBackupManager
+
+    # 1. Recuperación Automática (si la DB no existe y tenemos bucket configurado)
+    if not os.path.exists(settings.SQLITE_DB_PATH) and settings.GCS_BACKUP_BUCKET:
+        logger.info("Database not found locally. Attempting restore from GCS...")
+        backup_mgr = CloudBackupManager()
+        await backup_mgr.restore_latest()
+
+    # 2. Inicializar SQLite
     try:
         sqlite_store = SQLiteStore(settings.SQLITE_DB_PATH)
         await sqlite_store.init_db(settings.SQLITE_SCHEMA_PATH)
