@@ -1,4 +1,5 @@
 # src/memory/sqlite_store.py
+import asyncio
 import sys
 
 # Monkeypatch sqlite3 con sqlean para habilitar extensiones en macOS/Linux
@@ -28,25 +29,29 @@ class SQLiteStore:
     def __init__(self, db_path: str):
         self.db_path = db_path
         self._connection: aiosqlite.Connection | None = None
+        self._lock = asyncio.Lock()
         logger.info(f"SQLiteStore inicializado con ruta: {db_path}")
 
     async def connect(self) -> aiosqlite.Connection:
         """Establece la conexión y carga las extensiones necesarias."""
-        if self._connection is None:
-            # Asegurar que el directorio existe
-            Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+        async with self._lock:
+            if self._connection is None:
+                # Asegurar que el directorio existe
+                Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
 
-            # Conectar
-            self._connection = await aiosqlite.connect(self.db_path)
+                # Conectar
+                self._connection = await aiosqlite.connect(self.db_path)
 
-            # Cargar extensión sqlite-vec usando la ruta de la librería
-            await self._connection.enable_load_extension(True)
-            await self._connection.load_extension(sqlite_vec.loadable_path())
+                # Cargar extensión sqlite-vec usando la ruta de la librería
+                await self._connection.enable_load_extension(True)
+                await self._connection.load_extension(sqlite_vec.loadable_path())
 
-            # Configurar row_factory para obtener diccionarios
-            self._connection.row_factory = aiosqlite.Row
+                # Configurar row_factory para obtener diccionarios
+                self._connection.row_factory = aiosqlite.Row
 
-            logger.info("Conexión a SQLite establecida y extensión vectorial cargada.")
+                logger.info(
+                    "Conexión a SQLite establecida y extensión vectorial cargada."
+                )
 
         return self._connection
 

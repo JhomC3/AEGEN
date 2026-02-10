@@ -176,9 +176,9 @@ telegram_manager = TelegramToolManager()
 
 
 @tool
-async def download_telegram_audio(file_id: str, destination_folder: str) -> str:
+async def download_telegram_file(file_id: str, destination_folder: str) -> str:
     """
-    Tool para descargar un archivo de audio desde Telegram a una carpeta específica.
+    Tool para descargar un archivo desde Telegram a una carpeta específica.
 
     Args:
         file_id: El ID del archivo a descargar.
@@ -190,9 +190,7 @@ async def download_telegram_audio(file_id: str, destination_folder: str) -> str:
     destination = Path(destination_folder)
     file_path = await telegram_manager.download_file(file_id, destination)
     if not file_path:
-        raise ConnectionError(
-            "No se pudo descargar el archivo de audio desde Telegram."
-        )
+        raise ConnectionError("No se pudo descargar el archivo desde Telegram.")
     return str(file_path)
 
 

@@ -140,6 +140,11 @@ sudo apt-get install python3-requests
 
 ### 4.2. Crear y Ejecutar el Servicio de Polling
 
+0.  Verifica que el Python del sistema sea compatible:
+    ```bash
+    python3 --version  # Debe ser >= 3.7
+    ```
+
 1.  Crea un archivo de servicio para que corra siempre:
     ```bash
     sudo nano /etc/systemd/system/aegen-polling.service
