@@ -17,23 +17,64 @@ from src.core.schemas import (
     AnalysisStatus,
     AnalyzeQuery,
     AnalyzeResponse,
+    CrisisContact,
     HealthCheckResponse,
+    MemorySettings,
     PlanStep,
     ReportFormat,
     ServiceHealth,
     StatusResponse,
+    UserProfile,
 )
 
-# --- Fixtures permanecen igual, son una excelente práctica ---
+
+class TestProfileSchemas:
+    def test_user_profile_defaults(self):
+        """A default UserProfile must have all required sections."""
+        profile = UserProfile()
+        assert profile.identity.name == "Usuario"
+        assert profile.support_preferences.response_style == "balanced"
+        assert profile.coping_mechanisms.known_strengths == []
+        assert profile.memory_settings.consent_given is True
+        assert profile.memory_settings.ephemeral_mode is False
+        assert profile.clinical_safety.disclaimer_shown is False
+        assert len(profile.clinical_safety.emergency_resources) > 0
+
+    def test_profile_migration_from_old_dict(self):
+        """An old profile dict (missing new sections) must load with defaults."""
+        old_profile = {
+            "identity": {"name": "Jhonn", "style": "Casual"},
+            "personality_adaptation": {"humor_tolerance": 0.8},
+            "metadata": {"version": "1.1.0"},
+        }
+        profile = UserProfile.model_validate(old_profile)
+        assert profile.identity.name == "Jhonn"
+        assert profile.support_preferences.response_style == "balanced"  # default
+        assert profile.clinical_safety.disclaimer_shown is False  # default
+
+    def test_profile_roundtrip(self):
+        """Profile must survive dict -> model -> dict roundtrip."""
+        profile = UserProfile()
+        as_dict = profile.model_dump()
+        restored = UserProfile.model_validate(as_dict)
+        assert restored == profile
+
+    def test_crisis_contact_model(self):
+        contact = CrisisContact(
+            name="María", relation="hermana", how_to_reach="WhatsApp"
+        )
+        assert contact.name == "María"
+
+    def test_memory_settings_ephemeral(self):
+        ms = MemorySettings(ephemeral_mode=True)
+        assert ms.ephemeral_mode is True
+        assert ms.consent_given is True  # default still true
 
 
 @pytest.fixture
 def valid_uuid() -> UUID:
     """Proporciona un UUID único para cada prueba que lo utilice."""
     return uuid4()
-
-
-# --- Clases de Pruebas: Organización y Escalabilidad ---
 
 
 class TestAnalyzeQuery:

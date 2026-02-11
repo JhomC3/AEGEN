@@ -80,6 +80,14 @@ class IngestionPipeline:
         # 4. Storage
         for (chunk, content_hash), embedding in zip(to_embed, embeddings, strict=False):
             try:
+                # Extract provenance from chunk metadata (if provided)
+                chunk_meta = chunk.metadata or {}
+                provenance = {
+                    k: chunk_meta.pop(k)
+                    for k in ("source_type", "confidence", "sensitivity", "evidence")
+                    if k in chunk_meta
+                }
+
                 # Insertar memoria de texto
                 memory_id = await self.store.insert_memory(
                     chat_id=chat_id,
@@ -87,7 +95,8 @@ class IngestionPipeline:
                     content_hash=content_hash,
                     memory_type=memory_type,
                     namespace=namespace,
-                    metadata=chunk.metadata,
+                    metadata=chunk_meta,
+                    **provenance,
                 )
 
                 # Insertar vector

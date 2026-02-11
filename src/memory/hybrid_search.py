@@ -80,8 +80,8 @@ class HybridSearch:
         query_sql = f"""
             SELECT id, chat_id, content, memory_type, metadata, created_at
             FROM memories
-            WHERE id IN ({placeholders})
-        """
+            WHERE id IN ({placeholders}) AND is_active = 1
+        """  # nosec B608
 
         hydrated_results = []
         try:
@@ -122,7 +122,7 @@ class HybridSearch:
         Recupera memorias filtrando solo por tipo (sin búsqueda semántica).
         """
         db = await self.store.get_db()
-        query = "SELECT * FROM memories WHERE memory_type = ?"
+        query = "SELECT * FROM memories WHERE memory_type = ? AND is_active = 1"
         params: list[Any] = [memory_type]
 
         if chat_id:

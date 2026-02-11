@@ -99,7 +99,12 @@ class KnowledgeBaseManager:
                     chat_id=chat_id,
                     text=payload,
                     memory_type="fact",
-                    metadata={"source": "knowledge_base", "type": "structured"},
+                    metadata={
+                        "source": "knowledge_base",
+                        "type": "structured",
+                        "source_type": "explicit",
+                        "sensitivity": "medium",
+                    },
                 )
                 logger.debug(f"Knowledge Base synchronized with SQLite for {chat_id}")
             except Exception as se:

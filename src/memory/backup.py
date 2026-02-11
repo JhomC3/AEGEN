@@ -13,7 +13,6 @@ import os
 import shutil
 from datetime import datetime
 from pathlib import Path
-from typing import Optional
 
 from google.cloud import storage
 from google.oauth2 import service_account
@@ -29,7 +28,7 @@ class CloudBackupManager:
     Gestiona el respaldo y recuperación de la base de datos en GCS.
     """
 
-    def __init__(self, store: Optional[SQLiteStore] = None):
+    def __init__(self, store: SQLiteStore | None = None):
         self.store = store or SQLiteStore(settings.SQLITE_DB_PATH)
         self.bucket_name = settings.GCS_BACKUP_BUCKET
         self._client = None
@@ -58,7 +57,7 @@ class CloudBackupManager:
             logger.error(f"Error initializing GCS client: {e}")
             return None
 
-    async def create_backup(self) -> Optional[str]:
+    async def create_backup(self) -> str | None:
         """
         Crea un snapshot de la DB, lo comprime y lo sube a GCS.
         """

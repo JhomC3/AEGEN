@@ -64,6 +64,23 @@ class VectorMemoryManager:
             query=query, limit=limit, chat_id=user_id, namespace=namespace
         )
 
+        # Transparencia RAG
+        if results:
+            sources: dict[str, int] = {}
+            for r in results:
+                meta = r.get("metadata", {})
+                source = meta.get("source", r.get("memory_type", "unknown"))
+                sources[source] = sources.get(source, 0) + 1
+            source_summary = ", ".join(f"{k}: {v}" for k, v in sources.items())
+            logger.info(
+                f"[RAG] Retrieved {len(results)} fragments for user={user_id}, "
+                f"namespace={namespace} | Sources: {source_summary}"
+            )
+        else:
+            logger.debug(
+                f"[RAG] No fragments found for user={user_id}, query='{query[:50]}...'"
+            )
+
         # Si se especificó un tipo de contexto, podríamos filtrar aquí
         # aunque es mejor hacerlo en la query SQL si fuera crítico
         if context_type:
@@ -116,3 +133,26 @@ class VectorMemoryManager:
             chat_id=user_id,
             namespace=namespace,
         )
+
+    async def delete_memories_by_query(
+        self,
+        user_id: str,
+        query: str,
+        namespace: str = "user",
+    ) -> int:
+        """
+        Soft-deletes memories matching a search query. Used by /olvidar command.
+        Returns the number of memories deactivated.
+        """
+        results = await self.retrieve_context(
+            user_id=user_id, query=query, limit=20, namespace=namespace
+        )
+        if not results:
+            return 0
+
+        memory_ids = [r["id"] for r in results]
+        count = await self.store.soft_delete_memories(memory_ids)
+        logger.info(
+            f"[PRIVACY] Soft-deleted {count} memories for user={user_id}, query='{query[:50]}'"
+        )
+        return count

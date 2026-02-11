@@ -81,6 +81,19 @@ class LongTermMemoryManager:
 
     async def store_raw_message(self, chat_id: str, role: str, content: str):
         """Guarda un mensaje en el búfer de Redis inmediatamente."""
+        # Ephemeral mode guard
+        try:
+            from src.core.profile_manager import user_profile_manager
+
+            profile = await user_profile_manager.load_profile(chat_id)
+            if profile.get("memory_settings", {}).get("ephemeral_mode", False):
+                logger.debug(
+                    f"Ephemeral mode active for {chat_id}, skipping persistence"
+                )
+                return
+        except Exception as e:
+            logger.warning(f"Could not check ephemeral mode for {chat_id}: {e}")
+
         buffer = await self.get_buffer()
         await buffer.push_message(chat_id, role, content)
 

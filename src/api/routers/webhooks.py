@@ -208,7 +208,9 @@ def _consolidate_fragments(
     )
 
 
-async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
+async def process_buffered_events(  # noqa: C901
+    chat_id: int, task_seq: int, trace_id: str
+):
     """
     Tarea de fondo que espera y consolida mensajes acumulados.
     Implementa lógica de Debounce y Cerrojo de procesamiento.
@@ -277,6 +279,20 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
                 "fragment_count": len(fragments),
             },
         )
+
+        # Interceptar comandos de privacidad antes de la orquestación
+        from src.api.routers.privacy import handle_privacy_command, is_privacy_command
+
+        if is_privacy_command(event.content):
+            response_text = await handle_privacy_command(
+                str(event.content), str(chat_id)
+            )
+            if response_text:
+                await telegram_interface.reply_to_telegram_chat.ainvoke({
+                    "chat_id": str(chat_id),
+                    "message": response_text,
+                })
+                return
 
         await process_event_task(event)
 

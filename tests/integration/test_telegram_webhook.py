@@ -45,7 +45,7 @@ async def test_telegram_webhook_success_flow(
     mock_download_tool = MagicMock()
     mock_download_tool.ainvoke = AsyncMock(return_value="/tmp/fake_audio.ogg")
     monkeypatch.setattr(
-        "src.tools.telegram_interface.download_telegram_audio",
+        "src.tools.telegram_interface.download_telegram_file",
         mock_download_tool,
     )
 
