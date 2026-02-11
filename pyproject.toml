@@ -117,7 +117,7 @@ explicit_package_bases = true
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q --cov=src --cov-report=term-missing"
+addopts = "-ra -q --cov=src --cov-report=term-missing --cov-fail-under=50"
 testpaths = ["tests"]
 
 asyncio_mode = "auto"

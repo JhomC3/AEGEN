@@ -1,35 +1,16 @@
-# src/core/session_manager.py
-"""
-SessionManager for GraphStateV2 persistence in Redis.
-Handles conversational memory storage with TTL and serialization.
-"""
-
 import json
 import logging
+from datetime import datetime
 from typing import Any
 
 import redis.asyncio as redis
-from pydantic import BaseModel
+
+from src.core.schemas.session import ConversationSession
+from src.core.session_consolidation import trigger_session_consolidation
 
 from .config import settings
-from .schemas import V2ChatMessage
 
 logger = logging.getLogger(__name__)
-
-
-class ConversationSession(BaseModel):
-    """
-    Serializable session data for Redis storage.
-    Represents the persistent state of a conversation.
-    """
-
-    chat_id: str
-    conversation_history: list[V2ChatMessage]
-    last_update: str  # ISO timestamp
-    last_specialist: str | None = None
-    last_intent: str | None = None
-    session_context: dict[str, Any] = {}
-    metadata: dict[str, Any] = {}
 
 
 class SessionManager:
@@ -112,6 +93,9 @@ class SessionManager:
             # Return only the conversation history - caller will build GraphStateV2
             session_info = {
                 "conversation_history": session.conversation_history,
+                "last_specialist": session.last_specialist,
+                "last_intent": session.last_intent,
+                "session_context": session.session_context,
             }
 
             logger.info(
@@ -148,8 +132,6 @@ class SessionManager:
 
             # 3. Calcular TTL Adaptativo
             ttl = self._calculate_ttl(state)
-
-            from datetime import datetime
 
             session = ConversationSession(
                 chat_id=chat_id,
@@ -189,9 +171,6 @@ class SessionManager:
             True if deleted successfully, False otherwise
         """
         try:
-            # TRIGGER HOOK BEFORE DELETE (Optional, depending on flow)
-            # await self._on_session_end(chat_id)
-
             redis_client = await self._get_redis()
             key = self._session_key(chat_id)
 
@@ -210,26 +189,7 @@ class SessionManager:
         Explicitly triggers session consolidation to long-term memory.
         """
         session = await self.get_session(chat_id)
-        if not session:
-            return
-
-        from src.core.dependencies import get_sqlite_store
-        from src.memory.session_processor import SessionProcessor
-
-        try:
-            store = get_sqlite_store()
-            processor = SessionProcessor(store)
-
-            # Convert messages to dict if they are Pydantic models
-            messages = [
-                m.model_dump() if hasattr(m, "model_dump") else m
-                for m in session.get("conversation_history", [])
-            ]
-
-            await processor.process_session(chat_id, messages)
-            logger.info(f"Consolidation triggered successfully for {chat_id}")
-        except Exception as e:
-            logger.error(f"Error triggering consolidation: {e}")
+        await trigger_session_consolidation(chat_id, session)
 
     async def get_session_info(self, chat_id: str) -> dict[str, Any] | None:
         """

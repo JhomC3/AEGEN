@@ -1,9 +1,7 @@
 # tests/unit/test_cbt_safety.py
 
-from src.agents.specialists.cbt_specialist import (
-    _build_enriched_profile_context,
-    format_knowledge_for_prompt,
-)
+from src.agents.specialists.cbt.prompt_builder import build_enriched_profile_context
+from src.agents.utils.knowledge_formatter import format_knowledge_for_prompt
 
 
 class TestFormatKnowledge:
@@ -49,7 +47,7 @@ class TestEnrichedProfileContext:
                 "emergency_resources": ["Línea 106", "911"],
             },
         }
-        context = _build_enriched_profile_context(profile)
+        context = build_enriched_profile_context(profile)
         assert "soft" in context
         assert "familia" in context
         assert "caminar" in context
@@ -58,5 +56,5 @@ class TestEnrichedProfileContext:
     def test_handles_empty_profile(self):
         """Must not crash on minimal/empty profile."""
         profile = {}
-        context = _build_enriched_profile_context(profile)
+        context = build_enriched_profile_context(profile)
         assert isinstance(context, str)

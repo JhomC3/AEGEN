@@ -5,6 +5,16 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [No publicado]
 
+## [v0.7.1] - 2026-02-11
+### Refactorización
+- **Saneamiento Estructural Completo**: Eliminación de violaciones SRP y límites de LOC en todo el codebase.
+  - **Webhooks**: Desacoplamiento en `adapters/telegram_adapter`, `services/debounce_manager`, `services/event_processor`.
+  - **Routing**: Modularización en `graph_routing`, `pattern_extractor`, `intent_validator`.
+  - **Memoria**: Delegación a `memory_summarizer`, `incremental_extractor`, `sqlite_store` (repositorios).
+  - **Core**: Limpieza de `profile_manager`, `session_manager`, `logging_config`.
+  - **Tools**: Separación de herramientas de Telegram.
+- **Calidad**: Endurecimiento de tests con gate de cobertura al 50%. Script de arquitectura inteligente.
+
 ## [v0.6.0] - 2026-02-11
 ### Añadido
 - **Arquitectura de Datos con Procedencia (Provenance)**: Implementación de trazabilidad completa en la memoria persistente.

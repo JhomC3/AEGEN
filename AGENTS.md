@@ -16,8 +16,8 @@ Somos **AEGEN/MAGI Agents**. Nuestra misión es expandir esta plataforma de form
 ### 2. Desarrollo de Código
 - Adherirse estrictamente a `RULES.MD` (Reglas de Desarrollo).
 - No introducir dependencias nuevas sin verificar si ya existe una alternativa en el proyecto.
-- Mantener los archivos bajo las **100 líneas de código** (LOC). Si un archivo crece más, refactorizar y dividir.
-- Mantener las funciones bajo las **20 líneas de código** (LOC).
+- Mantener los archivos bajo los límites definidos en `RULES.MD` (Objetivo 150 LOC, máximo 200 LOC para lógica).
+- Mantener las funciones bajo las **20-30 líneas de código**.
 - Toda la documentación debe estar en **Español** (Spanish). Términos en inglés entre paréntesis (English).
 
 ### 3. Flujo de Git

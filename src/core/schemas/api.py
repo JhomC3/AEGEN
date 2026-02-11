@@ -8,18 +8,7 @@ from src.core.schemas.common import (
     AppEnvironment,
     HealthStatus,
     ServiceStatus,
-    SystemState,
 )
-
-
-class SystemStatus(BaseModel):
-    """Modelo de datos para el estado del sistema."""
-
-    # TODO: Evaluar eliminación - sin consumidores activos externos detectados
-    cpu_usage_percent: float
-    memory_usage_percent: float
-    state: SystemState
-    message: str
 
 
 class AnalyzeQuery(BaseModel):
@@ -223,24 +212,3 @@ class AnalysisPlan(BaseModel):
     plan_id: UUID = Field(default_factory=uuid4)
     original_query: str
     steps: list[PlanStep]
-
-
-class ReportGenerationState(BaseModel):
-    """
-    Define el estado para el pipeline de generación de reportes de video.
-    Maneja el procesamiento de múltiples videos.
-    """
-
-    # TODO: Evaluar eliminación - sin consumidores activos externos detectados
-    original_query: str
-
-    # Lista de diccionarios, cada uno con info de un video
-    videos_to_process: list[dict[str, Any]] = Field(default_factory=list)
-
-    # Listas para mantener los resultados de cada video
-    transcripts: list[str] = Field(default_factory=list)
-    audio_file_paths: list[str] = Field(default_factory=list)
-
-    # El reporte final combinado
-    report: str = Field(default="")
-    error: str | None = Field(default=None)

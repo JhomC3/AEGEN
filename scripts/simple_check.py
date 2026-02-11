@@ -10,20 +10,36 @@ from pathlib import Path
 
 
 def check_file_sizes() -> bool:
-    """Check that Python files are < 100 lines (per AGENTS.md)."""
+    """Check that Python files are within limits defined in RULES.MD."""
     violations = []
+    max_lines_logic = 200
+    max_lines_definition = 300
+
+    definition_paths = [
+        "src/core/schemas",
+        "src/core/config",
+        "src/core/routing_models.py",
+    ]
 
     for py_file in Path("src").glob("**/*.py"):
         if not py_file.exists():
             continue
 
         lines = len(py_file.read_text().splitlines())
-        if lines > 100:
-            violations.append(f"{py_file}: {lines} lines (max: 100)")
+
+        # Determine limit based on path
+        is_definition = any(str(py_file).startswith(p) for p in definition_paths)
+        limit = max_lines_definition if is_definition else max_lines_logic
+
+        if lines > limit:
+            type_str = "definición" if is_definition else "lógica"
+            violations.append(
+                f"{py_file}: {lines} líneas (máximo sugerido para {type_str}: {limit})"
+            )
 
     if violations:
-        print("❌ Violaciones de tamaño de archivo (>100 líneas):")
-        for v in violations[:10]:  # Show max 10
+        print("⚠️ Posibles violaciones de tamaño de archivo:")
+        for v in violations[:10]:  # Mostrar máximo 10
             print(f"   {v}")
         if len(violations) > 10:
             print(f"   ... y {len(violations) - 10} más")

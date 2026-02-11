@@ -61,10 +61,6 @@ def is_conversational_only(text: str) -> bool:
     if any(re.match(p, text) for p in patterns):
         return True
 
-    # CRITICAL FIX: Eliminada la heurística de "mensaje corto (<4 palabras)"
-    # porque interceptaba señales emocionales breves ("Estoy mal", "Ayuda").
-    # Ahora TODO lo que no sea un saludo explícito pasa por el Router LLM.
-
     return False
 
 
@@ -176,3 +172,38 @@ def extract_context_from_state(state: GraphStateV2) -> dict[str, Any]:
         context["session_context"] = payload["session_context"]
 
     return context
+
+
+def format_context_for_llm(context: dict[str, Any]) -> str:
+    """
+    Formatea contexto para inclusión en prompt LLM.
+
+    Args:
+        context: Diccionario con información contextual
+
+    Returns:
+        str: Contexto formateado para prompt
+    """
+    if not context:
+        return "Sin contexto previo"
+
+    parts = []
+
+    if context.get("user_id"):
+        parts.append(f"Usuario: {context['user_id']}")
+
+    if context.get("history_length", 0) > 0:
+        parts.append(f"Historial: {context['history_length']} mensajes")
+
+    if context.get("previous_intent"):
+        parts.append(f"Intent anterior: {context['previous_intent']}")
+
+    if context.get("previous_specialist"):
+        parts.append(f"Especialista previo: {context['previous_specialist']}")
+
+    # A.2: Inyectar contenido real de los últimos mensajes para continuidad narrativa
+    if context.get("recent_messages_content"):
+        history_str = "\n".join(context["recent_messages_content"])
+        parts.append(f"\nÚLTIMOS MENSAJES (Diálogo):\n{history_str}")
+
+    return " | ".join(parts) if parts else "Sesión nueva"

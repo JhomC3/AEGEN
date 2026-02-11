@@ -39,6 +39,7 @@ lint: ## Ejecuta linters (ruff, black check, mypy, bandit, safety)
 ##	$(PYTHON) -m black --check . # Deshabilitado para evitar conflictos con ruff format # Deshabilitado para evitar conflictos con ruff format
 	$(PYTHON) -m mypy src tests
 	$(PYTHON) -m bandit -c pyproject.toml -r src
+	# $(PYTHON) -m safety check # Optional: Enable if safety is configured
 
 verify: ## Validación completa: linting + tests + architecture simple
 	@echo "🎯 AEGEN Verification Suite..."

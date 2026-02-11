@@ -73,11 +73,6 @@ async def initialize_global_resources() -> tuple[aioredis.Redis | None, IEventBu
     return redis_connection, event_bus
 
 
-async def initialize_global_collections():
-    """No-op: ChromaDB eliminado."""
-    pass
-
-
 async def shutdown_global_resources():
     """Cierra conexiones y recursos globales."""
     if sqlite_store:

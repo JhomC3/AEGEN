@@ -8,140 +8,20 @@ Implementa las mejores prácticas de logging incluyendo:
 - Soporte para logs estructurados en JSON para producción
 """
 
-import json
 import logging
 import logging.config
 import sys
-from logging import LogRecord
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
+from typing import Any, cast
 
-# TypedDict y Literal son necesarios. Any, TextIO también.
-# List, Union, Dict de typing ya no son necesarios para Python 3.10+ en muchos casos.
-from typing import (
-    Any,
-    Literal,
-    TypeAlias,
-    TypedDict,
-    cast,
-)
+from src.core.logging.formatters import CorrelationIdFilter, JsonFormatter
+from src.core.logging.types import LoggersConfig, LoggingDictConfiguration
 
-# Optional, Type (si se usan explícitamente)
 from .config import settings
-from .middleware import correlation_id
-
-# --- Tipos para JSON --- # ruff: noqa: UP040
-JsonValue: TypeAlias = str | int | float | bool | None | list[Any] | dict[str, Any]
-JsonDict: TypeAlias = dict[str, JsonValue]
 
 # Formatos
 TEXT_FORMAT = "%(asctime)s | %(correlation_id)s | %(name)-12s | %(levelname)-8s | %(filename)s:%(lineno)d | %(funcName)s | %(message)s"
-# JSON_FORMAT (el diccionario) no se usa directamente, JsonFormatter lo implementa.
-
-
-class CorrelationIdFilter(logging.Filter):
-    """Filtro para inyectar el correlation_id en los registros de log."""
-
-    def filter(self, record: LogRecord) -> bool:
-        """
-        Añade el ID de correlación al registro.
-
-        Args:
-            record: El registro de log.
-
-        Returns:
-            True para indicar que el registro debe ser procesado.
-        """
-        record.correlation_id = correlation_id.get()
-        return True
-
-
-class JsonFormatter(logging.Formatter):
-    """Formateador personalizado para logs en JSON."""
-
-    _STANDARD_ATTRS = {
-        "args",
-        "asctime",
-        "created",
-        "exc_info",
-        "exc_text",
-        "filename",
-        "funcName",
-        "levelname",
-        "levelno",
-        "lineno",
-        "message",
-        "module",
-        "msecs",
-        "msg",
-        "name",
-        "pathname",
-        "process",
-        "processName",
-        "relativeCreated",
-        "stack_info",
-        "thread",
-        "threadName",
-        "correlation_id",  # Añadir para que no se duplique
-    }
-
-    def format(self, record: LogRecord) -> str:
-        log_output: JsonDict = {
-            "timestamp": self.formatTime(record, self.datefmt),
-            "level": record.levelname,
-            "name": record.name,
-            "message": record.getMessage(),
-            "correlation_id": getattr(record, "correlation_id", None),
-            "filename": record.filename,
-            "lineno": record.lineno,
-            "function": record.funcName,
-        }
-        if record.exc_info:
-            log_output["exc_info"] = self.formatException(record.exc_info)
-
-        extra_data_val = getattr(record, "extra_data", None)
-        if isinstance(extra_data_val, dict):
-            # Ayuda a Pylance con el tipo de las claves
-            typed_extra_data = cast(dict[str, Any], extra_data_val)
-            for key, value in typed_extra_data.items():
-                if key not in self._STANDARD_ATTRS and key not in log_output:
-                    log_output[key] = value
-        return json.dumps(log_output)
-
-
-# --- TypedDicts para la configuración del logging ---
-
-
-class StandardTextFormatterConfig(TypedDict):
-    format: str
-    datefmt: str
-
-
-# Para formateadores y manejadores que usan claves especiales como "()" o "class",
-# la entrada correspondiente en el diccionario de configuración se tipará como dict[str, Any].
-FormatterEntry = StandardTextFormatterConfig | dict[str, Any]  # Usando | para Union
-FormattersConfig = dict[str, FormatterEntry]
-
-HandlerEntry = dict[str, Any]  # Esto cubre ConsoleHandler y FileHandler
-HandlersConfig = dict[str, HandlerEntry]
-
-
-class LoggerConfig(TypedDict):
-    level: str
-    handlers: list[str]  # Usando list incorporada
-    propagate: bool
-
-
-LoggersConfig = dict[str, LoggerConfig]
-
-
-class LoggingDictConfiguration(TypedDict, total=False):
-    version: Literal[1]
-    disable_existing_loggers: bool
-    filters: dict[str, Any]
-    formatters: FormattersConfig
-    handlers: HandlersConfig
-    loggers: LoggersConfig
 
 
 def setup_logging() -> logging.Logger:
@@ -182,7 +62,11 @@ def setup_logging() -> logging.Logger:
         },
         # Configuraciones específicas que no siguen el patrón común
         "uvicorn": {"level": "INFO", "handlers": ["console"], "propagate": False},
-        "uvicorn.error": {"level": "INFO", "handlers": ["console"], "propagate": False},
+        "uvicorn.error": {
+            "level": "INFO",
+            "handlers": ["console"],
+            "propagate": False,
+        },
         "uvicorn.access": {
             "level": "WARNING" if is_production else "INFO",
             "handlers": ["console"],

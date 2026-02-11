@@ -1,6 +1,15 @@
 # src/memory/sqlite_store.py
 import asyncio
+import logging
 import sys
+from pathlib import Path
+
+import aiofiles
+import aiosqlite
+import sqlite_vec
+
+from src.memory.repositories.memory_repo import MemoryRepository
+from src.memory.repositories.profile_repo import ProfileRepository
 
 # Monkeypatch sqlite3 con sqlean para habilitar extensiones en macOS/Linux
 try:
@@ -9,13 +18,6 @@ try:
     sys.modules["sqlite3"] = sqlean
 except ImportError:
     pass
-
-import logging
-from pathlib import Path
-
-import aiofiles
-import aiosqlite
-import sqlite_vec
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +32,11 @@ class SQLiteStore:
         self.db_path = db_path
         self._connection: aiosqlite.Connection | None = None
         self._lock = asyncio.Lock()
+
+        # Repositorios
+        self._memory_repo = MemoryRepository(self)
+        self._profile_repo = ProfileRepository(self)
+
         logger.info(f"SQLiteStore inicializado con ruta: {db_path}")
 
     async def connect(self) -> aiosqlite.Connection:
@@ -87,6 +94,8 @@ class SQLiteStore:
         """Retorna la conexión activa, conectando si es necesario."""
         return await self.connect()
 
+    # === Delegación a MemoryRepository ===
+
     async def insert_memory(
         self,
         chat_id: str,
@@ -100,167 +109,35 @@ class SQLiteStore:
         sensitivity: str = "low",
         evidence: str | None = None,
     ) -> int:
-        """
-        Inserta una memoria con metadatos de provenance.
-        Retorna el ID de la memoria insertada.
-        """
-        import json
-        import sqlite3
-
-        db = await self.get_db()
-        metadata_json = json.dumps(metadata or {})
-
-        try:
-            cursor = await db.execute(
-                """
-                INSERT INTO memories
-                    (chat_id, namespace, content, content_hash, memory_type,
-                     metadata, source_type, confidence, sensitivity, evidence)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    chat_id,
-                    namespace,
-                    content,
-                    content_hash,
-                    memory_type,
-                    metadata_json,
-                    source_type,
-                    confidence,
-                    sensitivity,
-                    evidence,
-                ),
-            )
-            memory_id = cursor.lastrowid
-            await db.commit()
-            return memory_id if memory_id is not None else -1
-        except sqlite3.IntegrityError:
-            # Probablemente duplicado por hash
-            logger.debug(f"Memory with hash {content_hash} already exists.")
-            async with db.execute(
-                "SELECT id FROM memories WHERE content_hash = ?", (content_hash,)
-            ) as cursor:
-                row = await cursor.fetchone()
-                return row[0] if row else -1
-        except Exception as e:
-            logger.error(f"Error inserting memory: {e}")
-            await db.rollback()
-            raise
+        return await self._memory_repo.insert_memory(
+            chat_id,
+            content,
+            content_hash,
+            memory_type,
+            namespace,
+            metadata,
+            source_type,
+            confidence,
+            sensitivity,
+            evidence,
+        )
 
     async def insert_vector(self, memory_id: int, embedding: list[float]) -> int:
-        """
-        Inserta un vector y lo vincula con una memoria.
-        """
-        import struct
-
-        db = await self.get_db()
-        vector_blob = struct.pack(f"{len(embedding)}f", *embedding)
-
-        try:
-            # 1. Insertar en tabla vectorial
-            cursor = await db.execute(
-                "INSERT INTO memory_vectors(embedding) VALUES (?)", (vector_blob,)
-            )
-            vector_id = cursor.lastrowid
-
-            # 2. Vincular en tabla de mapeo
-            await db.execute(
-                "INSERT INTO vector_memory_map (vector_id, memory_id) VALUES (?, ?)",
-                (vector_id, memory_id),
-            )
-            await db.commit()
-            return vector_id if vector_id is not None else -1
-        except Exception as e:
-            logger.error(f"Error inserting vector: {e}")
-            await db.rollback()
-            raise
+        return await self._memory_repo.insert_vector(memory_id, embedding)
 
     async def hash_exists(self, content_hash: str) -> bool:
-        """Verifica si un hash de contenido ya existe en la DB."""
-        db = await self.get_db()
-        async with db.execute(
-            "SELECT 1 FROM memories WHERE content_hash = ?", (content_hash,)
-        ) as cursor:
-            row = await cursor.fetchone()
-            return row is not None
+        return await self._memory_repo.hash_exists(content_hash)
 
     async def soft_delete_memories(self, memory_ids: list[int]) -> int:
-        """Marca memorias como inactivas (borrado suave). Retorna la cuenta actualizada."""
-        if not memory_ids:
-            return 0
-        db = await self.get_db()
-        placeholders = ",".join(["?"] * len(memory_ids))
-        try:
-            cursor = await db.execute(
-                f"UPDATE memories SET is_active = 0 WHERE id IN ({placeholders})",  # nosec B608
-                memory_ids,
-            )
-            await db.commit()
-            return cursor.rowcount
-        except Exception as e:
-            logger.error(f"Error en soft_delete_memories: {e}")
-            await db.rollback()
-            return 0
+        return await self._memory_repo.soft_delete_memories(memory_ids)
 
     async def get_memory_stats(self, chat_id: str) -> dict:
-        """Retorna estadísticas de memoria para un usuario."""
-        db = await self.get_db()
-        stats: dict = {"total": 0, "by_type": {}, "by_sensitivity": {}}
-        try:
-            async with db.execute(
-                "SELECT memory_type, sensitivity, COUNT(*) as cnt "
-                "FROM memories WHERE chat_id = ? AND is_active = 1 "
-                "GROUP BY memory_type, sensitivity",
-                (chat_id,),
-            ) as cursor:
-                for row in await cursor.fetchall():
-                    mtype, sens, cnt = row[0], row[1] or "low", row[2]
-                    stats["by_type"][mtype] = stats["by_type"].get(mtype, 0) + cnt
-                    stats["by_sensitivity"][sens] = (
-                        stats["by_sensitivity"].get(sens, 0) + cnt
-                    )
-                    stats["total"] += cnt
-        except Exception as e:
-            logger.error(f"Error in get_memory_stats: {e}")
-        return stats
+        return await self._memory_repo.get_memory_stats(chat_id)
+
+    # === Delegación a ProfileRepository ===
 
     async def save_profile(self, chat_id: str, profile_data: dict) -> None:
-        """Guarda un perfil de usuario en la DB."""
-        import json
-
-        db = await self.get_db()
-        payload = json.dumps(profile_data, ensure_ascii=False)
-
-        try:
-            await db.execute(
-                """
-                INSERT INTO profiles (chat_id, data, updated_at)
-                VALUES (?, ?, CURRENT_TIMESTAMP)
-                ON CONFLICT(chat_id) DO UPDATE SET
-                    data = excluded.data,
-                    updated_at = CURRENT_TIMESTAMP
-                """,
-                (chat_id, payload),
-            )
-            await db.commit()
-        except Exception as e:
-            logger.error(f"Error saving profile to SQLite: {e}")
-            await db.rollback()
-            raise
+        await self._profile_repo.save_profile(chat_id, profile_data)
 
     async def load_profile(self, chat_id: str) -> dict | None:
-        """Carga un perfil de usuario de la DB."""
-        import json
-
-        db = await self.get_db()
-        try:
-            async with db.execute(
-                "SELECT data FROM profiles WHERE chat_id = ?", (chat_id,)
-            ) as cursor:
-                row = await cursor.fetchone()
-                if row:
-                    return json.loads(row["data"])
-                return None
-        except Exception as e:
-            logger.error(f"Error loading profile from SQLite: {e}")
-            return None
+        return await self._profile_repo.load_profile(chat_id)

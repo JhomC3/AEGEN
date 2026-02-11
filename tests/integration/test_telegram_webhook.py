@@ -38,7 +38,8 @@ async def test_telegram_webhook_success_flow(
         }
     )
     monkeypatch.setattr(
-        "src.api.routers.webhooks.master_orchestrator.run", mock_orchestrator_run
+        "src.api.services.event_processor.master_orchestrator.run",
+        mock_orchestrator_run,
     )
 
     # Mockear la herramienta de descarga de Telegram
@@ -91,7 +92,10 @@ async def test_telegram_webhook_success_flow(
         ]
     )
     monkeypatch.setattr(
-        "src.api.routers.webhooks.ingestion_buffer", mock_ingestion_buffer
+        "src.api.adapters.telegram_adapter.ingestion_buffer", mock_ingestion_buffer
+    )
+    monkeypatch.setattr(
+        "src.api.services.debounce_manager.ingestion_buffer", mock_ingestion_buffer
     )
 
     # 3. Ejecutar la Petición

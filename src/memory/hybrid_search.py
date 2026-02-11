@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 from typing import Any
 
@@ -90,8 +91,6 @@ class HybridSearch:
                 # Crear mapeo para mantener el orden de RRF
                 rows_map = {row["id"]: row for row in rows}
 
-                import json
-
                 for memory_id, score in sorted_ids:
                     if memory_id in rows_map:
                         row = rows_map[memory_id]
@@ -139,7 +138,6 @@ class HybridSearch:
         try:
             async with db.execute(query, params) as cursor:
                 rows = await cursor.fetchall()
-                import json
 
                 for row in rows:
                     results.append({

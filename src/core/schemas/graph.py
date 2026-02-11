@@ -48,19 +48,6 @@ class CanonicalEventV1(BaseModel):
     model_config = {"extra": "allow"}
 
 
-class GraphStateV1(TypedDict):
-    """
-    Define el objeto de estado genérico que fluye a través de los grafos de LangGraph.
-    Mantiene toda la información necesaria para el procesamiento de una solicitud.
-    (Versión 1)
-    # TODO: Evaluar eliminación - Reemplazado por V2
-    """
-
-    event: CanonicalEventV1
-    payload: dict[str, Any]
-    error_message: str | None
-
-
 class V2ChatMessage(TypedDict, total=False):
     """
     Mensaje de chat Redis-safe, JSON-serializable para historial conversacional.

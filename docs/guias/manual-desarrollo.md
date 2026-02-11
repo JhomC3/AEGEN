@@ -1,6 +1,6 @@
 # Manual de Desarrollo AEGEN
 
-Este documento es la **Única Fuente de Verdad** para el desarrollo técnico del proyecto. Define el flujo de trabajo diario y los estándares que garantizan la calidad del sistema.
+Este documento explica **cómo operar** en el entorno de desarrollo de AEGEN. Para conocer las leyes técnicas obligatorias, consulta primero **[RULES.MD](../../RULES.MD)**.
 
 ## 🚀 Inicio Rápido (Quick Start)
 
@@ -18,16 +18,14 @@ make dev          # Inicia contenedores con recarga en caliente (hot-reload)
 make verify       # Ejecuta la suite de validación completa (lint + test + arch)
 ```
 
-## 📋 Lista de Verificación (Checklist) Obligatoria
+## 📋 Flujo de Trabajo Obligatorio
 
-Antes de realizar cualquier commit o enviar un cambio, verifica:
+Antes de escribir una sola línea de código, debes seguir este proceso:
 
-- [ ] **Límites:** Archivo < 100 líneas, Funciones < 20 líneas.
-- [ ] **Responsabilidad:** Una sola responsabilidad por archivo/clase (SRP).
-- [ ] **Asincronía:** Todo I/O de red o disco es `async`.
-- [ ] **Tipado:** Tipado estricto en todas las funciones; evitar `Any`.
-- [ ] **Observabilidad:** Llamadas a LLM rastreadas con `correlation_id`.
-- [ ] **Tests:** Incluye pruebas unitarias para la nueva lógica.
+1.  **Planificación:** Crea un plan detallado en `docs/planes/YYYY-MM-DD-nombre.md` y obtén aprobación.
+2.  **Desarrollo:** Mantén los archivos bajo las 100 líneas y funciones bajo las 20 líneas (ver `RULES.MD`).
+3.  **Verificación Continua:** Ejecuta `make verify` frecuentemente.
+4.  **Formateado:** Usa `make format` antes de cada commit.
 
 ## 🛠️ Comandos Esenciales
 
@@ -41,10 +39,10 @@ Antes de realizar cualquier commit o enviar un cambio, verifica:
 
 ## 🧪 Estándares de Pruebas (Testing)
 
+AEGEN exige una **cobertura mínima del 85%**.
 - **Unitarias:** Lógica pura con mocks de entrada/salida.
 - **Integración:** Flujos entre componentes con Redis/SQLite reales.
 - **E2E:** Flujo completo desde Telegram hasta la respuesta final.
-- **Cobertura Mínima:** 85% para lógica unitaria.
 
 ## 🔍 Inspección de Sesiones con Redis
 
@@ -70,7 +68,7 @@ Para añadir una nueva habilidad al bot:
 1. Define la interfaz en `src.core.interfaces`.
 2. Implementa la lógica en `src.agents.specialists`.
 3. Registra el agente en el `MasterOrchestrator`.
-4. Añade un documento de detalle en `docs/arquitectura/agentes/`.
+4. Añade el detalle técnico en `docs/arquitectura/agentes/especialistas.md`.
 
 ---
-*Cualquier violación de estos estándares será detectada automáticamente por `make verify`.*
+*El incumplimiento de las normas en `RULES.MD` detendrá el pipeline de despliegue.*
