@@ -42,6 +42,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copia el código fuente y la configuración
 COPY --chown=appuser:appuser ./src ${APP_DIR}/src
+COPY --chown=appuser:appuser ./scripts ${APP_DIR}/scripts
 
 
 # Crear un directorio para logs y darle permisos al appuser
