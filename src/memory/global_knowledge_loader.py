@@ -56,9 +56,35 @@ class GlobalKnowledgeLoader:
             logger.error(f"Error extrayendo texto de PDF {pdf_path.name}: {e}")
             return ""
 
+    def _should_process_file(self, file_path: Path) -> bool:
+        """
+        Determina si un archivo debe ser procesado como conocimiento global.
+        Filtra extensiones permitidas e ignora archivos personales/legacy.
+        """
+        import re
+
+        name = file_path.name.lower()
+        ext = file_path.suffix.lower()
+
+        # 1. Solo permitir PDF, Markdown y Texto
+        if ext not in (".pdf", ".md", ".txt"):
+            return False
+
+        # 2. Ignorar archivos con IDs de usuario (números largos)
+        if re.search(r"\d{5,}", name):
+            return False
+
+        # 3. Ignorar palabras clave de archivos personales legacy
+        ignore_keywords = ("buffer", "summary", "vault", "profile")
+        if any(kw in name for kw in ignore_keywords):
+            return False
+
+        return True
+
     async def sync_knowledge(self):
         """
         Escanea el directorio de storage e ingiere archivos nuevos en SQLite.
+        Aplica filtros de seguridad para evitar contaminar el namespace global.
         """
         if not self.knowledge_path.exists():
             logger.info(
@@ -68,8 +94,16 @@ class GlobalKnowledgeLoader:
             return
 
         # 2. Escanear archivos locales
+        processed_count = 0
+        skipped_count = 0
+
         for file_path in self.knowledge_path.glob("*"):
             if file_path.is_dir() or file_path.name.startswith("."):
+                continue
+
+            if not self._should_process_file(file_path):
+                logger.debug(f"Saltando archivo no global/legacy: {file_path.name}")
+                skipped_count += 1
                 continue
 
             logger.info(f"Procesando conocimiento global: {file_path.name}")
@@ -88,12 +122,16 @@ class GlobalKnowledgeLoader:
                     continue
 
                 # Ingerir en SQLite con namespace global
-                # El manager internamente usará el pipeline que ya verifica deduplicación por hash
                 new_chunks = await self.manager.store_context(
                     user_id="system",
                     content=content,
                     context_type=MemoryType.DOCUMENT,
-                    metadata={"filename": file_path.name, "source": "global_knowledge"},
+                    metadata={
+                        "filename": file_path.name,
+                        "source": "global_knowledge",
+                        "source_type": "explicit",
+                        "sensitivity": "low",
+                    },
                     namespace="global",
                 )
 
@@ -102,12 +140,15 @@ class GlobalKnowledgeLoader:
                         f"✅ Ingeridos {new_chunks} fragmentos nuevos de {file_path.name}"
                     )
                 else:
-                    logger.info(
-                        f"ℹ️ Conocimiento global {file_path.name} ya está al día en la base de datos."
-                    )
+                    logger.debug(f"ℹ️ {file_path.name} ya está sincronizado.")
+                processed_count += 1
 
             except Exception as e:
                 logger.error(f"Error sincronizando {file_path.name}: {e}")
+
+        logger.info(
+            f"Sincronización finalizada. Procesados: {processed_count}, Saltados: {skipped_count}"
+        )
 
     async def check_and_bootstrap(self):
         """Hook para ejecutar en el startup de la aplicación."""
