@@ -65,9 +65,13 @@ class CloudBackupManager:
             logger.warning("GCS_BACKUP_BUCKET not configured. Skipping backup.")
             return None
 
+        # Asegurar que el directorio de backups existe
+        backup_dir = Path(settings.SQLITE_BACKUP_DIR)
+        backup_dir.mkdir(parents=True, exist_ok=True)
+
         timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
-        snapshot_path = Path(f"data/snapshot_{timestamp}.db")
-        compressed_path = Path(f"data/backup_{timestamp}.db.gz")
+        snapshot_path = backup_dir / f"snapshot_{timestamp}.db"
+        compressed_path = backup_dir / f"backup_{timestamp}.db.gz"
 
         try:
             # 1. Crear snapshot seguro (VACUUM INTO)
@@ -129,11 +133,11 @@ class CloudBackupManager:
             # Ordenar por nombre (que incluye fecha ISO) para obtener el último
             latest_blob = sorted(blobs, key=lambda x: x.name, reverse=True)[0]
 
-            local_gz = Path(f"data/{os.path.basename(latest_blob.name)}")
-            db_path = Path(settings.SQLITE_DB_PATH)
+            backup_dir = Path(settings.SQLITE_BACKUP_DIR)
+            backup_dir.mkdir(parents=True, exist_ok=True)
 
-            # Asegurar que el directorio data existe
-            db_path.parent.mkdir(exist_ok=True)
+            local_gz = backup_dir / os.path.basename(latest_blob.name)
+            db_path = Path(settings.SQLITE_DB_PATH)
 
             print(f"📥 Descargando backup desde GCS: {latest_blob.name}...")
             latest_blob.download_to_filename(str(local_gz))

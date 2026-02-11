@@ -54,9 +54,10 @@ class BaseAppSettings(BaseSettings):
     TELEGRAM_BOT_TOKEN: SecretStr | None = None
     NGROK_AUTHTOKEN: SecretStr | None = None
 
-    # SQLite Configuration
+    # Configuración de SQLite
     SQLITE_DB_PATH: str = "storage/aegen_memory.db"
     SQLITE_SCHEMA_PATH: str = "src/memory/schema.sql"
+    SQLITE_BACKUP_DIR: str = "storage/backups"
 
     # Cloud Backup (GCS)
     GCS_BACKUP_BUCKET: str | None = None
