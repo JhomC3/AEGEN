@@ -14,7 +14,7 @@ Este documento es de **lectura obligatoria** para cualquier contribuidor (humano
 
 1.  **[📄 Constitución (PROJECT_OVERVIEW.md)](PROJECT_OVERVIEW.md)**: Visión, arquitectura de alto nivel y Hoja de Ruta (Roadmap).
 2.  **[📂 Arquitectura (docs/arquitectura/)](docs/arquitectura/)**: Detalle de subsistemas (Memoria, Personalidad, etc.).
-3.  **[📂 Guías (docs/guias/)](docs/guias/)**: Instalación, Despliegue y Desarrollo.
+3.  **[📂 Guías (docs/guias/)](docs/guias/)**: Manuales de [Desarrollo](docs/guias/manual-desarrollo.md) y [Despliegue](docs/guias/manual-despliegue.md).
 4.  **[📜 Decisiones (adr/)](adr/)**: Registro histórico de decisiones técnicas vigentes.
 5.  **[📋 Planes (docs/planes/)](docs/planes/)**: Hojas de ruta detalladas para nuevas funcionalidades.
 6.  **[⚖️ Ley Técnica (RULES.MD)](RULES.MD)**: Estándares de código y seguridad.

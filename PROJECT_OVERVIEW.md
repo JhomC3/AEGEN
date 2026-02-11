@@ -41,10 +41,9 @@ AEGEN/
 │   └── tools/           # Interfaz Telegram, Voz, Ingestor Masivo
 ├── scripts/             # Herramientas de mantenimiento y automatización
 ├── docs/                # Documentación Técnica
-│   ├── arquitectura/    # Subsistemas (Memoria, Personalidad, Calidad)
-│   ├── guias/           # Desarrollo, Despliegue y Redis
-│   ├── planes/          # Planes Detallados de Desarrollo (Plan Maestro)
-│   └── archivo/         # Documentos antiguos y decisiones superadas
+│   ├── arquitectura/    # Subsistemas detallados (Core, Agentes, Memoria, etc.)
+│   ├── guias/           # Manuales de [Desarrollo](docs/guias/manual-desarrollo.md) y [Despliegue](docs/guias/manual-despliegue.md)
+│   └── planes/          # Planes Detallados de Desarrollo (Plan Maestro)
 └── adr/                 # Architecture Decision Records (Decisiones de Arquitectura Vigentes)
 ```
 

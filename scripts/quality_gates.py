@@ -118,7 +118,7 @@ def get_current_phase() -> str:
 
 def load_quality_gates() -> dict:
     """Carga la configuración de quality gates desde el archivo YAML oficial."""
-    gates_file = Path("docs/arquitectura/configuracion-calidad.yml")
+    gates_file = Path("docs/arquitectura/estandares/calidad.yml")
     if not gates_file.exists():
         logger.warning(
             f"⚠️ {gates_file} no encontrado, usando configuración de emergencia"
@@ -266,7 +266,7 @@ def main():
     args = parser.parse_args()
 
     # Verificar que estamos en el directorio correcto
-    if not Path("docs/arquitectura/configuracion-calidad.yml").exists():
+    if not Path("docs/arquitectura/estandares/calidad.yml").exists():
         print("❌ Error: No se encontró el archivo de configuración de calidad")
         sys.exit(1)
 
