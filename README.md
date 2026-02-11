@@ -16,8 +16,9 @@ Este documento es de **lectura obligatoria** para cualquier contribuidor (humano
 2.  **[📂 Arquitectura (docs/arquitectura/)](docs/arquitectura/)**: Detalle de subsistemas (Memoria, Personalidad, etc.).
 3.  **[📂 Guías (docs/guias/)](docs/guias/)**: Instalación, Despliegue y Desarrollo.
 4.  **[📜 Decisiones (adr/)](adr/)**: Registro histórico de decisiones técnicas vigentes.
-5.  **[⚖️ Ley Técnica (RULES.MD)](RULES.MD)**: Estándares de código y seguridad.
-6.  **[🤖 Gobernanza (AGENTS.md)](AGENTS.md)**: Reglas para agentes de IA.
+5.  **[📋 Planes (docs/planes/)](docs/planes/)**: Hojas de ruta detalladas para nuevas funcionalidades.
+6.  **[⚖️ Ley Técnica (RULES.MD)](RULES.MD)**: Estándares de código y seguridad.
+7.  **[🤖 Gobernanza (AGENTS.md)](AGENTS.md)**: Reglas para agentes de IA.
 
 ## ✨ Características Principales
 

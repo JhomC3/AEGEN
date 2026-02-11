@@ -78,10 +78,11 @@ graph TD
 ## 🗺️ 3. Hoja de Ruta (Roadmap) y Evolución
 
 ### 🌟 Bloque A: Saneamiento y Autonomía (Fase Actual)
-- **Purga de Código Antiguo:** Eliminación total de rastro de Google File API y scripts obsoletos.
+- **Purga de Código Antiguo:** Eliminación total de rastro de Google File API y scripts obsoletos. [Ver Plan: v0.7.0](docs/planes/v0.7.0-saneamiento-y-evolucion.md)
 - **Unificación de Persistencia:** Migración de carpetas redundantes hacia un único directorio `/storage`.
 - **Vigilante Automático (Auto-Sync):** Indexación en tiempo real de archivos nuevos en `storage/knowledge/`.
 - **Flexibilidad Lingüística:** Refactorización del motor de instrucciones para eliminar acentos forzados y permitir imitación natural.
+- **Refactorización de Webhooks:** Desmembrar el router principal en submódulos lógicos. [Ver Plan: v0.7.1](docs/planes/v0.7.1-refactorizacion-webhooks.md)
 
 ### 🚀 Bloque B: Expansión de Memoria y Contexto
 - **Ingesta Masiva:** Herramientas para importar historiales externos (ChatGPT, Claude, WhatsApp).
