@@ -1,36 +1,36 @@
-# AEGEN - Quality Gates por Fase
-# Archivo de configuración que define los checks de calidad requeridos para cada fase del proyecto
-# Este archivo es consumido por el CI/CD para ejecutar solo los checks apropiados para la fase actual
+# AEGEN - Quality Gates por Fase (Puertas de Calidad)
+# Archivo de configuración que define los controles de calidad requeridos para cada fase del proyecto.
+# Este archivo es consumido por el script scripts/quality_gates.py.
 
-# Versión del schema para compatibilidad futura
+# Versión del esquema para compatibilidad futura
 version: "1.0"
 
-# Definición de fases y sus quality gates
+# Definición de fases y sus puertas de calidad (quality gates)
 phases:
 
   # Fase 3A: MasterRouter Básico
-  # Enfoque: Establecer base funcional con testing mínimo
+  # Enfoque: Establecer base funcional con pruebas mínimas
   Fase_3A:
     description: "MasterRouter Básico - Enrutamiento funcional sin LLM"
     required_checks:
       - name: "lint"
         command: "make lint"
-        description: "Linting con ruff y mypy"
+        description: "Análisis estático con ruff y mypy"
         timeout: 120
 
       - name: "unit_tests"
         command: "make test"
-        description: "Tests unitarios básicos"
+        description: "Pruebas unitarias básicas"
         timeout: 300
 
       - name: "integration_tests"
         command: "pytest tests/integration/ -v"
-        description: "Tests de integración para webhooks y orchestrator"
+        description: "Pruebas de integración para webhooks y orquestador"
         timeout: 180
 
       - name: "manual_e2e"
-        command: "echo 'Manual E2E test required'"
-        description: "Test E2E manual: Telegram → Transcription"
+        command: "echo 'Prueba E2E manual requerida'"
+        description: "Prueba E2E manual: Telegram → Transcripción"
         manual: true
 
     coverage_requirements:
@@ -41,73 +41,73 @@ phases:
       - "manual_e2e"  # Se permite fallar en esta fase
 
   # Fase 3B: Memoria de Sesión
-  # Enfoque: Añadir persistencia y testing de estado
+  # Enfoque: Añadir persistencia y pruebas de estado
   Fase_3B:
     description: "Memoria de Sesión - Estado conversacional persistente"
     required_checks:
       - name: "lint"
         command: "make lint"
-        description: "Linting con ruff y mypy"
+        description: "Análisis estático con ruff y mypy"
         timeout: 120
 
       - name: "unit_tests"
         command: "make test"
-        description: "Tests unitarios"
+        description: "Pruebas unitarias"
         timeout: 300
 
       - name: "integration_tests"
         command: "pytest tests/integration/ -v"
-        description: "Tests de integración"
+        description: "Pruebas de integración"
         timeout: 180
 
       - name: "redis_persistence_tests"
         command: "pytest tests/integration/test_redis_persistence.py -v"
-        description: "Tests específicos de persistencia en Redis"
+        description: "Pruebas específicas de persistencia en Redis"
         timeout: 120
 
       - name: "load_test_basic"
         command: "pytest tests/load/test_basic_load.py -v"
-        description: "Test de carga básico (10 usuarios concurrentes)"
+        description: "Prueba de carga básica (10 usuarios concurrentes)"
         timeout: 300
 
     coverage_requirements:
       unit: 75
       integration: 60
 
-    # Checks adicionales que se pueden añadir opcionalmente
+    # Controles adicionales que se pueden añadir opcionalmente
     optional_checks:
       - name: "memory_leak_check"
         command: "python scripts/check_memory_leaks.py"
-        description: "Verificación básica de memory leaks"
+        description: "Verificación básica de fugas de memoria"
 
-  # Fase 3C: TCC Specialist
+  # Fase 3C: TCC Specialist (Especialista TCC)
   # Enfoque: Sistema completo con especialista funcional
   Fase_3C:
-    description: "TCC Specialist - Especialista funcional con integración de perfil"
+    description: "Especialista TCC - Funcional con integración de perfil"
     required_checks:
       - name: "lint"
         command: "make lint"
-        description: "Linting con ruff y mypy"
+        description: "Análisis estático con ruff y mypy"
         timeout: 120
 
       - name: "unit_tests"
         command: "make test"
-        description: "Tests unitarios completos"
+        description: "Pruebas unitarias completas"
         timeout: 400
 
       - name: "integration_tests"
         command: "pytest tests/integration/ -v"
-        description: "Tests de integración"
+        description: "Pruebas de integración"
         timeout: 240
 
       - name: "e2e_automation"
         command: "pytest tests/e2e/ -v"
-        description: "Tests E2E automatizados"
+        description: "Pruebas E2E automatizadas"
         timeout: 600
 
       - name: "performance_test"
         command: "pytest tests/performance/ -v"
-        description: "Tests de performance y latencia"
+        description: "Pruebas de rendimiento y latencia"
         timeout: 300
 
     coverage_requirements:
@@ -126,41 +126,41 @@ phases:
 
       - name: "security_scan"
         command: "bandit -r src/ && safety check"
-        description: "Scan de seguridad completo"
+        description: "Escaneo de seguridad completo"
         timeout: 180
 
       - name: "chaos_engineering"
         command: "python scripts/chaos_tests.py"
-        description: "Tests de chaos engineering"
+        description: "Pruebas de ingeniería del caos"
         timeout: 600
 
       - name: "performance_benchmark"
         command: "pytest tests/benchmark/ -v"
-        description: "Benchmarks de performance"
+        description: "Pruebas comparativas (benchmarks) de rendimiento"
         timeout: 900
 
     coverage_requirements:
       unit: 90
       integration: 85
       e2e: 95
-      mutation: 97  # Mutation testing para código crítico
+      mutation: 97  # Pruebas de mutación para código crítico
 
 # Configuración global
 global:
-  # Timeout por defecto para cualquier check
+  # Tiempo de espera por defecto para cualquier control
   default_timeout: 300
 
-  # Archivos que siempre deben pasar lint independiente de la fase
+  # Archivos que siempre deben pasar análisis estático independiente de la fase
   always_lint:
     - "src/"
     - "tests/"
     - "scripts/"
 
-  # Comandos que se ejecutan antes de cualquier gate
+  # Comandos que se ejecutan antes de cualquier puerta (gate)
   pre_checks:
-    - "git status --porcelain || echo 'Git working directory not clean'"
+    - "git status --porcelain || echo 'Directorio de trabajo de Git no está limpio'"
     - "python --version"
 
-  # Comandos que se ejecutan después de todos los gates
+  # Comandos que se ejecutan después de todas las puertas
   post_checks:
-    - "make sync-docs"  # Actualizar documentación después de tests
+    - "make sync-docs"  # Actualizar documentación después de las pruebas

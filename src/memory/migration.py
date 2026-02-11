@@ -1,10 +1,10 @@
 # src/memory/migration.py
 """
-Idempotent database migrations for AEGEN memory schema.
+Migraciones de base de datos idempotentes para el esquema de memoria AEGEN.
 
-Handles adding new columns to existing databases without data loss.
-New databases get the full schema via schema.sql; this module closes the gap
-for databases created before the provenance columns were added.
+Maneja la adición de nuevas columnas a bases de datos existentes sin pérdida de datos.
+Las nuevas bases de datos obtienen el esquema completo a través de schema.sql;
+este módulo cierra la brecha para las bases de datos creadas anteriormente.
 """
 
 from __future__ import annotations
@@ -38,7 +38,7 @@ _INDEXES: list[tuple[str, str]] = [
 
 
 async def _get_existing_columns(store: SQLiteStore) -> set[str]:
-    """Returns the set of column names in the memories table."""
+    """Retorna el conjunto de nombres de columnas en la tabla memories."""
     db = await store.get_db()
     cursor = await db.execute("PRAGMA table_info(memories)")
     rows = await cursor.fetchall()
@@ -47,9 +47,9 @@ async def _get_existing_columns(store: SQLiteStore) -> set[str]:
 
 async def apply_migrations(store: SQLiteStore) -> None:
     """
-    Apply all pending migrations idempotently.
+    Aplica todas las migraciones pendientes de forma idempotente.
 
-    Safe to call on every startup — skips columns/indexes that already exist.
+    Seguro de llamar en cada arranque: omite columnas/índices que ya existen.
     """
     db = await store.get_db()
     existing = await _get_existing_columns(store)

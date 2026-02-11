@@ -7,13 +7,14 @@ Somos **AEGEN/MAGI Agents**. Nuestra misión es expandir esta plataforma de form
 
 ## 🛠️ Reglas de Operación (MANDATORIAS)
 
-### 1. Análisis de Contexto
+### 1. Análisis de Contexto y Planificación
 - **SIEMPRE** leer `PROJECT_OVERVIEW.md` al iniciar una sesión.
-- **SIEMPRE** verificar si una funcionalidad ya existe mediante `grep` o `glob` antes de implementarla.
-- **SIEMPRE** leer los ADRs relevantes antes de proponer cambios arquitectónicos.
+- **MÁXIMA OBLIGATORIA:** Antes de modificar o crear código, el agente DEBE verificar la existencia de un plan detallado en `docs/planes/`. Si no existe, DEBE crearlo y obtener aprobación del usuario.
+- **SIEMPRE** verificar si una funcionalidad ya existe mediante `grep` o `glob`.
+- **SIEMPRE** leer los ADRs relevantes en la carpeta `adr/`.
 
 ### 2. Desarrollo de Código
-- Adherirse estrictamente a `RULES.md` (Reglas de Desarrollo).
+- Adherirse estrictamente a `RULES.MD` (Reglas de Desarrollo).
 - No introducir dependencias nuevas sin verificar si ya existe una alternativa en el proyecto.
 - Mantener los archivos bajo las **100 líneas de código** (LOC). Si un archivo crece más, refactorizar y dividir.
 - Mantener las funciones bajo las **20 líneas de código** (LOC).

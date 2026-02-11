@@ -27,17 +27,17 @@ def simple_yaml_load(file_path: Path) -> dict:
                     {
                         "name": "lint",
                         "command": "make lint",
-                        "description": "Linting básico",
+                        "description": "Análisis estático básico",
                     },
                     {
                         "name": "unit_tests",
                         "command": "make test",
-                        "description": "Tests unitarios",
+                        "description": "Pruebas unitarias",
                     },
                     {
                         "name": "manual_e2e",
-                        "command": 'echo "Manual E2E test required"',
-                        "description": "Test E2E manual",
+                        "command": 'echo "Prueba E2E manual requerida"',
+                        "description": "Prueba E2E manual",
                         "manual": True,
                     },
                 ],
@@ -49,17 +49,17 @@ def simple_yaml_load(file_path: Path) -> dict:
                     {
                         "name": "lint",
                         "command": "make lint",
-                        "description": "Linting básico",
+                        "description": "Análisis estático básico",
                     },
                     {
                         "name": "unit_tests",
                         "command": "make test",
-                        "description": "Tests unitarios",
+                        "description": "Pruebas unitarias",
                     },
                     {
                         "name": "integration_tests",
                         "command": "pytest tests/integration/ -v",
-                        "description": "Tests de integración",
+                        "description": "Pruebas de integración",
                     },
                 ],
             },
@@ -67,7 +67,7 @@ def simple_yaml_load(file_path: Path) -> dict:
         "global": {
             "default_timeout": 300,
             "pre_checks": [
-                'git status --porcelain || echo "Git working directory not clean"'
+                'git status --porcelain || echo "Directorio de trabajo de Git no está limpio"'
             ],
             "post_checks": ["make sync-docs"],
         },
@@ -118,7 +118,7 @@ def get_current_phase() -> str:
 
 def load_quality_gates() -> dict:
     """Carga la configuración de quality gates desde el archivo YAML oficial."""
-    gates_file = Path("docs/architecture/configuracion_calidad.yml")
+    gates_file = Path("docs/arquitectura/configuracion-calidad.yml")
     if not gates_file.exists():
         logger.warning(
             f"⚠️ {gates_file} no encontrado, usando configuración de emergencia"
@@ -266,7 +266,7 @@ def main():
     args = parser.parse_args()
 
     # Verificar que estamos en el directorio correcto
-    if not Path("docs/architecture/configuracion_calidad.yml").exists():
+    if not Path("docs/arquitectura/configuracion-calidad.yml").exists():
         print("❌ Error: No se encontró el archivo de configuración de calidad")
         sys.exit(1)
 

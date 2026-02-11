@@ -10,7 +10,7 @@ from pathlib import Path
 
 
 def check_file_sizes() -> bool:
-    """Check that Python files are < 700 lines (per AGENTS.md)."""
+    """Check that Python files are < 100 lines (per AGENTS.md)."""
     violations = []
 
     for py_file in Path("src").glob("**/*.py"):
@@ -18,15 +18,15 @@ def check_file_sizes() -> bool:
             continue
 
         lines = len(py_file.read_text().splitlines())
-        if lines > 700:
-            violations.append(f"{py_file}: {lines} lines (max: 700)")
+        if lines > 100:
+            violations.append(f"{py_file}: {lines} lines (max: 100)")
 
     if violations:
-        print("❌ File size violations:")
-        for v in violations[:5]:  # Show max 5
+        print("❌ Violaciones de tamaño de archivo (>100 líneas):")
+        for v in violations[:10]:  # Show max 10
             print(f"   {v}")
-        if len(violations) > 5:
-            print(f"   ... and {len(violations) - 5} more")
+        if len(violations) > 10:
+            print(f"   ... y {len(violations) - 10} más")
         return False
 
     return True
@@ -68,20 +68,20 @@ def check_basic_patterns() -> bool:  # noqa: C901
 
             # Check for sync I/O patterns
             if "import requests" in content:
-                violations.append(f"{file_path}: Use aiohttp instead of requests")
+                violations.append(f"{file_path}: Usar aiohttp en lugar de requests")
 
             if "open(" in content and "async" not in content:
                 violations.append(
-                    f"{file_path}: Use aiofiles for file I/O (ephemeral only)"
+                    f"{file_path}: Usar aiofiles para I/O de archivos (solo efímero)"
                 )
 
             if '"storage/' in content or "'storage/" in content:
                 violations.append(
-                    f"{file_path}: Use Redis/Cloud instead of 'storage/' for persistent data"
+                    f"{file_path}: Usar Redis/Cloud en lugar de 'storage/' para datos persistentes"
                 )
 
         if violations:
-            print("❌ Pattern violations:")
+            print("❌ Violaciones de patrones:")
             for v in violations:
                 print(f"   {v}")
             return False
@@ -95,26 +95,26 @@ def check_basic_patterns() -> bool:  # noqa: C901
 
 def main():
     """Simple validation - file sizes + basic patterns."""
-    print("🔍 Running simple architecture checks...")
+    print("🔍 Ejecutando chequeos de arquitectura simples...")
 
     all_passed = True
 
     # Check file sizes
     if not check_file_sizes():
         all_passed = False
-        print("\n📏 Fix: Split large files into smaller modules")
+        print("\n📏 Solución: Dividir archivos grandes en módulos más pequeños")
 
     # Check basic patterns
     if not check_basic_patterns():
         all_passed = False
-        print("\n🔄 Fix: Use async patterns (see DEVELOPMENT.md)")
+        print("\n🔄 Solución: Usar patrones asíncronos (ver docs/guias/desarrollo.md)")
 
     if all_passed:
-        print("✅ Simple architecture checks passed!")
+        print("✅ ¡Chequeos de arquitectura pasados!")
         return True
     else:
-        print("\n❌ Architecture issues found")
-        print("📚 Check DEVELOPMENT.md for guidelines")
+        print("\n❌ Se encontraron problemas de arquitectura")
+        print("📚 Revisa docs/guias/desarrollo.md para las guías")
         return False
 
 

@@ -108,41 +108,42 @@ dev-check: ## Quick check durante desarrollo (solo architecture)
 	@echo "⚡ Quick development check..."
 	$(PYTHON) scripts/simple_check.py
 
-status: ## Estado completo del proyecto - 3-2-1 model
-	@echo "📊 AEGEN Project Status (3-2-1 Documentation Model)"
+status: ## Estado completo del proyecto
+	@echo "📊 Estado del Proyecto AEGEN"
 	@echo "==================================================="
-	@echo "Git Branch: $$(git rev-parse --abbrev-ref HEAD)"
-	@echo "Last Commit: $$(git log -1 --pretty=format:'%h - %s (%cr)')"
-	@echo "Modified Files: $$(git diff --name-only | wc -l | tr -d ' ')"
+	@echo "Rama Git: $$(git rev-parse --abbrev-ref HEAD)"
+	@echo "Último Commit: $$(git log -1 --pretty=format:'%h - %s (%cr)')"
+	@echo "Archivos Modificados: $$(git diff --name-only | wc -l | tr -d ' ')"
 	@echo ""
-	@echo "📚 Documentation (3 files only):"
-	@echo "   ✅ PROJECT_OVERVIEW.md - Vision & roadmap"
-	@echo "   ✅ DEVELOPMENT.md - Technical guide"
-	@echo "   ✅ Makefile - Commands"
+	@echo "📚 Documentación Principal:"
+	@echo "   ✅ PROJECT_OVERVIEW.md - Visión y Hoja de Ruta"
+	@echo "   ✅ docs/guias/desarrollo.md - Guía Técnica"
+	@echo "   ✅ makefile - Comandos"
 	@echo ""
-	@echo "🏗️ Architecture Status:"
-	$(PYTHON) scripts/simple_check.py
+	@echo "🏗️ Estado de la Arquitectura:"
+	@$(PYTHON) scripts/simple_check.py
 	@echo ""
-	@echo "📋 Test Files: $$(find tests -name 'test_*.py' 2>/dev/null | wc -l | tr -d ' ')"
+	@echo "📋 Archivos de Prueba: $$(find tests -name 'test_*.py' 2>/dev/null | wc -l | tr -d ' ')"
 	@echo ""
-	@echo "📚 Documentation Sync:"
-	$(PYTHON) scripts/sync_docs.py
+	@echo "📚 Sincronización de Documentos:"
+	@$(PYTHON) scripts/sync_docs.py
 
 help-dev: ## Muestra comandos de desarrollo esenciales
-	@echo "🚀 AEGEN Development Commands (3-2-1 Model)"
+	@echo "🚀 Comandos de Desarrollo AEGEN"
 	@echo "==========================================="
-	@echo "📖 Read: DEVELOPMENT.md for technical guide"
-	@echo "📖 Read: PROJECT_OVERVIEW.md for vision/roadmap"
+	@echo "📖 Leer: docs/guias/desarrollo.md para guía técnica"
+	@echo "📖 Leer: PROJECT_OVERVIEW.md para visión/roadmap"
 	@echo ""
-	@echo "⚡ Development:"
-	@echo "   make verify     - Full validation (lint+test+arch)"
-	@echo "   make dev-check  - Quick architecture check"
-	@echo "   make format     - Auto-fix code style"
-	@echo "   make dev        - Start development server"
+	@echo "⚡ Desarrollo:"
+	@echo "   make verify     - Validación completa (lint+test+arch)"
+	@echo "   make dev-check  - Chequeo rápido de arquitectura"
+	@echo "   make format     - Corrección automática de estilo"
+	@echo "   make dev        - Iniciar servidor de desarrollo"
 	@echo ""
-	@echo "📊 Status:"
-	@echo "   make status     - Complete project status"
-	@echo "   make sync-docs  - Update documentation"
+	@echo "📊 Estado:"
+	@echo "   make status     - Estado completo del proyecto"
+	@echo "   make sync-docs  - Actualizar documentación"
+
 
 clean: ## Elimina archivos generados (cache, venv, etc.)
 	@echo "Cleaning up project..."

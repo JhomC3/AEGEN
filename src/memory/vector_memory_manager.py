@@ -1,8 +1,8 @@
 # src/memory/vector_memory_manager.py
 """
-Public API for managing and retrieving memories.
+API pública para la gestión y recuperación de memorias.
 
-Integrates IngestionPipeline and HybridSearch for high-level operations.
+Integra IngestionPipeline e HybridSearch para operaciones de alto nivel.
 """
 
 import logging
@@ -31,13 +31,13 @@ class VectorMemoryManager:
 
     def __init__(self, store: SQLiteStore | None = None):
         """
-        Inicializa el manager con una base de datos SQLite.
+        Inicializa el gestor con una base de datos SQLite.
         """
         # Usar store proporcionado o crear uno nuevo con la configuración global
         self.store = store or SQLiteStore(settings.SQLITE_DB_PATH)
         self.pipeline = IngestionPipeline(self.store)
         self.hybrid_search = HybridSearch(self.store)
-        logger.info("VectorMemoryManager initialized")
+        logger.info("VectorMemoryManager inicializado")
 
     async def retrieve_context(
         self,
@@ -141,8 +141,8 @@ class VectorMemoryManager:
         namespace: str = "user",
     ) -> int:
         """
-        Soft-deletes memories matching a search query. Used by /olvidar command.
-        Returns the number of memories deactivated.
+        Realiza un borrado suave (soft-delete) de memorias que coinciden con una consulta.
+        Utilizado por el comando /olvidar. Retorna el número de memorias desactivadas.
         """
         results = await self.retrieve_context(
             user_id=user_id, query=query, limit=20, namespace=namespace
@@ -153,6 +153,6 @@ class VectorMemoryManager:
         memory_ids = [r["id"] for r in results]
         count = await self.store.soft_delete_memories(memory_ids)
         logger.info(
-            f"[PRIVACY] Soft-deleted {count} memories for user={user_id}, query='{query[:50]}'"
+            f"[PRIVACIDAD] Borrado suave de {count} memorias para usuario={user_id}, consulta='{query[:50]}'"
         )
         return count

@@ -34,9 +34,11 @@ logger = logging.getLogger(settings.APP_NAME)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(
-        f"Lifespan: Starting up {settings.APP_NAME} in '{settings.APP_ENV.value}' mode (Version: {settings.APP_VERSION})..."
+        f"Ciclo de vida: Arrancando {settings.APP_NAME} en modo '{settings.APP_ENV.value}' (Versión: {settings.APP_VERSION})..."
     )
-    logger.info(f"Lifespan: Debug mode is {'ON' if settings.DEBUG_MODE else 'OFF'}.")
+    logger.info(
+        f"Ciclo de vida: Modo depuración (Debug) está {'ENCENDIDO' if settings.DEBUG_MODE else 'APAGADO'}."
+    )
 
     redis_client, event_bus = await initialize_global_resources()
 
@@ -44,15 +46,15 @@ async def lifespan(app: FastAPI):
         try:
             FastAPICache.init(RedisBackend(redis_client), prefix="magi-cache")
             logger.info(
-                f"Lifespan: FastAPI Cache initialized with Redis backend (URL: {settings.REDIS_URL})."
+                f"Ciclo de vida: FastAPI Cache inicializado con Redis (URL: {settings.REDIS_URL})."
             )
         except Exception as e:
             logger.error(
-                f"Lifespan: Failed to initialize FastAPI Cache with Redis: {e}"
+                f"Ciclo de vida: Falló la inicialización de FastAPI Cache con Redis: {e}"
             )
     else:
         logger.warning(
-            "Lifespan: Redis client not available. FastAPI Cache NOT initialized."
+            "Ciclo de vida: Cliente Redis no disponible. FastAPI Cache NO inicializado."
         )
 
     # "Calienta" las dependencias singleton
@@ -75,13 +77,13 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(global_knowledge_loader.check_and_bootstrap())
 
-    logger.info("Lifespan: Unified Memory Architecture Active.")
-    logger.info("Lifespan: Application startup complete.")
+    logger.info("Ciclo de vida: Arquitectura de Memoria Unificada Activa.")
+    logger.info("Ciclo de vida: Arranque de la aplicación completado.")
     yield
-    logger.info(f"Lifespan: Shutting down {settings.APP_NAME}...")
+    logger.info(f"Ciclo de vida: Apagando {settings.APP_NAME}...")
 
     await shutdown_global_resources()
-    logger.info("Lifespan: Application shutdown complete.")
+    logger.info("Ciclo de vida: Apagado de la aplicación completado.")
 
 
 # --- Aplicación FastAPI ---
@@ -112,13 +114,13 @@ async def log_all_requests(request: Request, call_next):
     is_health_check = request.url.path == "/system/health"
 
     if not is_health_check:
-        logger.info(f">>> REQUEST INCOMING: {request.method} {request.url.path}")
+        logger.info(f">>> PETICIÓN ENTRANTE: {request.method} {request.url.path}")
 
     response = await call_next(request)
 
     if not is_health_check:
         logger.info(
-            f"<<< RESPONSE OUTGOING: {request.method} {request.url.path} - Status: {response.status_code}"
+            f"<<< RESPUESTA SALIENTE: {request.method} {request.url.path} - Estado: {response.status_code}"
         )
     return response
 

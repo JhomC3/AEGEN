@@ -28,7 +28,7 @@ Para ver el estado de salud del sistema, ejecutar: `make verify`
 - **State Graphs (Grafos de Estado):** Uso de LangGraph para orquestación declarativa.
 - **Provenanced Memory (Memoria con Procedencia):** Cada dato guardado tiene origen, confianza y evidencia.
 
-## 🏗️ 2. Arquitectura de MAGI
+## 2. Arquitectura de MAGI
 
 ### Estructura de Directorios Consolidada
 ```
@@ -41,10 +41,10 @@ AEGEN/
 │   └── tools/           # Interfaz Telegram, Voz, Ingestor Masivo
 ├── scripts/             # Herramientas de mantenimiento y automatización
 ├── docs/                # Documentación Técnica
-│   ├── architecture/    # Subsistemas (Memoria, Personalidad, Calidad)
-│   ├── guides/          # Guías de Desarrollo, Despliegue y Redis
-│   ├── plans/           # Planes Detallados de Desarrollo (Plan Maestro)
-│   └── archive/         # Documentos antiguos y decisiones superadas
+│   ├── arquitectura/    # Subsistemas (Memoria, Personalidad, Calidad)
+│   ├── guias/           # Desarrollo, Despliegue y Redis
+│   ├── planes/          # Planes Detallados de Desarrollo (Plan Maestro)
+│   └── archivo/         # Documentos antiguos y decisiones superadas
 └── adr/                 # Architecture Decision Records (Decisiones de Arquitectura Vigentes)
 ```
 
@@ -111,6 +111,6 @@ docker-compose logs -f app # Seguimiento de la transparencia RAG en vivo
 **🚀 Este documento es la fuente de verdad del proyecto.**
 
 ### 📊 Estado Operativo (Sincronización Automática)
-- Branch_Trabajo: "main"
+- Branch_Trabajo: "develop"
 - Cambios_Pendientes: []
-- Última_Sincronización: "2026-02-11 00:00"
+- Última_Sincronización: "2026-02-11 10:08"

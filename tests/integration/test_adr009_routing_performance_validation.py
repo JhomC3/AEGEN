@@ -69,7 +69,7 @@ class TestADR009RoutingPerformance:
 
     def test_adr009_documentation_exists(self):
         """Validate ADR-0009 documentation exists."""
-        adr_path = "adr/ADR-0009-routing-performance-migration.md"
+        adr_path = "adr/archivo/ADR-0009-migracion-rendimiento-enrutamiento.md"
 
         assert os.path.exists(adr_path), f"ADR-0009 documentation missing: {adr_path}"
 

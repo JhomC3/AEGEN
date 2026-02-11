@@ -1,8 +1,8 @@
 # src/api/routers/privacy.py
 """
-User privacy control commands.
+Comandos de control de privacidad del usuario.
 
-Handles /privacidad, /olvidar, /efimero before the orchestrator.
+Maneja /privacidad, /olvidar, /efimero antes del orquestador.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ _PRIVACY_COMMANDS = frozenset({"/privacidad", "/olvidar", "/efimero", "/disclaim
 
 
 def is_privacy_command(text: str | None) -> bool:
-    """Returns True if the message is a privacy command."""
+    """Retorna True si el mensaje es un comando de privacidad."""
     if not text:
         return False
     return text.strip().split()[0].lower() in _PRIVACY_COMMANDS
@@ -26,7 +26,8 @@ def is_privacy_command(text: str | None) -> bool:
 
 async def handle_privacy_command(text: str, chat_id: str) -> str | None:
     """
-    Handles a privacy command. Returns the response text, or None if not a privacy command.
+    Procesa un comando de privacidad. Retorna el texto de respuesta,
+    o None si no es un comando de privacidad.
     """
     parts = text.strip().split(maxsplit=1)
     command = parts[0].lower()

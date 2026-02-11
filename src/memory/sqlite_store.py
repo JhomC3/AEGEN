@@ -185,7 +185,7 @@ class SQLiteStore:
             return row is not None
 
     async def soft_delete_memories(self, memory_ids: list[int]) -> int:
-        """Marks memories as inactive (soft delete). Returns count updated."""
+        """Marca memorias como inactivas (borrado suave). Retorna la cuenta actualizada."""
         if not memory_ids:
             return 0
         db = await self.get_db()
@@ -198,12 +198,12 @@ class SQLiteStore:
             await db.commit()
             return cursor.rowcount
         except Exception as e:
-            logger.error(f"Error in soft_delete_memories: {e}")
+            logger.error(f"Error en soft_delete_memories: {e}")
             await db.rollback()
             return 0
 
     async def get_memory_stats(self, chat_id: str) -> dict:
-        """Returns memory statistics for a user."""
+        """Retorna estadísticas de memoria para un usuario."""
         db = await self.get_db()
         stats: dict = {"total": 0, "by_type": {}, "by_sensitivity": {}}
         try:
