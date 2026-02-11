@@ -4,10 +4,13 @@ Script para ejecutar quality gates específicos por fase del proyecto.
 Lee quality_gates.yml y ejecuta solo los checks apropiados para la fase actual.
 """
 
+import logging
 import re
 import subprocess
 import sys
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 
 # Fallback YAML parser simple para evitar dependencia externa
@@ -114,18 +117,19 @@ def get_current_phase() -> str:
 
 
 def load_quality_gates() -> dict:
-    """Carga la configuración de quality gates."""
-    gates_file = Path("config/quality_gates.yml")
+    """Carga la configuración de quality gates desde el archivo YAML oficial."""
+    gates_file = Path("docs/architecture/configuracion_calidad.yml")
     if not gates_file.exists():
-        print("⚠️  quality_gates.yml no encontrado, usando configuración por defecto")
+        logger.warning(
+            f"⚠️ {gates_file} no encontrado, usando configuración de emergencia"
+        )
         return simple_yaml_load(gates_file)
 
     try:
-        # Por ahora usar configuración hardcoded
-        # En el futuro se puede añadir PyYAML al requirements
+        # En el futuro usar PyYAML. Por ahora usamos el fallback simple que ya existe.
         return simple_yaml_load(gates_file)
     except Exception as e:
-        print(f"❌ Error parsing quality_gates.yml: {e}")
+        logger.error(f"❌ Error leyendo configuracion_calidad.yml: {e}")
         return simple_yaml_load(gates_file)
 
 
@@ -262,8 +266,8 @@ def main():
     args = parser.parse_args()
 
     # Verificar que estamos en el directorio correcto
-    if not Path("config/quality_gates.yml").exists():
-        print("❌ Error: Ejecutar desde el directorio raíz del proyecto AEGEN")
+    if not Path("docs/architecture/configuracion_calidad.yml").exists():
+        print("❌ Error: No se encontró el archivo de configuración de calidad")
         sys.exit(1)
 
     if args.list_phases:

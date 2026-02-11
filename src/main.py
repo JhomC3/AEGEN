@@ -79,6 +79,7 @@ async def lifespan(app: FastAPI):
     logger.info("Lifespan: Application startup complete.")
     yield
     logger.info(f"Lifespan: Shutting down {settings.APP_NAME}...")
+
     await shutdown_global_resources()
     logger.info("Lifespan: Application shutdown complete.")
 

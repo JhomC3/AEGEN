@@ -8,11 +8,16 @@
 
 ## 📖 Manual del Proyecto
 
-Toda la filosofía de desarrollo, los estándares de codificación, la guía de arquitectura, el estado actual y la hoja de ruta del proyecto se encuentran documentados en nuestro manual principal.
+Toda la filosofía de desarrollo, los estándares de codificación, la guía de arquitectura, el estado actual y la hoja de ruta del proyecto se encuentran documentados en nuestro manual principal y carpetas especializadas.
 
 Este documento es de **lectura obligatoria** para cualquier contribuidor (humano o IA).
 
-➡️ **[📄 Manual de Arquitectura y Desarrollo (PROJECT_OVERVIEW.md)](PROJECT_OVERVIEW.md)**
+1.  **[📄 Constitución (PROJECT_OVERVIEW.md)](PROJECT_OVERVIEW.md)**: Visión, arquitectura de alto nivel y Roadmap.
+2.  **[📂 Arquitectura (docs/architecture/)](docs/architecture/)**: Detalle de subsistemas (Memoria, Personalidad, etc.).
+3.  **[📂 Guías (docs/guides/)](docs/guides/)**: Instalación, Despliegue y Desarrollo.
+4.  **[📜 Decisiones (adr/)](adr/)**: Registro histórico de decisiones técnicas.
+5.  **[⚖️ Ley Técnica (rules.md)](rules.md)**: Estándares de código y seguridad.
+6.  **[🤖 Gobernanza (AGENTS.md)](AGENTS.md)**: Reglas para agentes de IA.
 
 ## ✨ Características Principales
 

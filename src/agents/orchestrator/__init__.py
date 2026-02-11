@@ -1,11 +1,8 @@
-# src/agents/orchestrator.py
 """
 MasterOrchestrator - Refactored Implementation Entry Point
 
 Este archivo ahora importa la implementación refactorizada del MasterOrchestrator
 que cumple con principios de Clean Architecture y SRP.
-
-La implementación monolítica original fue movida a orchestrator_legacy.py
 """
 
 import logging
