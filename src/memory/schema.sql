@@ -70,11 +70,6 @@ CREATE TABLE IF NOT EXISTS profiles (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX IF NOT EXISTS idx_memories_chat_namespace
-    ON memories(chat_id, namespace);
-CREATE INDEX IF NOT EXISTS idx_memories_active
-    ON memories(is_active) WHERE is_active = 1;
-
 -- Trigger de limpieza automática: borra el vector físico cuando se elimina su referencia
 -- Esto completa la cascada de limpieza: memories → vector_memory_map → memory_vectors
 CREATE TRIGGER IF NOT EXISTS cleanup_vector_on_map_delete

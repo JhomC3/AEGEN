@@ -53,20 +53,32 @@ async def apply_migrations(store: SQLiteStore) -> None:
     """
     db = await store.get_db()
     existing = await _get_existing_columns(store)
-    applied = 0
+    applied_cols = 0
 
+    # 1. Add missing columns first
     for col_name, col_def in _PROVENANCE_COLUMNS:
         if col_name not in existing:
             sql = f"ALTER TABLE memories ADD COLUMN {col_name} {col_def}"
             await db.execute(sql)
-            applied += 1
+            applied_cols += 1
             logger.info(f"Migration: added column '{col_name}' to memories")
 
-    for _idx_name, idx_sql in _INDEXES:
-        await db.execute(idx_sql)
-
-    if applied > 0:
+    if applied_cols > 0:
         await db.commit()
-        logger.info(f"Migration complete: {applied} columns added")
-    else:
+        logger.info(f"Migration: {applied_cols} columns added successfully")
+
+    # 2. Add indexes once columns are guaranteed to exist
+    applied_idx = 0
+    for _idx_name, idx_sql in _INDEXES:
+        try:
+            await db.execute(idx_sql)
+            applied_idx += 1
+        except Exception as e:
+            logger.warning(f"Could not create index (may already exist or error): {e}")
+
+    if applied_idx > 0:
+        await db.commit()
+        logger.info("Migration: index check complete")
+
+    if applied_cols == 0 and applied_idx == 0:
         logger.debug("Migration: schema already up to date")
