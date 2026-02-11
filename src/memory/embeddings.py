@@ -66,6 +66,8 @@ class EmbeddingService:
             return []
 
         try:
+            from typing import cast
+
             # Google GenAI SDK (actualmente sincrónico, pero lo envolvemos en async)
             response = genai.embed_content(
                 model=self.model_name,
@@ -78,7 +80,7 @@ class EmbeddingService:
             # que es una lista de vectores si content es una lista de strings
             embeddings = response.get("embedding", [])
             logger.debug(f"Generated {len(embeddings)} embeddings")
-            return embeddings
+            return cast(list[list[float]], embeddings)
 
         except Exception as e:
             logger.error(f"Error generating embeddings: {e}")

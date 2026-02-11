@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 
 def format_knowledge_for_prompt(knowledge: dict[str, Any]) -> str:
-    """Formatea la Bóveda de Conocimiento para el prompt."""
+    """Formatea la Bóveda de Conocimiento marcando inferencias."""
     sections = []
 
     def fmt_attrs(attrs: dict) -> str:
@@ -33,16 +33,23 @@ def format_knowledge_for_prompt(knowledge: dict[str, Any]) -> str:
             return ""
         return ", ".join([f"{k}={v}" for k, v in attrs.items()])
 
+    def provenance_tag(item: dict) -> str:
+        if item.get("source_type") == "inferred":
+            conf = item.get("confidence", 0.5)
+            return f" (hipótesis, confianza: {conf:.0%})"
+        return ""
+
     if knowledge.get("entities"):
         ents = "\n".join([
             f"- {e['name']} ({e['type']}): {fmt_attrs(e.get('attributes', {}))}"
+            f"{provenance_tag(e)}"
             for e in knowledge["entities"]
         ])
         sections.append(f"ENTIDADES:\n{ents}")
 
     if knowledge.get("medical"):
         meds = "\n".join([
-            f"- {m['name']} ({m['type']}): {m.get('details', '')}"
+            f"- {m['name']} ({m['type']}): {m.get('details', '')}{provenance_tag(m)}"
             for m in knowledge["medical"]
         ])
         sections.append(f"DATOS MÉDICOS:\n{meds}")
@@ -50,17 +57,59 @@ def format_knowledge_for_prompt(knowledge: dict[str, Any]) -> str:
     if knowledge.get("relationships"):
         rels = "\n".join([
             f"- {r['person']} ({r['relation']}): {fmt_attrs(r.get('attributes', {}))}"
+            f"{provenance_tag(r)}"
             for r in knowledge["relationships"]
         ])
         sections.append(f"RELACIONES:\n{rels}")
 
     if knowledge.get("preferences"):
         prefs = "\n".join([
-            f"- {p['category']}: {p['value']}" for p in knowledge["preferences"]
+            f"- {p['category']}: {p['value']}{provenance_tag(p)}"
+            for p in knowledge["preferences"]
         ])
         sections.append(f"PREFERENCIAS:\n{prefs}")
 
     return "\n\n".join(sections) if sections else "No hay hechos confirmados aún."
+
+
+def _build_enriched_profile_context(profile: dict[str, Any]) -> str:
+    """Formats enriched profile sections for the CBT system prompt."""
+    sections = []
+
+    sp = profile.get("support_preferences", {})
+    if sp:
+        parts = [f"Estilo preferido: {sp.get('response_style', 'balanced')}"]
+        if sp.get("topics_to_avoid"):
+            parts.append(f"Temas a evitar: {', '.join(sp['topics_to_avoid'])}")
+        if sp.get("preferred_techniques"):
+            parts.append(
+                f"Técnicas preferidas: {', '.join(sp['preferred_techniques'])}"
+            )
+        sections.append(
+            "[PREFERENCIAS DE APOYO]\n" + "\n".join(f"- {p}" for p in parts)
+        )
+
+    cm = profile.get("coping_mechanisms", {})
+    if cm:
+        parts = []
+        if cm.get("known_strengths"):
+            parts.append(f"Fortalezas: {', '.join(cm['known_strengths'])}")
+        if cm.get("calming_anchors"):
+            parts.append(f"Anclajes de calma: {', '.join(cm['calming_anchors'])}")
+        if parts:
+            sections.append(
+                "[RECURSOS DEL USUARIO]\n" + "\n".join(f"- {p}" for p in parts)
+            )
+
+    cs = profile.get("clinical_safety", {})
+    if cs:
+        resources = cs.get("emergency_resources", [])
+        if resources:
+            sections.append(
+                "[RECURSOS DE EMERGENCIA]\n" + "\n".join(f"- {r}" for r in resources)
+            )
+
+    return "\n\n".join(sections) if sections else ""
 
 
 @tool
@@ -139,6 +188,13 @@ async def cbt_therapeutic_guidance_tool(
         )
 
         all_results = global_results + user_results
+
+        # Transparencia RAG
+        logger.info(
+            f"[CBT-RAG] Injecting context: {len(global_results)} global + "
+            f"{len(user_results)} user fragments for chat={chat_id}"
+        )
+
         knowledge_context = (
             "\n\n".join([f"- {r['content']}" for r in all_results])
             if all_results
@@ -161,6 +217,25 @@ async def cbt_therapeutic_guidance_tool(
             "knowledge_context": knowledge_context,
             "structured_knowledge": structured_knowledge,
         },
+    )
+
+    # Inyectar perfil enriquecido
+    enriched_context = _build_enriched_profile_context(profile)
+    if enriched_context:
+        persona_template += f"\n\n{enriched_context}"
+
+    # Inyectar guardrails clínicos
+    persona_template += (
+        "\n\n[GUARDRAILS CLÍNICOS]\n"
+        "- NUNCA uses lenguaje diagnóstico. No digas 'tienes ansiedad generalizada'.\n"
+        "- Puedes decir 'lo que describes suena a lo que en psicología se llama..., "
+        "pero solo un profesional puede evaluarlo'.\n"
+        "- Si el usuario pide diagnóstico, prescripción o evaluación clínica formal, "
+        "declina y sugiere buscar un profesional.\n"
+        "- Si detectas riesgo de autolesión o crisis, muestra los recursos de emergencia "
+        "y sugiere contactar a un profesional inmediatamente.\n"
+        "- Los datos marcados como '(hipótesis)' en el conocimiento son inferencias "
+        "no confirmadas. Úsalos con precaución.\n"
     )
 
     # Inyectar instrucciones de routing al final del system prompt

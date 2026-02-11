@@ -23,28 +23,39 @@ class FactExtractor:
             (
                 "system",
                 (
-                    "Eres un Analista de Datos Clínicos y experto en Grafos de Conocimiento. "
-                    "Tu tarea es extraer hechos atómicos, precisos y verificables de una conversación.\n\n"
-                    "REGLAS DE ORO:\n"
-                    "1. PRECISIÓN ABSOLUTA: No inventes datos. Si no hay seguridad del 90%+, ignora el hecho.\n"
-                    "2. ATOMICIDAD: Cada hecho debe ser una unidad independiente.\n"
-                    "3. NO ALUCINACIONES: Si el usuario dice 'mi perro', no asumas que es un Golden Retriever a menos que lo diga.\n"
-                    "4. DATOS MÉDICOS: Captura condiciones, medicación, dosis y profesionales con rigor.\n"
-                    "5. IDENTIDAD DEL USUARIO: Si el usuario menciona explícitamente su nombre (ej: 'Me llamo X', 'Dime Y'), extráelo.\n\n"
-                    "FORMATO DE SALIDA (JSON ESTRICTO):\n"
+                    "Eres un extractor de hechos estructurados. Tu tarea es identificar "
+                    "datos atómicos de una conversación y clasificarlos por origen y sensibilidad.\n\n"
+                    "REGLAS:\n"
+                    "1. CLASIFICA cada hecho como 'explicit' (el usuario lo dijo literalmente) o "
+                    "'inferred' (es tu interpretación del texto).\n"
+                    "2. CONFIANZA: Para hechos 'explicit', confidence=1.0. Para 'inferred', asigna 0.5-0.9.\n"
+                    "3. EVIDENCIA: Incluye la cita textual exacta del usuario que soporta el hecho.\n"
+                    "4. SENSIBILIDAD: 'low' (gustos, datos demográficos), 'medium' (relaciones, trabajo), "
+                    "'high' (salud mental, médico, trauma, emociones fuertes).\n"
+                    "5. NO DIAGNOSTIQUES. No afirmes rasgos estables. Si detectas un posible patrón "
+                    "cognitivo, etiquétalo como hipótesis inferred con evidencia.\n"
+                    "6. PRECISIÓN: Si no hay seguridad del 90%+, ignora el hecho.\n"
+                    "7. Si el usuario menciona su nombre, extráelo en 'user_name'.\n\n"
+                    "FORMATO (JSON ESTRICTO):\n"
                     "{{\n"
-                    "  'user_name': 'Nombre detectado o null',\n"
-                    "  'entities': [{{'name', 'type', 'attributes', 'confidence'}}],\n"
-                    "  'preferences': [{{'category', 'value', 'strength'}}],\n"
-                    "  'medical': [{{'type', 'name', 'details', 'date'}}],\n"
-                    "  'relationships': [{{'person', 'relation', 'attributes'}}],\n"
-                    "  'milestones': [{{'description', 'date', 'category'}}]\n"
+                    '  "user_name": "nombre o null",\n'
+                    '  "entities": [{{"name", "type", "attributes", "source_type", '
+                    '"confidence", "evidence", "sensitivity"}}],\n'
+                    '  "preferences": [{{"category", "value", "strength", "source_type", '
+                    '"confidence", "evidence", "sensitivity"}}],\n'
+                    '  "medical": [{{"type", "name", "details", "date", "source_type", '
+                    '"confidence", "evidence", "sensitivity"}}],\n'
+                    '  "relationships": [{{"person", "relation", "attributes", "source_type", '
+                    '"confidence", "evidence", "sensitivity"}}],\n'
+                    '  "milestones": [{{"description", "date", "category", "source_type", '
+                    '"confidence", "evidence", "sensitivity"}}]\n'
                     "}}"
                 ),
             ),
             (
                 "user",
-                "CONVERSACIÓN:\n{conversation}\n\nCONOCIMIENTO ACTUAL:\n{current_knowledge}\n\nExtrae y actualiza los hechos:",
+                "CONVERSACIÓN:\n{conversation}\n\nCONOCIMIENTO ACTUAL:\n{current_knowledge}\n\n"
+                "Extrae y actualiza los hechos:",
             ),
         ])
 
@@ -86,40 +97,80 @@ class FactExtractor:
             logger.error(f"Error en FactExtractor: {e}", exc_info=True)
             return current_knowledge
 
+    @staticmethod
+    def _identity_key(item: dict[str, Any], category: str) -> str:
+        """Returns a dedup key based on the semantic identity of a fact."""
+        if category == "entities":
+            return f"{item.get('name', '')}::{item.get('type', '')}".lower()
+        if category == "relationships":
+            return f"{item.get('person', '')}::{item.get('relation', '')}".lower()
+        if category == "medical":
+            return f"{item.get('name', '')}::{item.get('type', '')}".lower()
+        if category == "preferences":
+            return f"{item.get('category', '')}::{item.get('value', '')}".lower()
+        if category == "milestones":
+            return f"{item.get('description', '')}".lower()
+        return json.dumps(item, sort_keys=True)
+
     def _merge_knowledge(
         self, old: dict[str, Any], new: dict[str, Any]
     ) -> dict[str, Any]:
         """
-        Lógica de mezcla inteligente para evitar duplicados y actualizar atributos.
+        Merges new knowledge into old, deduplicating by semantic identity.
+        New items with the same identity key update the old item's attributes.
         """
         merged = old.copy()
 
         # Merge explícito del nombre de usuario
-        # Si el extractor detectó un nombre nuevo (no nulo), ese tiene prioridad absoluta.
         if new.get("user_name"):
             merged["user_name"] = new["user_name"]
 
-        # Simple merge for now, prioritizing new data for attributes
-        for key in [
+        for key in (
             "entities",
             "preferences",
             "medical",
             "relationships",
             "milestones",
-        ]:
-            if key not in merged:
-                merged[key] = []
-
-            # TODO: Implementar deduplicación por ID o Nombre
-            # Por ahora, simplemente añadimos y el LLM se encarga de la coherencia en la siguiente pasada
-            # Pero para ser más robustos, podríamos filtrar duplicados exactos
-            existing_items = {json.dumps(item, sort_keys=True) for item in merged[key]}
-            for item in new.get(key, []):
-                item_str = json.dumps(item, sort_keys=True)
-                if item_str not in existing_items:
-                    merged[key].append(item)
+        ):
+            self._merge_category(merged, new, key)
 
         return merged
+
+    def _merge_category(
+        self, merged: dict[str, Any], new: dict[str, Any], key: str
+    ) -> None:
+        """Helper to merge a specific category of facts."""
+        if key not in merged:
+            merged[key] = []
+
+        # Index existing items by identity key
+        existing: dict[str, int] = {
+            self._identity_key(item, key): idx for idx, item in enumerate(merged[key])
+        }
+
+        for item in new.get(key, []):
+            ik = self._identity_key(item, key)
+            if ik in existing:
+                # Update existing item (merge attributes, keep higher confidence)
+                old_item = merged[key][existing[ik]]
+                if isinstance(old_item.get("attributes"), dict) and isinstance(
+                    item.get("attributes"), dict
+                ):
+                    old_item["attributes"].update(item["attributes"])
+
+                # Overwrite with new data if same/higher confidence
+                if item.get("confidence", 0) >= old_item.get("confidence", 0):
+                    for field in (
+                        "source_type",
+                        "confidence",
+                        "evidence",
+                        "sensitivity",
+                    ):
+                        if field in item:
+                            old_item[field] = item[field]
+            else:
+                merged[key].append(item)
+                existing[ik] = len(merged[key]) - 1
 
 
 # Singleton

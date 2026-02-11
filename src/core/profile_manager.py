@@ -19,64 +19,39 @@ class UserProfileManager:
         logger.info("UserProfileManager initialized (Diskless & Multi-user)")
 
     def _get_default_profile(self) -> dict[str, Any]:
+        """Returns a complete default profile using the Pydantic model."""
+        from src.core.schemas.profile import UserProfile
+
+        return UserProfile().model_dump()
+
+    def _ensure_complete(self, raw: dict[str, Any]) -> dict[str, Any]:
         """
-        3.2: Estructura de perfil expandida (Valores, Metas, Evolución).
+        Validates and migrates an old profile dict.
+
+        Uses Pydantic model_validate to fill in missing sections with defaults.
+        Preserves all existing data. Bumps version to current.
         """
-        now = datetime.now().isoformat()
-        return {
-            "identity": {
-                "name": "Usuario",
-                "style": "Casual y Directo",
-                "preferences": {},
-            },
-            "personality_adaptation": {
-                "preferred_style": "casual",
-                "communication_level": "intermediate",
-                "humor_tolerance": 0.7,
-                "formality_level": 0.3,
-                "history_limit": 20,
-                "learned_preferences": [],
-                "active_topics": [],
-            },
-            "psychological_state": {
-                "current_phase": "Discovery",
-                "key_metaphors": [],
-                "active_struggles": [],
-            },
-            "values_and_goals": {
-                "core_values": [],
-                "short_term_goals": [],
-                "long_term_dreams": [],
-                "physical_state": "Not specified",
-            },
-            "tasks_and_activities": {"active_tasks": [], "completed_activities": []},
-            "evolution": {
-                "level": 1,
-                "milestones_count": 0,
-                "path_traveled": [],  # Registro del "camino recorrido"
-            },
-            "active_tags": ["bienvenida"],
-            "localization": {
-                "country_code": None,  # ISO (ej: "CO")
-                "region": None,  # Ciudad/Región (ej: "medellin")
-                "timezone": "UTC",  # IANA Timezone
-                "language_code": None,  # Código de Telegram
-                "dialect": "neutro",  # Dialecto derivado
-                "dialect_hint": None,  # Matiz regional (ej: "paisa")
-                "confirmed_by_user": False,  # Si el usuario lo validó
-            },
-            "timeline": [
-                {
-                    "date": now,
-                    "event": "Creación de Perfil Evolutivo",
-                    "type": "system",
-                }
-            ],
-            "metadata": {
-                "version": "1.1.0",
-                "last_updated": now,
-            },
-        }
+        from src.core.schemas.profile import UserProfile
+
+        try:
+            profile = UserProfile.model_validate(raw)
+            # Ensure version is bumped to latest
+            profile.metadata.version = "1.2.0"
+            return profile.model_dump()
+        except Exception as e:
+            logger.warning(f"Profile migration failed, using merged approach: {e}")
+            # Fallback: merge old dict onto defaults
+            defaults = self._get_default_profile()
+            for key, value in raw.items():
+                if (
+                    isinstance(value, dict)
+                    and key in defaults
+                    and isinstance(defaults[key], dict)
+                ):
+                    defaults[key].update(value)
+                else:
+                    defaults[key] = value
+            return defaults
 
     def _redis_key(self, chat_id: str) -> str:
         """3.4: Retorna la clave de Redis para el perfil."""
@@ -122,7 +97,7 @@ class UserProfileManager:
                 if raw_data:
                     if isinstance(raw_data, bytes):
                         raw_data = raw_data.decode("utf-8")
-                    return json.loads(raw_data)
+                    return self._ensure_complete(json.loads(raw_data))
             except Exception as e:
                 logger.error(f"Error cargando perfil de Redis para {chat_id}: {e}")
 
@@ -131,13 +106,14 @@ class UserProfileManager:
             store = get_sqlite_store()
             sqlite_profile = await store.load_profile(chat_id)
             if sqlite_profile:
+                complete = self._ensure_complete(sqlite_profile)
                 # Rehidratar Redis para futuras consultas
                 if redis_connection:
                     key = self._redis_key(chat_id)
                     await redis_connection.set(
-                        key, json.dumps(sqlite_profile, ensure_ascii=False)
+                        key, json.dumps(complete, ensure_ascii=False)
                     )
-                return sqlite_profile
+                return complete
         except Exception as e:
             logger.error(f"Error cargando perfil de SQLite para {chat_id}: {e}")
 

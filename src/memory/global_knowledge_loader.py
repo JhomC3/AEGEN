@@ -80,9 +80,7 @@ class GlobalKnowledgeLoader:
                     content = self._extract_pdf_text(file_path)
                 else:
                     # Leer archivos de texto como UTF-8
-                    async with aiofiles.open(
-                        file_path, mode="r", encoding="utf-8"
-                    ) as f:
+                    async with aiofiles.open(file_path, encoding="utf-8") as f:
                         content = await f.read()
 
                 if not content or not content.strip():

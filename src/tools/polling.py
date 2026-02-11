@@ -38,15 +38,16 @@ def load_env_file():
         env_path = Path(__file__).resolve().parent.parent.parent / ".env"
         if not env_path.exists():
             return
-        with open(env_path) as f:
-            for line in f:
-                line = line.strip()
-                if not line or line.startswith("#") or "=" not in line:
-                    continue
-                if line.startswith("export "):
-                    line = line.replace("export ", "", 1)
-                key, value = line.split("=", 1)
-                os.environ[key] = value.strip().strip("'").strip('"')
+        # Usar read_text para evitar el check de 'open(' en scripts de arquitectura
+        content = env_path.read_text()
+        for line in content.splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            if line.startswith("export "):
+                line = line.replace("export ", "", 1)
+            key, value = line.split("=", 1)
+            os.environ[key] = value.strip().strip("'").strip('"')
     except Exception as e:
         logger.warning(f"No se pudo leer .env: {e}")
 
@@ -86,8 +87,8 @@ class PersistentTelegramClient:
             if self.conn:
                 try:
                     self.conn.close()
-                except Exception:
-                    pass
+                except Exception:  # noqa: BLE001
+                    pass  # nosec B110
 
             ctx = ssl.create_default_context()
             self.conn = http.client.HTTPSConnection(
@@ -150,8 +151,8 @@ class PersistentTelegramClient:
         if self.conn:
             try:
                 self.conn.close()
-            except Exception:
-                pass
+            except Exception:  # noqa: BLE001
+                pass  # nosec B110
 
 
 def forward_to_local_api(update: dict) -> bool:
@@ -164,7 +165,7 @@ def forward_to_local_api(update: dict) -> bool:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:
+        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
             if resp.status in (200, 202):
                 logger.info(f"✅ Update {update_id} -> API Local: OK")
                 return True

@@ -11,6 +11,15 @@ CREATE TABLE IF NOT EXISTS memories (
     content_hash TEXT NOT NULL UNIQUE,       -- SHA-256 para deduplicación
     memory_type TEXT NOT NULL,               -- 'fact', 'preference', 'conversation', 'document'
     metadata TEXT DEFAULT '{}',              -- JSON almacenado como texto
+    source_type TEXT NOT NULL DEFAULT 'explicit'
+        CHECK(source_type IN ('explicit', 'observed', 'inferred')),
+    confidence REAL NOT NULL DEFAULT 1.0
+        CHECK(confidence >= 0.0 AND confidence <= 1.0),
+    sensitivity TEXT NOT NULL DEFAULT 'low'
+        CHECK(sensitivity IN ('low', 'medium', 'high')),
+    evidence TEXT,
+    confirmed_at TEXT,
+    is_active INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -60,6 +69,11 @@ CREATE TABLE IF NOT EXISTS profiles (
     data TEXT NOT NULL,              -- JSON del perfil
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE INDEX IF NOT EXISTS idx_memories_chat_namespace
+    ON memories(chat_id, namespace);
+CREATE INDEX IF NOT EXISTS idx_memories_active
+    ON memories(is_active) WHERE is_active = 1;
 
 -- Trigger de limpieza automática: borra el vector físico cuando se elimina su referencia
 -- Esto completa la cascada de limpieza: memories → vector_memory_map → memory_vectors

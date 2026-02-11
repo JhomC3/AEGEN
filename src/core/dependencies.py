@@ -44,6 +44,11 @@ async def initialize_global_resources() -> tuple[aioredis.Redis | None, IEventBu
         sqlite_store = SQLiteStore(settings.SQLITE_DB_PATH)
         await sqlite_store.init_db(settings.SQLITE_SCHEMA_PATH)
         logger.info("SQLiteStore initialized and schema applied.")
+
+        from src.memory.migration import apply_migrations
+
+        await apply_migrations(sqlite_store)
+        logger.info("Database migrations applied.")
     except Exception as e:
         logger.error(f"Failed to initialize SQLiteStore: {e}")
         # Consideramos SQLite crítico para el nuevo sistema

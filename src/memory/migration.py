@@ -1,0 +1,72 @@
+# src/memory/migration.py
+"""
+Idempotent database migrations for AEGEN memory schema.
+
+Handles adding new columns to existing databases without data loss.
+New databases get the full schema via schema.sql; this module closes the gap
+for databases created before the provenance columns were added.
+"""
+
+from __future__ import annotations
+
+import logging
+
+from src.memory.sqlite_store import SQLiteStore
+
+logger = logging.getLogger(__name__)
+
+# Columns to add with their SQL type and default
+_PROVENANCE_COLUMNS: list[tuple[str, str]] = [
+    ("source_type", "TEXT NOT NULL DEFAULT 'explicit'"),
+    ("confidence", "REAL NOT NULL DEFAULT 1.0"),
+    ("sensitivity", "TEXT NOT NULL DEFAULT 'low'"),
+    ("evidence", "TEXT"),
+    ("confirmed_at", "TEXT"),
+    ("is_active", "INTEGER NOT NULL DEFAULT 1"),
+]
+
+_INDEXES: list[tuple[str, str]] = [
+    (
+        "idx_memories_chat_namespace",
+        "CREATE INDEX IF NOT EXISTS idx_memories_chat_namespace ON memories(chat_id, namespace)",
+    ),
+    (
+        "idx_memories_active",
+        "CREATE INDEX IF NOT EXISTS idx_memories_active ON memories(is_active) WHERE is_active = 1",
+    ),
+]
+
+
+async def _get_existing_columns(store: SQLiteStore) -> set[str]:
+    """Returns the set of column names in the memories table."""
+    db = await store.get_db()
+    cursor = await db.execute("PRAGMA table_info(memories)")
+    rows = await cursor.fetchall()
+    return {row[1] for row in rows}
+
+
+async def apply_migrations(store: SQLiteStore) -> None:
+    """
+    Apply all pending migrations idempotently.
+
+    Safe to call on every startup — skips columns/indexes that already exist.
+    """
+    db = await store.get_db()
+    existing = await _get_existing_columns(store)
+    applied = 0
+
+    for col_name, col_def in _PROVENANCE_COLUMNS:
+        if col_name not in existing:
+            sql = f"ALTER TABLE memories ADD COLUMN {col_name} {col_def}"
+            await db.execute(sql)
+            applied += 1
+            logger.info(f"Migration: added column '{col_name}' to memories")
+
+    for _idx_name, idx_sql in _INDEXES:
+        await db.execute(idx_sql)
+
+    if applied > 0:
+        await db.commit()
+        logger.info(f"Migration complete: {applied} columns added")
+    else:
+        logger.debug("Migration: schema already up to date")
