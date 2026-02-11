@@ -4,15 +4,37 @@ Este documento resume el estado actual del proyecto AEGEN, los logros recientes 
 
 ---
 
-## 🚀 Fase F: Evolución de Memoria (Local-First) 🔄
-Estamos migrando la persistencia de largo plazo de **Google File API (Cloud)** a una arquitectura híbrida local optimizada para reducir latencia y mejorar la precisión.
+## 🚀 Fase F: Evolución de Memoria (Local-First) ✅
+Persistencia de largo plazo migrada de Google Cloud a arquitectura híbrida local optimizada.
 
-- **F.20 - Infraestructura SQLite:** Implementación de base de datos local con soporte `sqlite-vec` y `FTS5`.
-- **F.21 - Pipeline de Ingestión:** Chunking recursivo y deduplicación por hash para optimizar tokens.
-- **F.22 - Búsqueda Híbrida:** Implementación de Ranking RRF (Vectorial + Keywords).
-- **F.23 - Hooks de Sesión:** Automatización del paso Buffer (Redis) -> Long Term (SQLite).
+- **F.20 - Infraestructura SQLite:** Implementada con soporte `sqlite-vec` y `FTS5`.
+- **F.21 - Pipeline de Ingestión:** Chunking recursivo y deduplicación por hash SHA-256.
+- **F.22 - Búsqueda Híbrida:** Ranking RRF (0.7 Vector / 0.3 Keyword).
+- **F.23 - Hooks de Sesión:** Automatización Redis -> SQLite.
 
-> Ver detalles en: `docs/refactors/memory_evolution/`
+## 🚀 Fase G: Gobernanza y Seguridad Clínica ✅
+Implementación de trazabilidad y guardrails profesionales.
+
+- **G.24 - Trazabilidad (Provenance):** Separación de memoria en `explicit`, `observed` e `inferred`.
+- **G.25 - Perfil Pydantic:** Validación estructural de perfiles con migración automática.
+- **G.26 - Guardrails CBT:** Protección contra diagnóstico y protocolos de crisis.
+- **G.27 - Privacy Controls:** Comandos `/privacidad`, `/olvidar`, `/efimero`.
+
+---
+
+## 🗺️ Roadmap v0.7.0 (Próximos Pasos)
+
+### 1. Ingestión Masiva (Bulk Ingestion)
+- Herramienta para importar historiales de **ChatGPT / Claude**.
+- Agente de **"Life Review"** para extraer valores y metas desde documentos extensos.
+
+### 2. Olvido Inteligente (Smart Decay)
+- Ponderación temporal en la búsqueda (Nuevos > Viejos).
+- Clasificación de memorias como **Estado** (Efímero) vs **Rasgo** (Permanente).
+
+### 3. Flexibilidad de Estilo (Accent Fix)
+- Refactor del `PromptBuilder` para eliminar acentos forzados.
+- Lógica de adaptación lingüística por imitación natural, no por reglas rígidas.
 
 ---
 

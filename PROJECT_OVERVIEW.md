@@ -1,9 +1,9 @@
 # AEGEN: Plataforma de Orquestación de Agentes Multi-Especialistas
 
 > **MAGI:** El Asistente Conversacional (Interfaz Principal)
-> **Versión:** 0.3.0 (Memory Evolution)
-> **Estado:** Migración a Memoria Local-First en Progreso 🔄
-> **Branch Actual:** `develop`
+> **Versión:** 0.6.0 (Clinical Evolution)
+> **Estado:** Arquitectura de Memoria y Seguridad Completada ✅
+> **Branch Actual:** `feature/sqlite-memory`
 
 <!-- LLM-Hint: AEGEN es la infraestructura. MAGI es el agente conversacional que el usuario ve. MAGI utiliza el MasterOrchestrator para delegar tareas a especialistas como el Agente TCC. Este documento es la Fuente de Verdad. -->
 
@@ -82,14 +82,15 @@ graph TD
     A[Telegram] --> B(Webhook);
     B --> C{CanonicalEventV1};
     C --> D[MasterOrchestrator];
-    D --> E{EnhancedFunctionCallingRouter};
+    D --> E{EnhancedRouter};
     E --> F[RoutingAnalyzer];
-    F --> G{LLM (Gemini)};
+    F --> G{LLM (Multi-Provider)};
     E --> H[Specialist Agent];
     H --> I[GraphExecution];
     I --> J[RedisMessageBuffer];
     J --> K[ConsolidationManager];
     K --> L[SQLiteStore / sqlite-vec];
+    L -- "Provenance: Origen/Confianza/Evidencia" --> Specialists;
     L -.-> M[Backup: Cloud Storage];
     I --> N(Response);
     N --> A;
@@ -98,7 +99,7 @@ graph TD
         J
         K
         L
-        O[Redis Profile Cache]
+        O[Pydantic Profile Manager]
     end
 ```
 
