@@ -5,6 +5,34 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [Unreleased]
 
+## [v0.6.0] - 2026-02-11
+### Added
+- **Provenanced Data Architecture**: Implementación de trazabilidad completa en la memoria persistente.
+  - Nuevas columnas en `memories`: `source_type` (explicit/observed/inferred), `confidence`, `sensitivity`, `evidence`.
+  - Soporte para **Soft Delete** (`is_active`) en todas las capas (SQL, Hybrid Search, VMM).
+  - Motor de migraciones asíncronas e idempotentes en `src/memory/migration.py`.
+- **Enriched Evolutionary Profile (Pydantic)**: Migración del perfil de usuario a modelos Pydantic validados.
+  - Nuevas dimensiones: `support_preferences`, `coping_mechanisms`, `clinical_safety`.
+  - Migración automática y transparente de perfiles antiguos al cargar.
+- **Clinical Safety & Guardrails**: Blindaje ético y profesional del especialista CBT.
+  - Detector de vulnerabilidad con derivación a recursos de emergencia integrados en el perfil.
+  - Restricciones explícitas de "No Diagnóstico" y "No Prescripción" en el motor de prompts.
+  - Nuevo sistema de **Transparencia RAG**: Logs detallados de qué fragmentos de conocimiento se inyectan en cada respuesta.
+- **User Privacy Controls**: Interfaz de comandos para el control total de datos.
+  - `/privacidad`: Estadísticas de memoria por tipo y sensibilidad.
+  - `/olvidar [tema]`: Borrado semántico de memorias relacionadas.
+  - `/efimero`: Modo de sesión sin persistencia.
+  - `/disclaimer`: Advertencia legal y recursos de ayuda.
+- **Maintenance Tools**:
+  - `scripts/migrate_provenance.py`: Saneamiento de namespaces y contaminación de datos.
+  - `scripts/sync_knowledge.py`: Punto de entrada robusto para indexación de PDFs.
+  - `scripts/archive_legacy.py`: Limpieza física de archivos personales antiguos.
+
+### Changed
+- **System Stability**: Mejorada la resiliencia del arranque mediante ejecución asíncrona de la sincronización de conocimiento.
+- **Docker Optimization**: Imagen reconstruida para incluir herramientas de mantenimiento y soporte de módulos Python en la carpeta `scripts/`.
+- **Enhanced Reliability**: Implementado bloqueo de concurrencia (`asyncio.Lock`) en SQLiteStore para evitar "database locked".
+
 ## [v0.3.0] - 2026-02-07
 ### Added
 - **Hybrid Local-First Memory Architecture (Phase F)**: Inicio de la migración hacia una persistencia local optimizada.

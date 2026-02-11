@@ -85,5 +85,24 @@ Para mantener la estabilidad actual en la infraestructura e2-micro:
 2. **Respetar el Singleton:** Cualquier nuevo componente que necesite acceso a la base de datos vectoriales **DEBE** usar `get_vector_memory_manager()` de `src.core.dependencies`.
 3. **Monitoreo de Logs:** Usar `journalctl -u aegen-polling -f` para verificar que la conexión TLS se mantiene establecida ("🔐 Conexión TLS persistente establecida").
 
+## 6. Fase 2: Gobernanza de Datos y Seguridad Clínica (11 Feb 2026)
+
+Tras la estabilización de la infraestructura, se realizó una intervención profunda en la calidad y trazabilidad de los datos.
+
+### 6.1. Saneamiento de Namespaces
+- **Problema:** Se detectó contaminación en el namespace `global`. Archivos personales del usuario (backups, perfiles antiguos) fueron indexados como conocimiento público.
+- **Solución:** Script de mantenimiento `migrate_provenance.py` que desactivó 31 memorias contaminadas y saneó el disco moviendo archivos a `storage/archive/`.
+
+### 6.2. Implementación de Provenance
+Se añadió una capa de metadatos obligatoria a cada fragmento de memoria para diferenciar:
+- **Explicit:** Datos literales del usuario.
+- **Observed:** Comportamientos detectados por el sistema.
+- **Inferred:** Hipótesis generadas por el LLM (etiquetadas con nivel de confianza y evidencia textual).
+
+### 6.3. Guardrails Clínicos
+El especialista CBT fue blindado con reglas estrictas de seguridad:
+- Detección de vulnerabilidad vital con inyección automática de recursos de emergencia.
+- Instrucciones negativas prohibitivas (Anti-Diagnóstico / Anti-Prescripción).
+- Transparencia RAG obligatoria en logs para auditoría de inyección de contexto.
+
 ---
-*Este informe certifica que la plataforma AEGEN está lista para operar en producción bajo las condiciones de infraestructura actuales.*
