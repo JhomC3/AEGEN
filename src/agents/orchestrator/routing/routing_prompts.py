@@ -45,6 +45,14 @@ REGLA DE CONTINUIDAD (STICKINESS):
 - Solo cambia de especialista si el usuario solicita explícitamente otro tema o si hay un cambio drástico y claro de contexto.
 - Tu prioridad es la fluidez de la conversación actual.
 
+REGLA DE SESIÓN TERAPÉUTICA:
+- Si el `Especialista previo` es `cbt_specialist` y el usuario expresa frustración, queja
+  sobre el servicio, o respuestas cortas negativas (ej: "no sirves", "no me ayudas",
+  "esto no funciona"), esto es RESISTENCIA TERAPÉUTICA, no un cambio de tema.
+- En este caso, mantén `cbt_specialist` con intent `vulnerability` y añade la acción
+  "handle_resistance" en next_actions.
+- Solo cambia de CBT si el usuario dice explícitamente que quiere otro tema o usa un comando.
+
 CONTEXTO CONVERSACIONAL: {context}
 
 IMPORTANTE: Debes llamar OBLIGATORIAMENTE a la función route_user_message con:

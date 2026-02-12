@@ -107,3 +107,80 @@ class TestMergeKnowledge:
         # With new merge logic, it should update existing item
         assert len(merged["entities"]) == 1
         assert merged["entities"][0]["attributes"]["edad"] == "3"
+
+
+class TestFactExtractorNoInference:
+    """Verifica que el extractor RECHAZA hechos inferidos."""
+
+    def test_merge_rejects_inferred_facts(self):
+        """Hechos 'inferred' deben ser descartados en merge."""
+        extractor = FactExtractor()
+        old = {
+            "entities": [],
+            "preferences": [],
+            "medical": [],
+            "relationships": [],
+            "milestones": [],
+            "user_name": None,
+        }
+        new = {
+            "entities": [],
+            "relationships": [
+                {
+                    "person": "ex-novia inventada",
+                    "relation": "ex-pareja",
+                    "attributes": {},
+                    "source_type": "inferred",
+                    "confidence": 0.6,
+                    "evidence": "mencionó rancheras",
+                    "sensitivity": "medium",
+                },
+                {
+                    "person": "María",
+                    "relation": "hermana",
+                    "attributes": {},
+                    "source_type": "explicit",
+                    "confidence": 1.0,
+                    "evidence": "mi hermana María",
+                    "sensitivity": "low",
+                },
+            ],
+            "preferences": [],
+            "medical": [],
+            "milestones": [],
+        }
+        merged = extractor._merge_knowledge(old, new)
+        # Solo debe quedar el hecho explícito
+        assert len(merged["relationships"]) == 1
+        assert merged["relationships"][0]["person"] == "María"
+
+    def test_merge_rejects_low_confidence(self):
+        """Hechos con confianza < 0.8 deben ser descartados."""
+        extractor = FactExtractor()
+        old = {
+            "entities": [],
+            "preferences": [],
+            "medical": [],
+            "relationships": [],
+            "milestones": [],
+            "user_name": None,
+        }
+        new = {
+            "entities": [
+                {
+                    "name": "dato dudoso",
+                    "type": "concepto",
+                    "attributes": {},
+                    "source_type": "explicit",
+                    "confidence": 0.5,
+                    "evidence": "algo vago",
+                    "sensitivity": "low",
+                },
+            ],
+            "preferences": [],
+            "medical": [],
+            "relationships": [],
+            "milestones": [],
+        }
+        merged = extractor._merge_knowledge(old, new)
+        assert len(merged["entities"]) == 0

@@ -1,10 +1,13 @@
 from typing import Any
 
+# Umbral mínimo de confianza para mostrar un hecho al LLM
+MIN_CONFIDENCE_FOR_PROMPT = 0.7
+
 
 def format_knowledge_for_prompt(knowledge: dict[str, Any]) -> str:
     """
-    Formatea la Bóveda de Conocimiento marcando inferencias.
-    Versión unificada para todos los especialistas.
+    Formatea la Bóveda de Conocimiento excluyendo inferencias.
+    Solo hechos explícitos con confianza >= 0.7 llegan al LLM.
     """
     sections = []
 
@@ -14,40 +17,40 @@ def format_knowledge_for_prompt(knowledge: dict[str, Any]) -> str:
             return ""
         return ", ".join([f"{k}={v}" for k, v in attrs.items()])
 
-    def provenance_tag(item: dict) -> str:
+    def is_trusted(item: dict) -> bool:
+        """Filtro de procedencia: solo hechos explícitos y confiables."""
         if item.get("source_type") == "inferred":
-            conf = item.get("confidence", 0.5)
-            return f" (hipótesis, confianza: {conf:.0%})"
-        return ""
+            return False
+        if item.get("confidence", 1.0) < MIN_CONFIDENCE_FOR_PROMPT:
+            return False
+        return True
 
-    if knowledge.get("entities"):
+    entities = [e for e in knowledge.get("entities", []) if is_trusted(e)]
+    if entities:
         ents = "\n".join([
             f"- {e['name']} ({e['type']}): {fmt_attrs(e.get('attributes', {}))}"
-            f"{provenance_tag(e)}"
-            for e in knowledge["entities"]
+            for e in entities
         ])
         sections.append(f"ENTIDADES:\n{ents}")
 
-    if knowledge.get("medical"):
+    medical = [m for m in knowledge.get("medical", []) if is_trusted(m)]
+    if medical:
         meds = "\n".join([
-            f"- {m['name']} ({m['type']}): {m.get('details', '')}{provenance_tag(m)}"
-            for m in knowledge["medical"]
+            f"- {m['name']} ({m['type']}): {m.get('details', '')}" for m in medical
         ])
         sections.append(f"DATOS MÉDICOS:\n{meds}")
 
-    if knowledge.get("relationships"):
+    relationships = [r for r in knowledge.get("relationships", []) if is_trusted(r)]
+    if relationships:
         rels = "\n".join([
             f"- {r['person']} ({r['relation']}): {fmt_attrs(r.get('attributes', {}))}"
-            f"{provenance_tag(r)}"
-            for r in knowledge["relationships"]
+            for r in relationships
         ])
         sections.append(f"RELACIONES:\n{rels}")
 
-    if knowledge.get("preferences"):
-        prefs = "\n".join([
-            f"- {p['category']}: {p['value']}{provenance_tag(p)}"
-            for p in knowledge["preferences"]
-        ])
+    preferences = [p for p in knowledge.get("preferences", []) if is_trusted(p)]
+    if preferences:
+        prefs = "\n".join([f"- {p['category']}: {p['value']}" for p in preferences])
         sections.append(f"PREFERENCIAS:\n{prefs}")
 
     return "\n\n".join(sections) if sections else "No hay hechos confirmados aún."

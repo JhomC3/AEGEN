@@ -21,6 +21,7 @@ from .routing_utils import (
     route_to_chat,
     update_state_with_decision,
 )
+from .therapeutic_session import should_maintain_therapeutic_session
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,12 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
                 f"Stickiness: Boost de confianza para {last_specialist} "
                 f"({old_conf:.2f} -> {decision.confidence:.2f})"
             )
+
+        # ADR-0024: Protección de Sesión Terapéutica
+        if should_maintain_therapeutic_session(state, decision):
+            decision.target_specialist = "cbt_specialist"
+            decision.next_actions = ["handle_resistance", "validate_frustration"]
+            return self._route_to_specialist(state, decision)
 
         # Verificar confianza mínima global
         if decision.confidence < MIN_CONFIDENCE_THRESHOLD:

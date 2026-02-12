@@ -26,16 +26,19 @@ class FactExtractor:
                     "Eres un extractor de hechos estructurados. Tu tarea es identificar "
                     "datos atómicos de una conversación y clasificarlos por origen y sensibilidad.\n\n"
                     "REGLAS:\n"
-                    "1. CLASIFICA cada hecho como 'explicit' (el usuario lo dijo literalmente) o "
-                    "'inferred' (es tu interpretación del texto).\n"
-                    "2. CONFIANZA: Para hechos 'explicit', confidence=1.0. Para 'inferred', asigna 0.5-0.9.\n"
-                    "3. EVIDENCIA: Incluye la cita textual exacta del usuario que soporta el hecho.\n"
-                    "4. SENSIBILIDAD: 'low' (gustos, datos demográficos), 'medium' (relaciones, trabajo), "
+                    "1. SOLO extrae hechos EXPLÍCITOS: datos que el usuario dijo literalmente.\n"
+                    "2. NO INFERIR: Si el usuario no lo dijo con sus palabras, NO lo extraigas. "
+                    "No interpretes, no supongas, no deduzcas.\n"
+                    "3. source_type SIEMPRE debe ser 'explicit'. "
+                    "Si no puedes clasificar un hecho como explícito, IGNÓRALO.\n"
+                    "4. CONFIANZA: Solo incluye hechos con confidence >= 0.8.\n"
+                    "5. EVIDENCIA: Incluye la cita textual EXACTA del usuario que soporta el hecho.\n"
+                    "6. SENSIBILIDAD: 'low' (gustos, datos demográficos), 'medium' (relaciones, trabajo), "
                     "'high' (salud mental, médico, trauma, emociones fuertes).\n"
-                    "5. NO DIAGNOSTIQUES. No afirmes rasgos estables. Si detectas un posible patrón "
-                    "cognitivo, etiquétalo como hipótesis inferred con evidencia.\n"
-                    "6. PRECISIÓN: Si no hay seguridad del 90%+, ignora el hecho.\n"
-                    "7. Si el usuario menciona su nombre, extráelo en 'user_name'.\n\n"
+                    "7. NO DIAGNOSTIQUES. No afirmes rasgos de personalidad ni patrones cognitivos.\n"
+                    "8. PRECISIÓN: Si no hay una cita textual del usuario que confirme el hecho, "
+                    "NO lo incluyas.\n"
+                    "9. Si el usuario menciona su nombre, extráelo en 'user_name'.\n\n"
                     "FORMATO (JSON ESTRICTO):\n"
                     "{{\n"
                     '  "user_name": "nombre o null",\n'
@@ -139,7 +142,7 @@ class FactExtractor:
     def _merge_category(
         self, merged: dict[str, Any], new: dict[str, Any], key: str
     ) -> None:
-        """Helper to merge a specific category of facts."""
+        """Helper to merge a specific category of facts, filtering unsafe data."""
         if key not in merged:
             merged[key] = []
 
@@ -149,6 +152,19 @@ class FactExtractor:
         }
 
         for item in new.get(key, []):
+            # FILTRO ANTI-ALUCINACIÓN: Rechazar inferidos y baja confianza
+            if item.get("source_type") == "inferred":
+                logger.info(
+                    f"Hecho inferido rechazado: {item.get('name', item.get('person', 'unknown'))}"
+                )
+                continue
+            if item.get("confidence", 0) < 0.8:
+                logger.info(
+                    f"Hecho de baja confianza rechazado ({item.get('confidence', 0):.1f}): "
+                    f"{item.get('name', item.get('person', 'unknown'))}"
+                )
+                continue
+
             ik = self._identity_key(item, key)
             if ik in existing:
                 # Update existing item (merge attributes, keep higher confidence)

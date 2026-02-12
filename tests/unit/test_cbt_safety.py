@@ -6,7 +6,7 @@ from src.agents.utils.knowledge_formatter import format_knowledge_for_prompt
 
 class TestFormatKnowledge:
     def test_filters_inactive_inferred_data(self):
-        """Knowledge items with source_type='inferred' and no confirmation should be marked."""
+        """Knowledge items with source_type='inferred' and no confirmation should be excluded (ADR-0024)."""
         knowledge = {
             "entities": [
                 {
@@ -27,7 +27,7 @@ class TestFormatKnowledge:
         }
         result = format_knowledge_for_prompt(knowledge)
         assert "Max" in result
-        assert "(hipótesis" in result.lower() or "inferido" in result.lower()
+        assert "catastrofización" not in result
 
 
 class TestEnrichedProfileContext:

@@ -4,6 +4,8 @@ from typing import Any
 
 import aiosqlite
 
+from src.memory.json_sanitizer import safe_json_loads
+
 logger = logging.getLogger(__name__)
 
 
@@ -41,7 +43,7 @@ class ProfileRepository:
             raise
 
     async def load_profile(self, chat_id: str) -> dict | None:
-        """Carga un perfil de usuario de la DB."""
+        """Carga un perfil de usuario de la DB con reparación JSON."""
         db = await self.get_db()
         try:
             async with db.execute(
@@ -49,7 +51,13 @@ class ProfileRepository:
             ) as cursor:
                 row = await cursor.fetchone()
                 if row:
-                    return json.loads(row["data"])
+                    result = safe_json_loads(row["data"])
+                    if result is None:
+                        logger.error(
+                            f"Perfil corrupto irrecuperable para {chat_id}. "
+                            f"Se retorna None para activar fallback a defaults."
+                        )
+                    return result
                 return None
         except Exception as e:
             logger.error(f"Error loading profile from SQLite: {e}")

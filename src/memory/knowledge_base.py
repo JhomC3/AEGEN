@@ -6,6 +6,7 @@ from typing import Any
 
 from src.core.dependencies import get_sqlite_store
 from src.memory.ingestion_pipeline import IngestionPipeline
+from src.memory.json_sanitizer import safe_json_loads
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,10 @@ class KnowledgeBaseManager:
                 if raw_data:
                     if isinstance(raw_data, bytes):
                         raw_data = raw_data.decode("utf-8")
-                    return json.loads(raw_data)
+
+                    parsed = safe_json_loads(raw_data)
+                    if parsed:
+                        return parsed
             except Exception as e:
                 logger.error(
                     f"Error cargando conocimiento de Redis para {chat_id}: {e}"
@@ -66,8 +70,9 @@ class KnowledgeBaseManager:
             )
             if results:
                 # El contenido es el JSON de la KB
-                kb_data = json.loads(results[0]["content"])
-                return kb_data
+                kb_data = safe_json_loads(results[0]["content"])
+                if kb_data:
+                    return kb_data
         except Exception as e:
             logger.error(
                 f"Error recuperando conocimiento de SQLite para {chat_id}: {e}"
