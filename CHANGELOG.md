@@ -5,6 +5,18 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [No publicado]
 
+## [v0.7.2] - 2026-02-11
+### Añadido
+- **Containerización del Polling de Telegram**: Integración del servicio de polling (`src/tools/polling.py`) directamente en `docker-compose.yml`.
+  - Mayor resiliencia mediante reinicio automático (`unless-stopped`).
+  - Desacoplamiento total del Host (GCE) eliminando la dependencia de `systemd`.
+  - Mejora en la comunicación interna mediante la red de Docker (`http://app:8000`).
+- **Robustez del Servicio de Polling**: Validación de `TELEGRAM_BOT_TOKEN` y manejo de errores mejorado para entornos de contenedor.
+
+### Cambiado
+- **Documentación de Despliegue**: Simplificación del manual de despliegue eliminando pasos de configuración manual del host.
+- **Makefile**: Actualización de comandos `build` y `logs` para soportar la nueva arquitectura multi-servicio.
+
 ## [v0.7.1] - 2026-02-11
 ### Refactorización
 - **Saneamiento Estructural Completo**: Eliminación de violaciones SRP y límites de LOC en todo el codebase.

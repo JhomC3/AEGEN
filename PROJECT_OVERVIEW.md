@@ -1,7 +1,7 @@
 # AEGEN: Plataforma de Orquestación de Agentes Multi-Especialistas
 
 > **MAGI:** El Asistente Conversacional (Interfaz Principal)
-> **Versión:** 0.7.1 (Refactorización y Saneamiento Completados)
+> **Versión:** 0.7.2 (Containerización de Polling Completada)
 > **Estado:** Estable ✅
 > **Branch Actual:** `develop`
 
@@ -81,7 +81,7 @@ graph TD
 - **Unificación de Persistencia:** Migración de carpetas redundantes hacia un único directorio `/storage`.
 - **Vigilante Automático (Auto-Sync):** Indexación en tiempo real de archivos nuevos en `storage/knowledge/`.
 - **Flexibilidad Lingüística:** Refactorización del motor de instrucciones para eliminar acentos forzados y permitir imitación natural.
-- **Refactorización Integral:** Desmembramiento de archivos monolíticos (>200 LOC) en módulos especializados (Webhooks, Routing, Memoria, Logging). [Ver Plan Completado: v0.7.1](docs/planes/v0.7.1-refactorizacion-webhooks.md)
+- **Refactorización Integral:** Desmembramiento de archivos monolíticos (>200 LOC) en módulos especializados (Webhooks, Routing, Memoria, Logging). [Ver Plan Completado: v0.7.1](docs/planes/archivo/v0.7.1-refactorizacion-webhooks.md)
 
 ### 🚀 Bloque B: Expansión de Memoria y Contexto
 - **Ingesta Masiva:** Herramientas para importar historiales externos (ChatGPT, Claude, WhatsApp).
@@ -94,6 +94,7 @@ graph TD
 - **Verificador de Verdad (Fact Checker):** Validación post-generación contra la Bóveda de Conocimiento para eliminar alucinaciones.
 
 ### ✅ Hitos Completados
+- **Containerización del Polling (v0.7.2):** Integración del servicio de polling en Docker para resiliencia y desacoplamiento del host.
 - **Refactorización Integral (v0.7.1):** Eliminación de violaciones SRP y límites de LOC. Reestructuración de Webhooks, Routing, Memory y Logging.
 - **Gobernanza y Seguridad Clínica (v0.6.0):** Implementación de procedencia (provenance), perfiles Pydantic y reglas de seguridad CBT.
 - **Evolución de Memoria (v0.3.0):** Migración a SQLite local con búsqueda vectorial y léxica híbrida.
@@ -114,4 +115,4 @@ docker-compose logs -f app # Seguimiento de la transparencia RAG en vivo
 ### 📊 Estado Operativo (Sincronización Automática)
 - Branch_Trabajo: "develop"
 - Cambios_Pendientes: []
-- Última_Sincronización: "2026-02-11 10:08"
+- Última_Sincronización: "2026-02-11 19:20"

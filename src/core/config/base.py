@@ -16,7 +16,7 @@ class BaseAppSettings(BaseSettings):
 
     APP_NAME: str = "AEGEN"
     APP_ENV: Environment = APP_ENV  # Carga la variable de entorno
-    APP_VERSION: str = "0.1.1"
+    APP_VERSION: str = "0.7.2"
     LOG_LEVEL: str = "INFO"
 
     # Secretos
