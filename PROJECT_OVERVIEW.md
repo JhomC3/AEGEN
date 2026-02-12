@@ -1,7 +1,7 @@
 # AEGEN: Plataforma de Orquestación de Agentes Multi-Especialistas
 
 > **MAGI:** El Asistente Conversacional (Interfaz Principal)
-> **Versión:** 0.7.2 (Containerización de Polling Completada)
+> **Versión:** 0.7.3 (Auto-Sync Memoria Completada)
 > **Estado:** Estable ✅
 > **Branch Actual:** `develop`
 
@@ -66,22 +66,22 @@ graph TD
     I --> N(Respuesta);
     N --> A;
 
+    Z[PDFs en storage/knowledge] -.-> Y[KnowledgeWatcher];
+    Y -- "Async Polling (Auto-Sync)" --> L;
+
     subgraph Memoria
         J
         K
         L
         O[Gestor de Perfil Pydantic]
+        Y
     end
 ```
 
 ## 🗺️ 3. Hoja de Ruta (Roadmap) y Evolución
 
 ### 🌟 Bloque A: Saneamiento y Autonomía (Fase Actual)
-- **Purga de Código Antiguo:** Eliminación total de rastro de Google File API y scripts obsoletos. [Ver Plan: v0.7.0](docs/planes/v0.7.0-saneamiento-y-evolucion.md)
-- **Unificación de Persistencia:** Migración de carpetas redundantes hacia un único directorio `/storage`.
-- **Vigilante Automático (Auto-Sync):** Indexación en tiempo real de archivos nuevos en `storage/knowledge/`.
 - **Flexibilidad Lingüística:** Refactorización del motor de instrucciones para eliminar acentos forzados y permitir imitación natural.
-- **Refactorización Integral:** Desmembramiento de archivos monolíticos (>200 LOC) en módulos especializados (Webhooks, Routing, Memoria, Logging). [Ver Plan Completado: v0.7.1](docs/planes/archivo/v0.7.1-refactorizacion-webhooks.md)
 
 ### 🚀 Bloque B: Expansión de Memoria y Contexto
 - **Ingesta Masiva:** Herramientas para importar historiales externos (ChatGPT, Claude, WhatsApp).
@@ -94,6 +94,7 @@ graph TD
 - **Verificador de Verdad (Fact Checker):** Validación post-generación contra la Bóveda de Conocimiento para eliminar alucinaciones.
 
 ### ✅ Hitos Completados
+- **Auto-Sync de Memoria (v0.7.3):** Implementación de `KnowledgeWatcher` para indexación en tiempo real de documentos mediante polling asíncrono.
 - **Containerización del Polling (v0.7.2):** Integración del servicio de polling en Docker para resiliencia y desacoplamiento del host.
 - **Refactorización Integral (v0.7.1):** Eliminación de violaciones SRP y límites de LOC. Reestructuración de Webhooks, Routing, Memory y Logging.
 - **Gobernanza y Seguridad Clínica (v0.6.0):** Implementación de procedencia (provenance), perfiles Pydantic y reglas de seguridad CBT.

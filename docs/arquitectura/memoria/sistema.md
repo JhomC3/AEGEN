@@ -42,5 +42,17 @@ Los fragmentos recuperados se ordenan usando **Reciprocal Rank Fusion (RRF)**:
 - **Keyword Weight (Peso de Palabra Clave - 0.3)**: Asegura que se encuentren nombres o términos específicos.
 - **Time Decay (Decaimiento Temporal - v0.7.0)**: Las memorias recientes reciben un impulso en el ranking (clasificación).
 
+## 5. Ingesta de Conocimiento Global (Auto-Sync)
+
+El sistema cuenta con un mecanismo de **Async Polling** para mantener sincronizada la base de conocimiento (`storage/knowledge/`) con la memoria vectorial en tiempo real.
+
+- **Componente**: `KnowledgeWatcher` (src/memory/knowledge_watcher.py).
+- **Funcionamiento**: Tarea de fondo que escanea cambios cada 30 segundos.
+- **Ciclo de Vida**:
+    - **Nuevo Archivo**: Ingesta inmediata y generación de embeddings.
+    - **Modificación**: Borrado suave (soft-delete) de fragmentos anteriores + Re-ingesta.
+    - **Eliminación**: Borrado suave de fragmentos asociados.
+- **Formatos Soportados**: PDF (extracción de texto plano), Markdown (.md), Texto (.txt).
+
 ---
 *Para detalles de implementación, ver `src/memory/`*

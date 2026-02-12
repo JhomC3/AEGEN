@@ -56,22 +56,40 @@ Si necesitas ver el estado del webhook en Telegram:
 docker exec -it magi_app_prod python scripts/check_webhook.py
 ```
 
-## 4. Mantenimiento y Sincronización
+## 4. Gestión de Conocimiento (Auto-Sync)
 
-AEGEN incluye scripts automatizados para gestionar la salud de los datos desde el contenedor:
+AEGEN cuenta con un vigilante automático (`KnowledgeWatcher`) que indexa archivos en tiempo real sin reiniciar el servicio.
+
+### Añadir Nuevos Documentos
+Simplemente copia los archivos al directorio `storage/knowledge/` del host. El volumen de Docker los reflejará y el sistema los procesará en ~30 segundos.
+
+```bash
+# Desde tu máquina local a la VM (usando gcloud)
+gcloud compute scp ./guia_terapeutica.pdf usuario@instancia-aegen:~/AEGEN/storage/knowledge/
+
+# Si ya estás en el servidor
+cp manual_nuevo.pdf storage/knowledge/
+```
+
+### Verificación
+Revisa los logs para confirmar la ingesta:
+```bash
+docker-compose logs -f app | grep "KnowledgeWatcher"
+# Salida esperada: "Detectado archivo nuevo: guia_terapeutica.pdf"
+```
+
+## 5. Mantenimiento y Scripts
+AEGEN incluye scripts automatizados para tareas específicas:
 
 ```bash
 # Saneamiento de Base de Datos (Provenance)
 docker exec -it magi_app_prod python -m scripts.migrate_provenance
 
-# Sincronización de Conocimiento (PDFs)
-docker exec -it magi_app_prod python -m scripts.sync_knowledge
-
 # Limpieza de archivos físicos legacy
 docker exec -it magi_app_prod python scripts/archive_legacy.py
 ```
 
-## 5. Gestión de Backups
+## 6. Gestión de Backups
 
 La base de datos SQLite se respalda automáticamente en Google Cloud Storage (si está configurado).
 - **Snapshot:** Se crea mediante el comando `VACUUM INTO`.
