@@ -43,27 +43,17 @@ docker-compose logs -f app
 
 ## 3. Servicio de Polling (Telegram)
 
-Dado que no usamos HTTPS público, ejecutamos un servicio de sondeo (polling) en el host.
+El servicio de polling está integrado en `docker-compose.yml` y se inicia automáticamente con el resto de la aplicación. No requiere configuración manual en el Host.
 
-### Configuración de Systemd
-Crea el archivo `/etc/systemd/system/aegen-polling.service`:
+Para verificar que el polling está funcionando correctamente:
 
-```ini
-[Unit]
-Description=AEGEN Telegram Polling Service
-After=docker.service
+```bash
+docker-compose logs -f polling
+```
 
-[Service]
-Type=simple
-User=TU_USUARIO
-WorkingDirectory=/home/TU_USUARIO/AEGEN
-EnvironmentFile=/home/TU_USUARIO/AEGEN/.env
-ExecStart=/usr/bin/python3 src/tools/polling.py
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
+Si necesitas ver el estado del webhook en Telegram:
+```bash
+docker exec -it magi_app_prod python scripts/check_webhook.py
 ```
 
 ## 4. Mantenimiento y Sincronización

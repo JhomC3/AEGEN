@@ -87,9 +87,13 @@ logs-dev: ## Muestra los logs de los contenedores de desarrollo
 	@echo "Tailing development logs..."
 	docker-compose logs -f
 
-build: ## Construye la imagen Docker de producción
-	@echo "Building production Docker image..."
-	docker-compose -f docker-compose.yml build app
+build: ## Construye las imágenes Docker de producción
+	@echo "Building production Docker images..."
+	docker-compose -f docker-compose.yml build
+
+logs: ## Muestra los logs de todos los servicios
+	@echo "Tailing all service logs..."
+	docker-compose logs -f
 
 sync-docs: ## Sincroniza documentación con estado real del proyecto
 	@echo "Synchronizing documentation with project state..."

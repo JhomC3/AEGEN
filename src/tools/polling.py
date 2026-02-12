@@ -114,8 +114,13 @@ def main():
     logger.info(
         f"Iniciando Polling Service v0.5.0 (Persistent TLS / Timeout={POLLING_TIMEOUT}s)"
     )
-    logger.info(f"Token (masked): {TOKEN[:10]}...{TOKEN[-5:]}")
+    if TOKEN:
+        logger.info(f"Token (masked): {TOKEN[:10]}...{TOKEN[-5:]}")
     logger.info(f"Target API: {API_URL}")
+
+    if not TOKEN:
+        logger.error("TELEGRAM_BOT_TOKEN es None. Abortando.")
+        sys.exit(1)
 
     client = PersistentTelegramClient(TOKEN)
 
