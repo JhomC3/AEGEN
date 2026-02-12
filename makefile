@@ -23,9 +23,9 @@ venv: ## Crea el entorno virtual si no existe usando uv
 
 install: venv ## Instala dependencias de desarrollo usando uv y los lockfiles
 	@echo "Installing/syncing development dependencies from lockfile..."
-	$(UV) pip sync requirements-dev.lock
+	. $(VENV_DIR)/bin/activate && $(UV) pip sync requirements-dev.lock
 	@echo "Installing project in editable mode..."
-	$(UV) pip install -e .
+	. $(VENV_DIR)/bin/activate && $(UV) pip install -e .
 
 lock: venv ## Genera/Actualiza los archivos requirements.lock
 	@echo "Generating requirements.lock (production)..."
@@ -35,10 +35,10 @@ lock: venv ## Genera/Actualiza los archivos requirements.lock
 
 lint: ## Ejecuta linters (ruff, black check, mypy, bandit, safety)
 	@echo "Running linters..."
-	$(PYTHON) -m ruff check .
+	. $(VENV_DIR)/bin/activate && $(PYTHON) -m ruff check .
 ##	$(PYTHON) -m black --check . # Deshabilitado para evitar conflictos con ruff format # Deshabilitado para evitar conflictos con ruff format
-	$(PYTHON) -m mypy src tests
-	$(PYTHON) -m bandit -c pyproject.toml -r src
+	. $(VENV_DIR)/bin/activate && $(PYTHON) -m mypy src tests
+	. $(VENV_DIR)/bin/activate && $(PYTHON) -m bandit -c pyproject.toml -r src
 	# $(PYTHON) -m safety check # Optional: Enable if safety is configured
 
 verify: ## Validación completa: linting + tests + architecture simple
@@ -46,9 +46,9 @@ verify: ## Validación completa: linting + tests + architecture simple
 	@echo "1/3 Linting..."
 	@$(MAKE) lint
 	@echo "2/3 Testing..."
-	@$(MAKE) test
+	@. $(VENV_DIR)/bin/activate && $(MAKE) test
 	@echo "3/3 Architecture..."
-	@$(PYTHON) scripts/simple_check.py
+	@. $(VENV_DIR)/bin/activate && $(PYTHON) scripts/simple_check.py
 	@echo "✅ All checks passed!"
 
 verify-phase: ## Ejecuta quality gates para fase específica (LEGACY)
