@@ -23,33 +23,26 @@ venv: ## Crea el entorno virtual si no existe usando uv
 
 install: venv ## Instala dependencias de desarrollo usando uv y los lockfiles
 	@echo "Installing/syncing development dependencies from lockfile..."
-	. $(VENV_DIR)/bin/activate && $(UV) pip sync requirements-dev.lock
+	$(UV) pip sync --python $(PYTHON) requirements-dev.lock
 	@echo "Installing project in editable mode..."
-	. $(VENV_DIR)/bin/activate && $(UV) pip install -e .
-
-lock: venv ## Genera/Actualiza los archivos requirements.lock
-	@echo "Generating requirements.lock (production)..."
-	$(UV) pip compile pyproject.toml --output-file requirements.lock
-	@echo "Generating requirements-dev.lock (development)..."
-	$(UV) pip compile pyproject.toml --extra dev --extra test --extra lint --extra doc --output-file requirements-dev.lock
+	$(UV) pip install --python $(PYTHON) -e .
 
 lint: ## Ejecuta linters (ruff, black check, mypy, bandit, safety)
 	@echo "Running linters..."
-	. $(VENV_DIR)/bin/activate && $(PYTHON) -m ruff check .
-##	$(PYTHON) -m black --check . # Deshabilitado para evitar conflictos con ruff format # Deshabilitado para evitar conflictos con ruff format
-	. $(VENV_DIR)/bin/activate && $(PYTHON) -m mypy src tests
-	. $(VENV_DIR)/bin/activate && $(PYTHON) -m bandit -c pyproject.toml -r src
-	# $(PYTHON) -m safety check # Optional: Enable if safety is configured
+	$(PYTHON) -m ruff check .
+	$(PYTHON) -m mypy src tests
+	$(PYTHON) -m bandit -c pyproject.toml -r src
 
 verify: ## Validación completa: linting + tests + architecture simple
 	@echo "🎯 AEGEN Verification Suite..."
 	@echo "1/3 Linting..."
 	@$(MAKE) lint
 	@echo "2/3 Testing..."
-	@. $(VENV_DIR)/bin/activate && $(MAKE) test
+	@$(MAKE) test
 	@echo "3/3 Architecture..."
-	@. $(VENV_DIR)/bin/activate && $(PYTHON) scripts/simple_check.py
+	@$(PYTHON) scripts/simple_check.py
 	@echo "✅ All checks passed!"
+
 
 verify-phase: ## Ejecuta quality gates para fase específica (LEGACY)
 	@echo "🎯 Running phase quality gates: $(PHASE)"
