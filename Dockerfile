@@ -34,7 +34,8 @@ RUN uv pip sync --system requirements.lock
 
 # ---- Final Stage ----
 FROM base AS final
-ARG APP_DIR
+ARG APP_DIR=/app
+WORKDIR ${APP_DIR}
 
 # Copia dependencias instaladas
 COPY --from=builder /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
