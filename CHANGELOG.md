@@ -5,6 +5,26 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [No publicado]
 
+## [v0.8.0] - 2026-02-12
+### Añadido
+- **Overhaul de Personalidad (Soul Stack v2)**: Implementación de una arquitectura de 5 capas (Identidad → Alma → Espejo → Skill → Runtime) para una personalidad coherente y adaptable.
+- **Capa "The Mirror" (Espejo Inteligente)**: Sistema de adaptación dinámica basado en señales lingüísticas observadas.
+  - **Eco Léxico**: MAGI ahora adopta el vocabulario específico del usuario (sustantivos/verbos) sin fingir acentos falsos.
+  - **StyleAnalyzer**: Motor de análisis en Python que detecta formalidad (considerando mayúsculas), brevedad y uso de emojis.
+- **Evolución Lingüística Orgánica**:
+  - El `EvolutionDetector` ahora identifica preferencias explícitas de dialecto y feedback sobre el tono.
+  - El `EvolutionApplier` persiste estos cambios con lógica de clamping (0.0 a 1.0).
+- **Consistencia de Identidad**: Definición de MAGI como "Apoyo Honesto" para resolver la tensión entre la cercanía y la firmeza del coaching TCC.
+
+### Cambiado
+- **Refactorización de Especialistas**: Uso de `src/core/message_utils.py` para la extracción centralizada de mensajes (DRY).
+- **Esquema de Datos de Perfil**: Adición de `preferred_dialect` para desacoplar la identidad lingüística de la ubicación geográfica.
+- **Limpieza de Raíz del Proyecto**: Migración de archivos de base de datos de prueba (`.db`) a la carpeta `storage/` y actualización de los tests correspondientes.
+
+### Corregido
+- **Detección de Idioma**: Eliminación de falsos positivos entre español y portugués mediante keywords discriminantes.
+- **Hard-coding de Dialectos**: Eliminación de bloques `if/elif` en el constructor de prompts en favor de una lógica modular basada en datos confirmados.
+
 ## [v0.7.2] - 2026-02-11
 ### Añadido
 - **Containerización del Polling de Telegram**: Integración del servicio de polling (`src/tools/polling.py`) directamente en `docker-compose.yml`.

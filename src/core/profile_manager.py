@@ -124,6 +124,15 @@ class UserProfileManager:
         logger.info(f"Perfil no encontrado para {chat_id}. Usando default.")
         return self._get_default_profile()
 
+    async def list_all_profiles(self) -> list[str]:
+        """Retorna todos los chat_ids registrados en la persistencia local."""
+        try:
+            store = get_sqlite_store()
+            return await store.list_all_chat_ids()
+        except Exception as e:
+            logger.error(f"Error listando perfiles: {e}")
+            return []
+
     async def save_profile(self, chat_id: str, profile: dict[str, Any]):
         """
         3.7: Guarda el perfil en Redis y SQLite (Local-First).

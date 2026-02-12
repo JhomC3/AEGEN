@@ -14,6 +14,29 @@ class PersonalityAdaptation:
 
 
 @dataclass
+class StyleSignals:
+    """Señales de estilo detectadas en mensajes recientes."""
+
+    detected_language: str  # "es", "en", "pt", etc.
+    formality_indicator: str  # "muy_formal", "formal", "casual", "muy_casual"
+    brevity: str  # "telegrafico", "conciso", "verboso"
+    uses_emoji: bool
+
+
+@dataclass
+class LinguisticProfile:
+    """Perfil lingüístico procesado para inyección en el prompt."""
+
+    dialect: str  # "neutro", "argentino", "colombiano", etc.
+    dialect_hint: str | None  # "paisa", "porteño", etc.
+    preferred_dialect: str | None  # Preferencia explicita del usuario
+    dialect_confirmed: bool  # Si la ubicación fue confirmada por el usuario
+    formality_level: float  # 0.0-1.0 del perfil evolutivo
+    humor_tolerance: float  # 0.0-1.0 del perfil evolutivo
+    preferred_style: str  # "casual", "formal", "tecnico", "empatico"
+
+
+@dataclass
 class SkillOverlay:
     """Modificador de personalidad para un skill específico."""
 

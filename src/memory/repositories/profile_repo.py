@@ -54,3 +54,14 @@ class ProfileRepository:
         except Exception as e:
             logger.error(f"Error loading profile from SQLite: {e}")
             return None
+
+    async def list_all_chat_ids(self) -> list[str]:
+        """Retorna una lista de todos los chat_id con perfiles en la DB."""
+        db = await self.get_db()
+        try:
+            async with db.execute("SELECT chat_id FROM profiles") as cursor:
+                rows = await cursor.fetchall()
+                return [row["chat_id"] for row in rows]
+        except Exception as e:
+            logger.error(f"Error listing chat IDs from SQLite: {e}")
+            return []

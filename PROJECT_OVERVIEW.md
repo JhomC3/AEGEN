@@ -1,11 +1,11 @@
-# AEGEN: Plataforma de Orquestación de Agentes Multi-Especialistas
+# AEGEN: Plataforma de Apoyo Universal y Amistad Inteligente
 
-> **MAGI:** El Asistente Conversacional (Interfaz Principal)
-> **Versión:** 0.7.3 (Auto-Sync Memoria Completada)
+> **MAGI:** Tu amigo cercano y refugio universal (Interfaz Principal)
+> **Versión:** 0.8.0 (Overhaul Personalidad Completado)
 > **Estado:** Estable ✅
 > **Branch Actual:** `develop`
 
-<!-- LLM-Hint: AEGEN es la infraestructura. MAGI es el agente conversacional que el usuario ve. MAGI utiliza el MasterOrchestrator para delegar tareas a especialistas como el Agente TCC. Este documento es la Fuente de Verdad. -->
+<!-- LLM-Hint: AEGEN es la infraestructura técnica. MAGI es el amigo cercano que el usuario ve. MAGI es un refugio universal para cualquier necesidad (psicológica, laboral, cotidiana). MAGI utiliza el MasterOrchestrator para actuar como Guía en diferentes contextos. Este documento es la Fuente de Verdad. -->
 
 ## 🎯 Contexto Actual del Proyecto
 
@@ -81,7 +81,7 @@ graph TD
 ## 🗺️ 3. Hoja de Ruta (Roadmap) y Evolución
 
 ### 🌟 Bloque A: Saneamiento y Autonomía (Fase Actual)
-- **Flexibilidad Lingüística:** Refactorización del motor de instrucciones para eliminar acentos forzados y permitir imitación natural.
+- **Overhaul de Personalidad:** Completado (v0.8.0). Implementación de "Eco Léxico", "Neutralidad Cálida" y Soul Stack v2 para una conexión real sin acentos forzados.
 
 ### 🚀 Bloque B: Expansión de Memoria y Contexto
 - **Ingesta Masiva:** Herramientas para importar historiales externos (ChatGPT, Claude, WhatsApp).
@@ -94,6 +94,7 @@ graph TD
 - **Verificador de Verdad (Fact Checker):** Validación post-generación contra la Bóveda de Conocimiento para eliminar alucinaciones.
 
 ### ✅ Hitos Completados
+- **Overhaul de Personalidad (v0.8.0):** Arquitectura de 5 capas (Identidad → Alma → Espejo → Skill → Runtime) y motor de análisis de estilo lingüístico.
 - **Auto-Sync de Memoria (v0.7.3):** Implementación de `KnowledgeWatcher` para indexación en tiempo real de documentos mediante polling asíncrono.
 - **Containerización del Polling (v0.7.2):** Integración del servicio de polling en Docker para resiliencia y desacoplamiento del host.
 - **Refactorización Integral (v0.7.1):** Eliminación de violaciones SRP y límites de LOC. Reestructuración de Webhooks, Routing, Memory y Logging.

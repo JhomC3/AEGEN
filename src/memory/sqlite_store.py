@@ -4,13 +4,6 @@ import logging
 import sys
 from pathlib import Path
 
-import aiofiles
-import aiosqlite
-import sqlite_vec
-
-from src.memory.repositories.memory_repo import MemoryRepository
-from src.memory.repositories.profile_repo import ProfileRepository
-
 # Monkeypatch sqlite3 con sqlean para habilitar extensiones en macOS/Linux
 try:
     import sqlean
@@ -18,6 +11,13 @@ try:
     sys.modules["sqlite3"] = sqlean
 except ImportError:
     pass
+
+import aiofiles
+import aiosqlite
+import sqlite_vec
+
+from src.memory.repositories.memory_repo import MemoryRepository
+from src.memory.repositories.profile_repo import ProfileRepository
 
 logger = logging.getLogger(__name__)
 
@@ -146,3 +146,6 @@ class SQLiteStore:
 
     async def load_profile(self, chat_id: str) -> dict | None:
         return await self._profile_repo.load_profile(chat_id)
+
+    async def list_all_chat_ids(self) -> list[str]:
+        return await self._profile_repo.list_all_chat_ids()

@@ -5,6 +5,15 @@ from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, System
 from src.core.schemas import V2ChatMessage
 
 
+def extract_recent_user_messages(messages: list[Any], limit: int = 10) -> list[str]:
+    """
+    Extrae el contenido de texto de los últimos mensajes humanos para análisis de estilo.
+    """
+    return [
+        str(m.content) for m in messages if isinstance(m, HumanMessage) and m.content
+    ][-limit:]
+
+
 def dict_to_langchain_messages(
     history: list[dict[str, Any]] | list[V2ChatMessage],
     limit: int = 8,

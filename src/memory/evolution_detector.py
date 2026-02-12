@@ -25,6 +25,7 @@ class EvolutionDetector:
                     "1. Evolución de vida: Nuevos valores, metas alcanzadas, hitos (milestones).\n"
                     "2. Adaptación de MAGI: ¿Cómo prefiere el usuario que le hablen? (estilo, nivel de humor, formalidad).\n"
                     "3. Preferencias aprendidas: Cosas que le gustan o disgustan específicamente.\n"
+                    "4. Preferencia lingüística: Detecta si el usuario prefiere un trato más formal o informal, si ha solicitado explícitamente un dialecto (ej. 'háblame como un paisa') o si se ha quejado del tono de MAGI.\n"
                     "\n"
                     "Responde estrictamente en JSON con los campos:\n"
                     "- 'new_values': [lista]\n"
@@ -35,6 +36,12 @@ class EvolutionDetector:
                     "    'humor_tolerance_delta': float (-0.1 a 0.1),\n"
                     "    'formality_level_delta': float (-0.1 a 0.1),\n"
                     "    'new_preferences': [lista]\n"
+                    "}},\n"
+                    "- 'linguistic_preference': {{\n"
+                    "    'prefers_more_formal': bool,\n"
+                    "    'prefers_more_casual': bool,\n"
+                    "    'explicit_dialect_request': 'argentino'|'colombiano'|'mexicano'|'español'|'neutro' o null,\n"
+                    "    'language_feedback': 'string' o null\n"
                     "}}\n"
                 ),
             ),

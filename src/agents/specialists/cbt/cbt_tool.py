@@ -8,7 +8,10 @@ from langchain_core.tools import tool
 from src.agents.utils.knowledge_formatter import format_knowledge_for_prompt
 from src.core.dependencies import get_vector_memory_manager
 from src.core.engine import create_observable_config, llm
-from src.core.message_utils import dict_to_langchain_messages
+from src.core.message_utils import (
+    dict_to_langchain_messages,
+    extract_recent_user_messages,
+)
 from src.core.profile_manager import user_profile_manager
 from src.memory.knowledge_base import knowledge_base_manager
 from src.memory.long_term_memory import long_term_memory
@@ -83,6 +86,14 @@ async def cbt_therapeutic_guidance_tool(
     # 4. Construir instrucciones adicionales basadas en next_actions
     routing_instructions = build_routing_instructions(next_actions)
 
+    # Configurar límite de historial desde el perfil
+    adaptation = user_profile_manager.get_personality_adaptation(profile)
+    history_limit = adaptation.get("history_limit", 20)
+    messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
+
+    # Extraer mensajes recientes del usuario para análisis de estilo (Espejo)
+    recent_user_msgs = extract_recent_user_messages(messages)
+
     persona_template = await system_prompt_builder.build(
         chat_id=chat_id,
         profile=profile,
@@ -92,6 +103,7 @@ async def cbt_therapeutic_guidance_tool(
             "knowledge_context": knowledge_context,
             "structured_knowledge": structured_knowledge,
         },
+        recent_user_messages=recent_user_msgs,
     )
 
     # Inyectar perfil enriquecido
@@ -108,9 +120,6 @@ async def cbt_therapeutic_guidance_tool(
 
     try:
         config = create_observable_config(call_type="cbt_therapeutic_response")
-        adaptation = user_profile_manager.get_personality_adaptation(profile)
-        history_limit = adaptation.get("history_limit", 20)
-        messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
 
         conversational_prompt = ChatPromptTemplate.from_messages([
             ("system", persona_template),
