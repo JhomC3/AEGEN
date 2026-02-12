@@ -130,6 +130,27 @@ class MemoryRepository:
             await db.rollback()
             return 0
 
+    async def delete_memories_by_filename(
+        self, filename: str, namespace: str = "global"
+    ) -> int:
+        """
+        Inactiva todas las memorias asociadas a un nombre de archivo en un namespace.
+        Retorna la cantidad de registros afectados.
+        """
+        db = await self.get_db()
+        try:
+            cursor = await db.execute(
+                "UPDATE memories SET is_active = 0 "
+                "WHERE namespace = ? AND json_extract(metadata, '$.filename') = ?",
+                (namespace, filename),
+            )
+            await db.commit()
+            return cursor.rowcount
+        except Exception as e:
+            logger.error(f"Error en delete_memories_by_filename para {filename}: {e}")
+            await db.rollback()
+            return 0
+
     async def get_memory_stats(self, chat_id: str) -> dict:
         """Retorna estadísticas de memoria para un usuario."""
         db = await self.get_db()

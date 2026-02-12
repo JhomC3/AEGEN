@@ -47,7 +47,7 @@ class GlobalKnowledgeLoader:
             text = ""
             with fitz.open(str(pdf_path)) as doc:
                 for page in doc:
-                    text += page.get_text()
+                    text += str(page.get_text())
             return text
         except ImportError:
             logger.error("PyMuPDF (fitz) no está instalado. No se puede procesar PDF.")
@@ -81,6 +81,53 @@ class GlobalKnowledgeLoader:
 
         return True
 
+    async def ingest_file(self, file_path: Path) -> int:
+        """
+        Ingiere un archivo individual en el sistema de memoria.
+        Retorna el número de fragmentos nuevos.
+        """
+        logger.info(f"Procesando conocimiento global: {file_path.name}")
+        try:
+            content = ""
+            # Manejo según extensión
+            if file_path.suffix.lower() == ".pdf":
+                content = self._extract_pdf_text(file_path)
+            else:
+                # Leer archivos de texto como UTF-8
+                async with aiofiles.open(file_path, encoding="utf-8") as f:
+                    content = await f.read()
+
+            if not content or not content.strip():
+                logger.warning(f"No se pudo extraer contenido de {file_path.name}")
+                return 0
+
+            # Ingerir en SQLite con namespace global
+            new_chunks = await self.manager.store_context(
+                user_id="system",
+                content=content,
+                context_type=MemoryType.DOCUMENT,
+                metadata={
+                    "filename": file_path.name,
+                    "source": "global_knowledge",
+                    "source_type": "explicit",
+                    "sensitivity": "low",
+                },
+                namespace="global",
+            )
+
+            if new_chunks > 0:
+                logger.info(
+                    f"✅ Ingeridos {new_chunks} fragmentos nuevos de {file_path.name}"
+                )
+            else:
+                logger.debug(f"ℹ️ {file_path.name} ya está sincronizado.")
+
+            return new_chunks
+
+        except Exception as e:
+            logger.error(f"Error sincronizando {file_path.name}: {e}")
+            return 0
+
     async def sync_knowledge(self):
         """
         Escanea el directorio de storage e ingiere archivos nuevos en SQLite.
@@ -106,45 +153,8 @@ class GlobalKnowledgeLoader:
                 skipped_count += 1
                 continue
 
-            logger.info(f"Procesando conocimiento global: {file_path.name}")
-            try:
-                content = ""
-                # Manejo según extensión
-                if file_path.suffix.lower() == ".pdf":
-                    content = self._extract_pdf_text(file_path)
-                else:
-                    # Leer archivos de texto como UTF-8
-                    async with aiofiles.open(file_path, encoding="utf-8") as f:
-                        content = await f.read()
-
-                if not content or not content.strip():
-                    logger.warning(f"No se pudo extraer contenido de {file_path.name}")
-                    continue
-
-                # Ingerir en SQLite con namespace global
-                new_chunks = await self.manager.store_context(
-                    user_id="system",
-                    content=content,
-                    context_type=MemoryType.DOCUMENT,
-                    metadata={
-                        "filename": file_path.name,
-                        "source": "global_knowledge",
-                        "source_type": "explicit",
-                        "sensitivity": "low",
-                    },
-                    namespace="global",
-                )
-
-                if new_chunks > 0:
-                    logger.info(
-                        f"✅ Ingeridos {new_chunks} fragmentos nuevos de {file_path.name}"
-                    )
-                else:
-                    logger.debug(f"ℹ️ {file_path.name} ya está sincronizado.")
-                processed_count += 1
-
-            except Exception as e:
-                logger.error(f"Error sincronizando {file_path.name}: {e}")
+            await self.ingest_file(file_path)
+            processed_count += 1
 
         logger.info(
             f"Sincronización finalizada. Procesados: {processed_count}, Saltados: {skipped_count}"

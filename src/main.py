@@ -72,11 +72,18 @@ async def lifespan(app: FastAPI):
 
     asyncio.create_task(global_knowledge_loader.check_and_bootstrap())
 
+    # 2. Iniciar vigilante de conocimiento (Auto-Sync)
+    from src.memory.knowledge_watcher import KnowledgeWatcher
+
+    watcher = KnowledgeWatcher(global_knowledge_loader)
+    await watcher.start()
+
     logger.info("Ciclo de vida: Arquitectura de Memoria Unificada Activa.")
     logger.info("Ciclo de vida: Arranque de la aplicación completado.")
     yield
     logger.info(f"Ciclo de vida: Apagando {settings.APP_NAME}...")
 
+    await watcher.stop()
     await shutdown_global_resources()
     logger.info("Ciclo de vida: Apagado de la aplicación completado.")
 

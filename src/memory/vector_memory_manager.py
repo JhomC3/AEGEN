@@ -117,6 +117,20 @@ class VectorMemoryManager:
             metadata=metadata,
         )
 
+    async def delete_file_knowledge(
+        self, filename: str, namespace: str = "global"
+    ) -> int:
+        """
+        Elimina (borrado suave) todo el conocimiento asociado a un archivo específico.
+        """
+        count = await self.store.delete_memories_by_filename(filename, namespace)
+        if count > 0:
+            logger.info(
+                f"[KNOWLEDGE] Borrado suave de {count} fragmentos del archivo '{filename}' "
+                f"en namespace '{namespace}'"
+            )
+        return count
+
     async def get_memories_by_type(
         self,
         user_id: str,
