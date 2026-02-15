@@ -3,7 +3,8 @@ import logging
 from datetime import datetime
 from typing import Any
 
-from src.core.dependencies import get_sqlite_store, redis_connection
+from src.core import dependencies
+from src.core.dependencies import get_sqlite_store
 from src.core.profile_context import (
     get_active_tags,
     get_context_for_prompt,
@@ -93,10 +94,10 @@ class UserProfileManager:
         Si no existe, intenta recuperación desde SQLite (Local-First).
         """
         # 1. Intentar desde Redis (Caché caliente)
-        if redis_connection:
+        if dependencies.redis_connection:
             key = self._redis_key(chat_id)
             try:
-                raw_data = await redis_connection.get(key)
+                raw_data = await dependencies.redis_connection.get(key)
                 if raw_data:
                     if isinstance(raw_data, bytes):
                         raw_data = raw_data.decode("utf-8")
@@ -111,9 +112,9 @@ class UserProfileManager:
             if sqlite_profile:
                 complete = self._ensure_complete(sqlite_profile)
                 # Rehidratar Redis para futuras consultas
-                if redis_connection:
+                if dependencies.redis_connection:
                     key = self._redis_key(chat_id)
-                    await redis_connection.set(
+                    await dependencies.redis_connection.set(
                         key, json.dumps(complete, ensure_ascii=False)
                     )
                 return complete
@@ -140,11 +141,11 @@ class UserProfileManager:
         profile["metadata"]["last_updated"] = datetime.now().isoformat()
 
         # 1. Guardar en Redis (Caché caliente)
-        if redis_connection:
+        if dependencies.redis_connection:
             key = self._redis_key(chat_id)
             try:
                 payload = json.dumps(profile, ensure_ascii=False)
-                await redis_connection.set(key, payload)
+                await dependencies.redis_connection.set(key, payload)
             except Exception as e:
                 logger.error(f"Error guardando perfil en Redis para {chat_id}: {e}")
 
@@ -186,10 +187,12 @@ class UserProfileManager:
 
         if update_localization_passive(profile, language_code):
             # Guardar solo en Redis (Optimización Fase 3)
-            if redis_connection:
+            if dependencies.redis_connection:
                 profile["metadata"]["last_updated"] = datetime.now().isoformat()
                 key = self._redis_key(chat_id)
-                await redis_connection.set(key, json.dumps(profile, ensure_ascii=False))
+                await dependencies.redis_connection.set(
+                    key, json.dumps(profile, ensure_ascii=False)
+                )
 
             loc = profile.get("localization", {})
             logger.debug(

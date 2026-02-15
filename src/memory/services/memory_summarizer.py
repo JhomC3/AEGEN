@@ -3,7 +3,8 @@ import logging
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from src.core.dependencies import get_sqlite_store, redis_connection
+from src.core import dependencies
+from src.core.dependencies import get_sqlite_store
 from src.memory.ingestion_pipeline import IngestionPipeline
 from src.memory.redis_buffer import RedisMessageBuffer
 
@@ -56,11 +57,11 @@ class MemorySummarizer:
             new_summary = str(response.content).strip()
 
             # 1. Persistir resumen en Redis
-            if redis_connection is None:
+            if dependencies.redis_connection is None:
                 raise RuntimeError("Redis no disponible para update_memory")
 
             summary_key = f"chat:summary:{chat_id}"
-            await redis_connection.set(
+            await dependencies.redis_connection.set(
                 summary_key,
                 json.dumps(
                     {"summary": new_summary, "chat_id": chat_id}, ensure_ascii=False

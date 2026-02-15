@@ -6,9 +6,8 @@ from uuid import uuid4
 from src.api.routers.privacy import handle_privacy_command, is_privacy_command
 from src.api.services.event_processor import process_event_task
 from src.api.services.fragment_consolidator import consolidate_fragments
-from src.core import schemas
+from src.core import dependencies, schemas
 from src.core.config import settings
-from src.core.dependencies import redis_connection
 from src.core.ingestion_buffer import ingestion_buffer
 from src.tools import telegram_interface
 
@@ -26,10 +25,10 @@ async def _check_debounce(chat_id: int, task_seq: int) -> bool:
 
 async def _wait_for_lock(chat_id: int, task_seq: int, lock_key: str) -> bool:
     """Espera si el chat está ocupado y re-verifica debounce."""
-    if not redis_connection:
+    if not dependencies.redis_connection:
         return True
 
-    is_processing = await redis_connection.get(lock_key)
+    is_processing = await dependencies.redis_connection.get(lock_key)
     if is_processing:
         logger.info(f"Chat {chat_id} ocupado. Esperando ráfaga tardía...")
         await asyncio.sleep(2.0)
@@ -77,8 +76,8 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
         return
 
     # 5. Ejecución con Protección (Try/Finally)
-    if redis_connection:
-        await redis_connection.setex(lock_key, 60, "true")
+    if dependencies.redis_connection:
+        await dependencies.redis_connection.setex(lock_key, 60, "true")
 
     try:
         # Feedback visual
@@ -119,5 +118,5 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
     except Exception as e:
         logger.error(f"Error procesando ráfaga para {chat_id}: {e}", exc_info=True)
     finally:
-        if redis_connection:
-            await redis_connection.delete(lock_key)
+        if dependencies.redis_connection:
+            await dependencies.redis_connection.delete(lock_key)
