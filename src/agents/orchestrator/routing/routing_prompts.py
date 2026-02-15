@@ -67,13 +67,3 @@ IMPORTANTE: Debes llamar OBLIGATORIAMENTE a la función route_user_message con:
         ),
         ("human", "{user_message}"),
     ])
-
-
-def build_fallback_context_message() -> str:
-    """
-    Mensaje de contexto para situaciones de fallback.
-
-    Returns:
-        str: Contexto informativo para fallback routing
-    """
-    return "Sin herramientas disponibles o contexto insuficiente para routing especializado"

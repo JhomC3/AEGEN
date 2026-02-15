@@ -98,29 +98,3 @@ class OrchestratorGraphBuilder(GraphBuilder):
         logger.info("Grafo de orquestación compilado exitosamente")
 
         return compiled_graph
-
-    def _validate_routing_functions(self, routing_functions: dict[str, Any]) -> None:
-        """
-        Valida que todas las funciones de routing requeridas estén presentes.
-
-        Args:
-            routing_functions: Dict de funciones a validar
-
-        Raises:
-            ValueError: Si faltan funciones requeridas
-        """
-        required_functions = [
-            "meta_router_fn",
-            "chain_router_fn",
-            "initial_router_fn",
-            "chain_router_decision_fn",
-        ]
-
-        missing_functions = [
-            fn for fn in required_functions if fn not in routing_functions
-        ]
-
-        if missing_functions:
-            raise ValueError(
-                f"Faltan funciones de routing requeridas: {missing_functions}"
-            )
