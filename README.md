@@ -17,8 +17,7 @@ Este documento es de **lectura obligatoria** para cualquier contribuidor (humano
 3.  **[📂 Guías (docs/guias/)](docs/guias/)**: Manuales de [Desarrollo](docs/guias/manual-desarrollo.md) y [Despliegue](docs/guias/manual-despliegue.md).
 4.  **[📜 Decisiones (adr/)](adr/)**: Registro histórico de decisiones técnicas vigentes.
 5.  **[📋 Planes (docs/planes/)](docs/planes/)**: Hojas de ruta detalladas para nuevas funcionalidades.
-6.  **[⚖️ Ley Técnica (RULES.MD)](RULES.MD)**: Estándares de código y seguridad.
-7.  **[🤖 Gobernanza (AGENTS.md)](AGENTS.md)**: Reglas para agentes de IA.
+6.  **[⚖️ Estándares y Gobernanza (AGENTS.md)](AGENTS.md)**: Estándares de código, seguridad y reglas para agentes de IA.
 
 ## ✨ Características Principales
 

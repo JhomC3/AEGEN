@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 class MessageQueueManager:
     """Gestor de colas de mensajes por usuario."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.user_queues: dict[str, UserMessageQueue] = {}
         self.logger = logging.getLogger(__name__)
 

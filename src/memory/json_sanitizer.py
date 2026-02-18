@@ -62,5 +62,4 @@ def _repair_json_string(raw: str) -> str:
     # Reemplazar comillas simples por dobles (fuera de strings)
     repaired = re.sub(r"(?<![\\])'", '"', raw)
     # Eliminar comas finales antes de } o ]
-    repaired = re.sub(r",\s*([}\]])", r"\1", repaired)
-    return repaired
+    return re.sub(r",\s*([}\]])", r"\1", repaired)

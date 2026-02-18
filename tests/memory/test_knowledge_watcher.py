@@ -22,7 +22,7 @@ async def test_knowledge_watcher_detection(tmp_path):
     loader.ingest_file = AsyncMock(return_value=1)
     loader.manager = MagicMock()
     loader.manager.delete_file_knowledge = AsyncMock(return_value=1)
-    loader._should_process_file = MagicMock(return_value=True)
+    loader._should_process_file = MagicMock(return_value=(True, "accepted"))
 
     # Intervalo corto para el test
     watcher = KnowledgeWatcher(loader, interval=0.1)

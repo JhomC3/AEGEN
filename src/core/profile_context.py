@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 
 
 def get_context_for_prompt(profile: dict[str, Any]) -> dict[str, str]:
@@ -20,23 +20,26 @@ def get_context_for_prompt(profile: dict[str, Any]) -> dict[str, str]:
 
 
 def get_active_tags(profile: dict[str, Any]) -> list[str]:
-    return profile.get("active_tags", [])
+    return cast(list[str], profile.get("active_tags", []))
 
 
 def get_style(profile: dict[str, Any]) -> str:
-    return profile.get("identity", {}).get("style", "Casual y Directo")
+    return cast(str, profile.get("identity", {}).get("style", "Casual y Directo"))
 
 
 def get_personality_adaptation(profile: dict[str, Any]) -> dict[str, Any]:
     """Retorna la configuración de adaptación de personalidad."""
-    return profile.get(
-        "personality_adaptation",
-        {
-            "preferred_style": "casual",
-            "communication_level": "intermediate",
-            "humor_tolerance": 0.7,
-            "formality_level": 0.3,
-            "history_limit": 20,
-            "learned_preferences": [],
-        },
+    return cast(
+        dict[str, Any],
+        profile.get(
+            "personality_adaptation",
+            {
+                "preferred_style": "casual",
+                "communication_level": "intermediate",
+                "humor_tolerance": 0.7,
+                "formality_level": 0.3,
+                "history_limit": 20,
+                "learned_preferences": [],
+            },
+        ),
     )

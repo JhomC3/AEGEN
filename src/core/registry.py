@@ -28,6 +28,12 @@ class Specialist(Protocol):
         """La herramienta que describe la capacidad del especialista para el enrutador."""
         ...
 
+    def get_capabilities(self) -> list[str]:
+        """
+        Devuelve una lista de los tipos de eventos que este especialista puede manejar.
+        """
+        ...
+
 
 class SpecialistRegistry:
     """
@@ -37,13 +43,13 @@ class SpecialistRegistry:
     _instance = None
     _specialists: dict[str, Specialist] = {}
 
-    def __new__(cls):
+    def __new__(cls) -> "SpecialistRegistry":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._specialists = {}
         return cls._instance
 
-    def register(self, specialist: Specialist):
+    def register(self, specialist: Specialist) -> None:
         """Registra un nuevo especialista."""
         if specialist.name in self._specialists:
             logger.warning(

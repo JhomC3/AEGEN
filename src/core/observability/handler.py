@@ -174,11 +174,10 @@ class LLMObservabilityHandler(BaseCallbackHandler):
                     first_gen
                     and hasattr(first_gen, "message")
                     and hasattr(first_gen.message, "usage_metadata")
-                ):
-                    if first_gen.message.usage_metadata:
-                        self._extract_token_usage_from_metadata(
-                            metrics, first_gen.message.usage_metadata
-                        )
+                ) and first_gen.message.usage_metadata:
+                    self._extract_token_usage_from_metadata(
+                        metrics, first_gen.message.usage_metadata
+                    )
             # Try usage_metadata directly (newer LangChain AIMessage)
             elif hasattr(response, "usage_metadata") and response.usage_metadata:
                 self._extract_token_usage_from_metadata(

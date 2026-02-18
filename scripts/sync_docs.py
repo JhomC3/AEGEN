@@ -16,8 +16,12 @@ from pathlib import Path
 def run_command(cmd: str) -> str:
     """Ejecuta un comando y retorna la salida limpia."""
     try:
-        result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, check=True
+        # Simple split for basic commands, shell=True for complex ones
+        use_shell = any(c in cmd for c in ["|", "&", ">", "<", ";"])
+        args = cmd if use_shell else cmd.split()
+
+        result = subprocess.run(  # noqa: S603
+            args, shell=use_shell, capture_output=True, text=True, check=True
         )
         return result.stdout.strip()
     except subprocess.CalledProcessError as e:

@@ -43,7 +43,7 @@ async def _download_event_files(
     return payload_updates
 
 
-async def _update_user_context(event: schemas.CanonicalEventV1):
+async def _update_user_context(event: schemas.CanonicalEventV1) -> None:
     chat_id = str(event.chat_id)
     if event.first_name:
         await user_profile_manager.seed_identity_from_platform(
@@ -53,7 +53,7 @@ async def _update_user_context(event: schemas.CanonicalEventV1):
         await user_profile_manager.update_localization(chat_id, event.language_code)
 
 
-async def _load_session_context(chat_id: str) -> tuple[dict, list]:
+async def _load_session_context(chat_id: str) -> tuple[dict[str, Any], list[Any]]:
     existing_session = await session_manager.get_session(chat_id)
     if existing_session:
         return {
@@ -66,10 +66,10 @@ async def _load_session_context(chat_id: str) -> tuple[dict, list]:
 
 async def _run_orchestration(
     event: schemas.CanonicalEventV1,
-    payload: dict,
-    conversation_history: list,
+    payload: dict[str, Any],
+    conversation_history: list[Any],
     task_id: str,
-) -> dict:
+) -> dict[str, Any]:
     initial_state = GraphStateV2(
         event=event,
         payload=payload,
@@ -91,7 +91,9 @@ async def _run_orchestration(
         return final_state
 
 
-async def _send_response(chat_id: str, final_state: dict, task_id: str) -> str:
+async def _send_response(
+    chat_id: str, final_state: dict[str, Any], task_id: str
+) -> str:
     response_content = final_state.get("payload", {}).get("response")
     message = (
         final_state.get("error_message") or str(response_content)
@@ -108,7 +110,9 @@ async def _send_response(chat_id: str, final_state: dict, task_id: str) -> str:
     return message
 
 
-async def _buffer_memory(chat_id: str, user_content: str, assistant_message: str):
+async def _buffer_memory(
+    chat_id: str, user_content: str, assistant_message: str
+) -> None:
     try:
         await long_term_memory.store_raw_message(chat_id, "user", user_content)
         await long_term_memory.store_raw_message(
@@ -118,7 +122,7 @@ async def _buffer_memory(chat_id: str, user_content: str, assistant_message: str
         logger.error(f"Error al enviar mensajes al buffer: {e}")
 
 
-async def process_event_task(event: schemas.CanonicalEventV1):
+async def process_event_task(event: schemas.CanonicalEventV1) -> None:
     """
     Tarea de fondo que orquesta el flujo de procesamiento para un evento canónico.
     """

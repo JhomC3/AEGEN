@@ -53,7 +53,7 @@ async def _handle_privacy_intercept(
     return False
 
 
-async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str):
+async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str) -> None:
     """
     Tarea de fondo que espera y consolida mensajes acumulados.
     Implementa lógica de Debounce y Cerrojo de procesamiento.

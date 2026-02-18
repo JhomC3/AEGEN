@@ -167,14 +167,13 @@ async def health_check(
     tags=["Status"],
     summary="Verifica la salud del proveedor LLM activo",
 )
-async def llm_health_check():
+async def llm_health_check() -> dict[str, Any]:
     """
     Verifica la conexión y salud del proveedor LLM configurado.
     """
     from src.core.engine import check_llm_health
 
-    health_data = await check_llm_health()
-    return health_data
+    return await check_llm_health()
 
 
 @router.get(
@@ -182,7 +181,7 @@ async def llm_health_check():
     tags=["Debug"],
     summary="Debug: Lista especialistas registrados",
 )
-def get_specialists():
+def get_specialists() -> dict[str, Any]:
     """Debug endpoint para verificar especialistas registrados."""
     specialists = specialist_registry.get_all_specialists()
     return {

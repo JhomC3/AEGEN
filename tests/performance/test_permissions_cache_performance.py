@@ -26,10 +26,9 @@ async def mock_role_manager():
             await asyncio.sleep(0.01)  # 10ms cache miss
             cache_state[user_id] = True
             return True
-        else:
-            # Cache hit: muy rápido (0.1ms)
-            await asyncio.sleep(0.0001)  # 0.1ms cache hit
-            return cache_state[user_id]
+        # Cache hit: muy rápido (0.1ms)
+        await asyncio.sleep(0.0001)  # 0.1ms cache hit
+        return cache_state[user_id]
 
     mock_manager.check_permission = mock_check_permission
     return mock_manager

@@ -21,7 +21,7 @@ logger = logging.getLogger("polling_service")
 
 
 # --- Utils ---
-def load_env_file():
+def load_env_file() -> None:
     """Carga variables de .env manualmente."""
     try:
         env_path = Path(__file__).resolve().parent.parent.parent / ".env"
@@ -75,7 +75,7 @@ def process_updates(updates: dict, offset: int | None) -> int | None:
     return offset
 
 
-def polling_loop(client: PersistentTelegramClient):
+def polling_loop(client: PersistentTelegramClient) -> None:
     """Bucle principal de polling con backoff exponencial y manejo de errores."""
     offset = None
     consecutive_errors = 0
@@ -110,7 +110,7 @@ def polling_loop(client: PersistentTelegramClient):
             time.sleep(5)
 
 
-def main():
+def main() -> None:
     logger.info(
         f"Iniciando Polling Service v0.5.0 (Persistent TLS / Timeout={POLLING_TIMEOUT}s)"
     )

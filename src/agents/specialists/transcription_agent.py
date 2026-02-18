@@ -38,7 +38,7 @@ class TranscriptionSpecialist(SpecialistInterface):
     Agente especializado en la transcripción de audio.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._name: str = "transcription_agent"
         self._graph: Any = self._build_graph()
         self._tool: BaseTool = transcription_tool

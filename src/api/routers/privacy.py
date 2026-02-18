@@ -35,11 +35,11 @@ async def handle_privacy_command(text: str, chat_id: str) -> str | None:
 
     if command == "/privacidad":
         return await _handle_privacidad(chat_id)
-    elif command == "/olvidar":
+    if command == "/olvidar":
         return await _handle_olvidar(chat_id, arg)
-    elif command == "/efimero":
+    if command == "/efimero":
         return await _handle_efimero(chat_id)
-    elif command == "/disclaimer":
+    if command == "/disclaimer":
         return _handle_disclaimer()
 
     return None

@@ -83,7 +83,7 @@ class StyleAnalyzer:
 
         if formal_score > casual_score:
             return "formal" if formal_score < 3 else "muy_formal"
-        elif casual_score > formal_score:
+        if casual_score > formal_score:
             return "casual" if casual_score < 3 else "muy_casual"
         return "casual"  # Default balanceado
 
@@ -93,7 +93,7 @@ class StyleAnalyzer:
 
         if avg_len < 30:
             return "telegrafico"
-        elif avg_len < 120:
+        if avg_len < 120:
             return "conciso"
         return "verboso"
 

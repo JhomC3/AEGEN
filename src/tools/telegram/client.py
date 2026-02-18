@@ -23,7 +23,7 @@ class PersistentTelegramClient:
         self.conn: http.client.HTTPSConnection | None = None
         self._connect()
 
-    def _connect(self):
+    def _connect(self) -> None:
         """Crea o recrea la conexión TLS persistente."""
         try:
             if self.conn:
@@ -89,7 +89,7 @@ class PersistentTelegramClient:
 
         return None
 
-    def close(self):
+    def close(self) -> None:
         if self.conn:
             try:
                 self.conn.close()

@@ -27,11 +27,10 @@ install: venv ## Instala dependencias de desarrollo usando uv y los lockfiles
 	@echo "Installing project in editable mode..."
 	$(UV) pip install --python $(PYTHON) -e .
 
-lint: ## Ejecuta linters (ruff, black check, mypy, bandit, safety)
+lint: ## Ejecuta linters (ruff, mypy)
 	@echo "Running linters..."
 	$(PYTHON) -m ruff check .
 	$(PYTHON) -m mypy src tests
-	$(PYTHON) -m bandit -c pyproject.toml -r src
 
 verify: ## Validación completa: linting + tests + architecture simple
 	@echo "🎯 AEGEN Verification Suite..."

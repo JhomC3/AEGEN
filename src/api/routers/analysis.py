@@ -25,7 +25,7 @@ event_bus_dependency = Depends(get_event_bus)
 async def ingest_request(
     request: AnalyzeQuery,
     event_bus: IEventBus = event_bus_dependency,
-):
+) -> IngestionResponse:
     """
     Endpoint de ingestión no bloqueante.
 

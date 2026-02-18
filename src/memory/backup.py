@@ -9,7 +9,6 @@ with Google Cloud Storage.
 import asyncio
 import gzip
 import logging
-import os
 import shutil
 from datetime import datetime
 from pathlib import Path
@@ -28,12 +27,12 @@ class CloudBackupManager:
     Gestiona el respaldo y recuperación de la base de datos en GCS.
     """
 
-    def __init__(self, store: SQLiteStore | None = None):
+    def __init__(self, store: SQLiteStore | None = None) -> None:
         self.store = store or SQLiteStore(settings.SQLITE_DB_PATH)
         self.bucket_name = settings.GCS_BACKUP_BUCKET
         self._client = None
 
-    def _get_client(self):
+    def _get_client(self) -> storage.Client | None:
         """Inicializa el cliente de GCS."""
         if self._client:
             return self._client
@@ -76,12 +75,14 @@ class CloudBackupManager:
         try:
             # 1. Crear snapshot seguro (VACUUM INTO)
             db = await self.store.get_db()
-            await db.execute(f"VACUUM INTO '{snapshot_path}'")
+            # SQLite VACUUM INTO doesn't support parameterized queries for the filename
+            # The path is constructed from a timestamp and controlled directory, so it is safe.
+            await db.execute(f"VACUUM INTO '{snapshot_path}'")  # noqa: S608
             logger.info(f"Snapshot created at {snapshot_path}")
 
             # 2. Comprimir
             def compress_file():
-                with open(snapshot_path, "rb") as f_in:
+                with snapshot_path.open("rb") as f_in:
                     with gzip.open(compressed_path, "wb") as f_out:
                         shutil.copyfileobj(f_in, f_out)
 
@@ -105,9 +106,9 @@ class CloudBackupManager:
         finally:
             # Limpiar archivos temporales locales
             if snapshot_path.exists():
-                os.remove(snapshot_path)
+                snapshot_path.unlink()
             if compressed_path.exists():
-                os.remove(compressed_path)
+                compressed_path.unlink()
 
         return None
 
@@ -136,24 +137,26 @@ class CloudBackupManager:
             backup_dir = Path(settings.SQLITE_BACKUP_DIR)
             backup_dir.mkdir(parents=True, exist_ok=True)
 
-            local_gz = backup_dir / os.path.basename(latest_blob.name)
+            local_gz = backup_dir / Path(latest_blob.name).name
             db_path = Path(settings.SQLITE_DB_PATH)
 
-            print(f"📥 Descargando backup desde GCS: {latest_blob.name}...")
+            logger.info(f"📥 Descargando backup desde GCS: {latest_blob.name}...")
             latest_blob.download_to_filename(str(local_gz))
 
             # Descomprimir directamente al destino
-            print(f"📂 Restaurando base de datos a {db_path}...")
+            logger.info(f"📂 Restaurando base de datos a {db_path}...")
 
             def decompress_file():
+                # Explicitly open in binary mode
                 with gzip.open(local_gz, "rb") as f_in:
-                    with open(db_path, "wb") as f_out:
+                    with db_path.open("wb") as f_out:
                         shutil.copyfileobj(f_in, f_out)
 
             await asyncio.to_thread(decompress_file)
 
             # Limpiar temporal
-            os.remove(local_gz)
+            if local_gz.exists():
+                local_gz.unlink()
             logger.info("Database restored successfully from GCS.")
             return True
 

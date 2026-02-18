@@ -10,11 +10,10 @@ def get_settings() -> BaseAppSettings:
     """Factory function to get settings based on environment."""
     if APP_ENV == Environment.PRODUCTION:
         return ProductionSettings()
-    elif APP_ENV in [Environment.DEVELOPMENT, Environment.LOCAL]:
+    if APP_ENV in [Environment.DEVELOPMENT, Environment.LOCAL]:
         return DevelopmentSettings()
-    else:
-        # Default to development settings
-        return DevelopmentSettings()
+    # Default to development settings
+    return DevelopmentSettings()
 
 
 # Create a global settings instance

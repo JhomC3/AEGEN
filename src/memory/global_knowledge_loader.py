@@ -56,10 +56,10 @@ class GlobalKnowledgeLoader:
             logger.error(f"Error extrayendo texto de PDF {pdf_path.name}: {e}")
             return ""
 
-    def _should_process_file(self, file_path: Path) -> bool:
+    def _should_process_file(self, file_path: Path) -> tuple[bool, str]:
         """
         Determina si un archivo debe ser procesado como conocimiento global.
-        Filtra extensiones permitidas e ignora archivos personales/legacy.
+        Retorna (should_process, reason) para trazabilidad de decisiones.
         """
         import re
 
@@ -68,18 +68,22 @@ class GlobalKnowledgeLoader:
 
         # 1. Solo permitir PDF, Markdown y Texto
         if ext not in (".pdf", ".md", ".txt"):
-            return False
+            return False, f"extension_no_permitida: {ext}"
 
-        # 2. Ignorar archivos con IDs de usuario (números largos)
-        if re.search(r"\d{5,}", name):
-            return False
+        # 2. Lista blanca: archivos CORE_ omiten verificación numérica
+        is_core = name.startswith("core_")
 
-        # 3. Ignorar palabras clave de archivos personales legacy
+        # 3. Ignorar archivos con IDs de usuario (solo para no-CORE)
+        if not is_core and re.search(r"\d{5,}", name):
+            return False, "posible_id_usuario_detectado"
+
+        # 4. Ignorar palabras clave de archivos personales legacy
         ignore_keywords = ("buffer", "summary", "vault", "profile")
-        if any(kw in name for kw in ignore_keywords):
-            return False
+        for kw in ignore_keywords:
+            if kw in name:
+                return False, f"keyword_personal_legacy: {kw}"
 
-        return True
+        return True, "aceptado"
 
     async def ingest_file(self, file_path: Path) -> int:
         """
@@ -148,8 +152,11 @@ class GlobalKnowledgeLoader:
             if file_path.is_dir() or file_path.name.startswith("."):
                 continue
 
-            if not self._should_process_file(file_path):
-                logger.debug(f"Saltando archivo no global/legacy: {file_path.name}")
+            should_process, reason = self._should_process_file(file_path)
+            if not should_process:
+                logger.info(
+                    f"[INGESTA] Archivo descartado: {file_path.name} | Razón: {reason}"
+                )
                 skipped_count += 1
                 continue
 

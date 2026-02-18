@@ -212,3 +212,22 @@ class AnalysisPlan(BaseModel):
     plan_id: UUID = Field(default_factory=uuid4)
     original_query: str
     steps: list[PlanStep]
+
+
+class KnowledgeDocumentStatus(BaseModel):
+    """Estado de un documento de conocimiento global."""
+
+    filename: str
+    chunk_count: int
+    last_sync: str | None = None
+    is_retrievable: bool | None = None
+
+
+class KnowledgeStatusResponse(BaseModel):
+    """Respuesta del endpoint de diagnóstico de conocimiento."""
+
+    status: str
+    total_documents: int
+    total_chunks: int
+    last_sync: str | None = None
+    documents: list[KnowledgeDocumentStatus]

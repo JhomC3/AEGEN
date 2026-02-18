@@ -33,7 +33,7 @@ class OptimizedSpecialistCache(SpecialistCache):
     Implementa optimizaciones recomendadas por Gemini para performance.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize cache con estado limpio."""
         self._routable_specialists: list[Any] = []
         self._routable_tools: list[Any] = []

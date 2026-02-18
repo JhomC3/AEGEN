@@ -35,6 +35,5 @@ class IntentValidator:
                 return False
 
             return any(pos in text_lower for pos in positive_patterns)
-        else:
-            # Comportamiento legacy para listas simples
-            return any(pattern in text_lower for pattern in patterns_config)
+        # Comportamiento legacy para listas simples
+        return any(pattern in text_lower for pattern in patterns_config)

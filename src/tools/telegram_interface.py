@@ -113,8 +113,7 @@ class TelegramToolManager:
         # Eliminar código inline (`texto` -> texto)
         text = re.sub(r"`(.*?)`", r"\1", text)
         # Eliminar bloques de código (```texto``` -> texto)
-        text = re.sub(r"```(.*?)```", r"\1", text, flags=re.DOTALL)
-        return text
+        return re.sub(r"```(.*?)```", r"\1", text, flags=re.DOTALL)
 
     @retry_on_failure(retries=3, delay=2.0, backoff=2.0)
     async def send_message(self, chat_id: str, text: str) -> bool:

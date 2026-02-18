@@ -29,13 +29,10 @@ def should_archive(file_path: Path) -> bool:
 
     # 2. Palabras clave de archivos personales legacy
     ignore_keywords = ("buffer", "summary", "vault", "profile", "knowledge_loader")
-    if any(kw in name for kw in ignore_keywords) and file_path.suffix.lower() in (
-        ".json",
-        ".txt",
-    ):
-        return True
-
-    return False
+    return bool(
+        any(kw in name for kw in ignore_keywords)
+        and file_path.suffix.lower() in (".json", ".txt")
+    )
 
 
 def main():

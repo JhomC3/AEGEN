@@ -14,7 +14,7 @@ class IngestionBuffer:
     Permite capturar ráfagas de mensajes y procesarlos como uno solo.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.MSG_BUFFER_PREFIX = "ingest:buffer:"
         self.SEQ_COUNTER_PREFIX = "ingest:seq:"
 

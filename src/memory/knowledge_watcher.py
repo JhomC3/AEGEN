@@ -1,5 +1,6 @@
 # src/memory/knowledge_watcher.py
 import asyncio
+import contextlib
 import logging
 from pathlib import Path
 
@@ -15,7 +16,7 @@ class KnowledgeWatcher:
     usando una estrategia de Async Polling.
     """
 
-    def __init__(self, loader: GlobalKnowledgeLoader, interval: int = 30):
+    def __init__(self, loader: GlobalKnowledgeLoader, interval: int | float = 30):
         self.loader = loader
         self.interval = interval
         self.knowledge_path = loader.knowledge_path
@@ -51,10 +52,8 @@ class KnowledgeWatcher:
         self._is_running = False
         if self._watch_task:
             self._watch_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._watch_task
-            except asyncio.CancelledError:
-                pass
             self._watch_task = None
         logger.info("KnowledgeWatcher detenido.")
 
@@ -68,7 +67,8 @@ class KnowledgeWatcher:
             if file_path.is_dir() or file_path.name.startswith("."):
                 continue
 
-            if self.loader._should_process_file(file_path):
+            should_process, _ = self.loader._should_process_file(file_path)
+            if should_process:
                 try:
                     files[file_path.name] = (file_path, file_path.stat().st_mtime)
                 except FileNotFoundError:

@@ -55,7 +55,7 @@ async def _chat_node(state: GraphStateV2) -> Any:
 class ChatSpecialist(SpecialistInterface):
     """Especialista Conversacional (MAGI)."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._name = "chat_specialist"
         self._tool = conversational_chat_tool
         self._graph = self._build_graph()

@@ -58,6 +58,22 @@ async def conversational_chat_tool(
 
         all_results = global_results + user_results
 
+        # Transparencia RAG enriquecida (ADR-0025)
+        global_sources = [
+            r.get("metadata", {}).get("filename", "?") for r in global_results
+        ]
+        logger.info(
+            f"[CHAT-RAG] Context injection for chat={chat_id}",
+            extra={
+                "event": "specialist_rag_injection",
+                "specialist": "chat",
+                "chat_id": chat_id,
+                "global_count": len(global_results),
+                "user_count": len(user_results),
+                "global_sources": global_sources,
+            },
+        )
+
         if all_results:
             knowledge_context = "\n\n".join([f"- {r['content']}" for r in all_results])
         else:
@@ -130,11 +146,10 @@ async def conversational_chat_tool(
                 conversational_prompt,
                 cast(RunnableConfig, config),
             )
-        else:
-            chain = conversational_prompt | llm
-            response = await chain.ainvoke(
-                prompt_input, config=cast(RunnableConfig, config)
-            )
+        chain = conversational_prompt | llm
+        response = await chain.ainvoke(
+            prompt_input, config=cast(RunnableConfig, config)
+        )
 
         return str(response.content).strip()
     except Exception as e:

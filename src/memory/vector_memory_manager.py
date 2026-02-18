@@ -48,45 +48,67 @@ class VectorMemoryManager:
         namespace: str = "user",
     ) -> list[dict[str, Any]]:
         """
-        Recupera memorias relevantes para una consulta usando búsqueda híbrida.
-
-        Args:
-            user_id: ID del usuario (chat_id)
-            query: Consulta en texto
-            context_type: Opcional, filtrar por tipo de memoria
-            limit: Número máximo de resultados
-            namespace: Espacio de nombres (default 'user')
-
-        Returns:
-            Lista de fragmentos de memoria relevantes.
+        Recupera memorias relevantes usando búsqueda híbrida.
+        Genera trazas RAG estructuradas para observabilidad.
         """
+        import time
+
+        start_time = time.monotonic()
+
         results = await self.hybrid_search.search(
             query=query, limit=limit, chat_id=user_id, namespace=namespace
         )
 
-        # Transparencia RAG
-        if results:
-            sources: dict[str, int] = {}
-            for r in results:
-                meta = r.get("metadata", {})
-                source = meta.get("source", r.get("memory_type", "unknown"))
-                sources[source] = sources.get(source, 0) + 1
-            source_summary = ", ".join(f"{k}: {v}" for k, v in sources.items())
-            logger.info(
-                f"[RAG] Retrieved {len(results)} fragments for user={user_id}, "
-                f"namespace={namespace} | Sources: {source_summary}"
-            )
-        else:
-            logger.debug(
-                f"[RAG] No fragments found for user={user_id}, query='{query[:50]}...'"
-            )
+        elapsed_ms = (time.monotonic() - start_time) * 1000
+
+        # Traza RAG estructurada (ADR-0025)
+        self._log_rag_trace(
+            user_id=user_id,
+            namespace=namespace,
+            query=query,
+            results=results,
+            elapsed_ms=elapsed_ms,
+        )
 
         # Si se especificó un tipo de contexto, podríamos filtrar aquí
-        # aunque es mejor hacerlo en la query SQL si fuera crítico
         if context_type:
             results = [r for r in results if r["memory_type"] == context_type.value]
 
         return results
+
+    def _log_rag_trace(
+        self,
+        user_id: str,
+        namespace: str,
+        query: str,
+        results: list[dict[str, Any]],
+        elapsed_ms: float,
+    ) -> None:
+        """Emite una traza RAG estructurada como log JSON."""
+        fragments = [
+            {
+                "id": r["id"],
+                "score": round(r.get("score", 0), 4),
+                "source": r.get("metadata", {}).get("filename", "unknown"),
+                "type": r.get("memory_type", "unknown"),
+                "preview": r["content"][:120],
+            }
+            for r in results
+        ]
+
+        logger.info(
+            f"[RAG-TRACE] {namespace}: {len(results)} fragments, "
+            f"{elapsed_ms:.0f}ms | query='{query[:50]}...'",
+            extra={
+                "event": "rag_retrieval",
+                "user_id": user_id,
+                "namespace": namespace,
+                "query_preview": query[:80],
+                "results_count": len(results),
+                "latency_ms": round(elapsed_ms, 1),
+                "fragments": fragments,
+            },
+        )
 
     async def store_context(
         self,

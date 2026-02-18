@@ -151,7 +151,7 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
             return self._route_to_specialist(state, decision)
 
         # Nivel 2: Confianza moderada (60-85%) → Clarificar
-        elif confidence >= LOW_CONFIDENCE_THRESHOLD:
+        if confidence >= LOW_CONFIDENCE_THRESHOLD:
             logger.info(
                 f"Posible vulnerabilidad ({confidence:.2f}). "
                 f"Añadiendo acción de clarificación."
@@ -161,14 +161,13 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
             return self._route_to_specialist(state, decision)
 
         # Nivel 3: Baja confianza (50-60%) → Chat general
-        else:
-            logger.info(
-                f"Señal débil de vulnerabilidad ({confidence:.2f}). "
-                f"Routing a chat_specialist para evaluación suave."
-            )
-            decision.target_specialist = "chat_specialist"
-            decision.next_actions = ["monitor_emotional_cues"]
-            return self._route_to_specialist(state, decision)
+        logger.info(
+            f"Señal débil de vulnerabilidad ({confidence:.2f}). "
+            f"Routing a chat_specialist para evaluación suave."
+        )
+        decision.target_specialist = "chat_specialist"
+        decision.next_actions = ["monitor_emotional_cues"]
+        return self._route_to_specialist(state, decision)
 
     def _route_to_specialist(
         self, state: GraphStateV2, decision: RoutingDecision
@@ -180,6 +179,5 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
             # Actualizar state y enrutar
             update_state_with_decision(state, decision)
             return decision.target_specialist
-        else:
-            logger.warning(f"Specialist '{decision.target_specialist}' no disponible")
-            return route_to_chat(state)
+        logger.warning(f"Specialist '{decision.target_specialist}' no disponible")
+        return route_to_chat(state)

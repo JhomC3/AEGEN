@@ -94,7 +94,7 @@ class BaseAppSettings(BaseSettings):
     # --- Validación ---
     # Validar que claves esenciales existan en producción
     @model_validator(mode="after")
-    def validate_production_secrets(self):
+    def validate_production_secrets(self) -> "BaseAppSettings":
         env = self.APP_ENV
         if env == Environment.PRODUCTION:
             required_secrets = ["GOOGLE_API_KEY"]

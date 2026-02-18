@@ -58,10 +58,7 @@ def is_conversational_only(text: str) -> bool:
     ]
 
     # Verificar Regex para saludos explícitos
-    if any(re.match(p, text) for p in patterns):
-        return True
-
-    return False
+    return bool(any(re.match(p, text) for p in patterns))
 
 
 def detect_explicit_command(text: str) -> str | None:

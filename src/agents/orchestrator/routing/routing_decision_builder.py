@@ -24,7 +24,7 @@ def create_fallback_decision_data() -> dict[str, Any]:
     }
 
 
-def extract_tool_result(response) -> dict[str, Any]:
+def extract_tool_result(response: Any) -> dict[str, Any]:
     """
     Extrae resultado del function call y retorna data dict.
     """

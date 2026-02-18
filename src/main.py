@@ -16,7 +16,13 @@ from prometheus_fastapi_instrumentator import Instrumentator  # noqa: E402
 
 # Importar los especialistas para asegurar que se registren al inicio
 from src import agents  # noqa: F401, E402
-from src.api.routers import analysis, llm_metrics, status, webhooks  # noqa: E402
+from src.api.routers import (  # noqa: E402
+    analysis,
+    diagnostics,
+    llm_metrics,
+    status,
+    webhooks,
+)
 from src.core.config import settings  # noqa: E402
 from src.core.dependencies import (  # noqa: E402
     initialize_global_resources,
@@ -127,7 +133,7 @@ async def log_all_requests(request: Request, call_next):
     return response
 
 
-if settings.ALLOWED_HOSTS == ["*"]:
+if ["*"] == settings.ALLOWED_HOSTS:
     logger.warning(
         "CORS 'allow_origins' está configurado como '*' (permitir todo). Considera restringirlo en producción."
     )
@@ -140,7 +146,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-if not settings.DEBUG_MODE and settings.ALLOWED_HOSTS != ["*"]:
+if not settings.DEBUG_MODE and ["*"] != settings.ALLOWED_HOSTS:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.ALLOWED_HOSTS)
     logger.info(f"TrustedHostMiddleware enabled for hosts: {settings.ALLOWED_HOSTS}")
 
@@ -157,6 +163,9 @@ register_exception_handlers(app)
 # --- Routers ---
 app.include_router(status.router, prefix="/system", tags=["System"])
 app.include_router(llm_metrics.router, prefix="/system/llm", tags=["LLM Metrics"])
+app.include_router(
+    diagnostics.router, prefix="/system/diagnostics", tags=["Diagnostics"]
+)
 app.include_router(analysis.router, prefix="/api/v1/analysis", tags=["Analysis"])
 app.include_router(webhooks.router, prefix="/api/v1/webhooks", tags=["Webhooks"])
 

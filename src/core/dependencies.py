@@ -73,13 +73,13 @@ async def initialize_global_resources() -> tuple[aioredis.Redis | None, IEventBu
     return redis_connection, event_bus
 
 
-async def shutdown_global_resources():
+async def shutdown_global_resources() -> None:
     """Cierra conexiones y recursos globales."""
     if sqlite_store:
         await sqlite_store.disconnect()
         logger.info("SQLite connection closed.")
 
-    if isinstance(event_bus, RedisEventBus) or isinstance(event_bus, InMemoryEventBus):
+    if isinstance(event_bus, (RedisEventBus, InMemoryEventBus)):
         await event_bus.shutdown()
         logger.info("Event Bus shut down.")
 
@@ -102,7 +102,7 @@ def get_event_bus() -> IEventBus:
 
 
 # Dependencia para obtener la conexión Redis (si algún componente la necesita)
-async def get_redis_dependency():
+async def get_redis_dependency() -> aioredis.Redis:
     if redis_connection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -149,7 +149,7 @@ def get_sqlite_store() -> SQLiteStore:
     return sqlite_store
 
 
-def prime_dependencies():
+def prime_dependencies() -> None:
     """
     "Calienta" las dependencias singleton al arranque de la aplicación.
     """

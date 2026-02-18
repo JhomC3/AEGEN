@@ -15,15 +15,12 @@ def forward_to_local_api(update: dict, api_url: str) -> bool:
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=10) as resp:  # nosec B310
+        with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
             if resp.status in (200, 202):
                 logger.info(f"✅ Update {update_id} -> API Local: OK")
                 return True
-            else:
-                logger.warning(
-                    f"❌ Update {update_id} -> API Local: Status {resp.status}"
-                )
-                return False
+            logger.warning(f"❌ Update {update_id} -> API Local: Status {resp.status}")
+            return False
     except Exception as e:
         logger.warning(f"❌ Update {update_id} -> API Local: {e}")
         return False

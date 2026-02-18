@@ -24,7 +24,7 @@ class SessionManager:
     - Error handling and fallback
     """
 
-    def __init__(self, redis_url: str | None = None, ttl: int | None = None):
+    def __init__(self, redis_url: str | None = None, ttl: int | None = None) -> None:
         """
         Initialize SessionManager with Redis connection.
 
@@ -62,7 +62,7 @@ class SessionManager:
 
         if last_specialist == "cbt_specialist":
             return 86400  # 24 horas
-        elif history_len > 10:
+        if history_len > 10:
             return 28800  # 8 horas
 
         return 14400  # 4 horas (valor base mejorado vs 1h anterior)
@@ -184,7 +184,7 @@ class SessionManager:
             logger.error(f"Failed to delete session for {chat_id}: {e}", exc_info=True)
             return False
 
-    async def trigger_consolidation(self, chat_id: str):
+    async def trigger_consolidation(self, chat_id: str) -> None:
         """
         Explicitly triggers session consolidation to long-term memory.
         """
@@ -229,10 +229,10 @@ class SessionManager:
             )
             return None
 
-    async def close(self):
+    async def close(self) -> None:
         """Close Redis connection."""
         if self._redis:
-            await self._redis.aclose()
+            await self._redis.close()
             self._redis = None
             logger.info("SessionManager: Redis connection closed")
 

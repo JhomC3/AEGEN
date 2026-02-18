@@ -76,10 +76,8 @@ test = [
 
 lint = [
     "ruff",
-    "black",
     "mypy",
     "pre-commit",
-    "bandit",
     "safety",
     # --- Stubs de Tipos ---
     "types-redis",
@@ -100,8 +98,31 @@ Issues = "https://github.com/JhomC3/aegen/issues"
 line-length = 88
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "C", "B", "N", "UP", "ASYNC", "TID"]
-ignore = ["E501"]
+select = [
+    "E", "W", "F",     # PyCodeStyle + Pyflakes (base)
+    "I",                # Import sorting
+    "B",                # Bugbear (bugs comunes)
+    "N",                # Naming conventions
+    "UP",               # PyUpgrade (modernizar syntax)
+    "ASYNC",            # Async patterns
+    "TID",              # Tidy imports
+    "T20",              # Print statements (enforcement de "nunca print()")
+    "C4",               # Comprehensions
+    "C90",              # McCabe complexity
+    "SIM",              # Simplificación
+    "RET",              # Return patterns
+    "PTH",              # Pathlib over os.path
+    "S",                # Security (reemplaza bandit standalone)
+]
+ignore = ["S101"]  # assert OK en tests (reemplaza bandit B101 skip)
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10  # enforcement real de complejidad
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "T201", "S105", "S106", "S108"]  # asserts, print, hardcoded tokens, insecure temp files OK en tests
+"scripts/**" = ["T20", "S310", "S602", "S603"]  # print, urlopen, subprocess OK en scripts CLI
+"src/main.py" = ["S104"]  # Binding to 0.0.0.0 is standard for Docker containers
 
 [tool.ruff.format]
 quote-style = "double"
@@ -109,10 +130,16 @@ preview = true
 
 [tool.mypy]
 python_version = "3.13"
-# warn_return_any = true
 warn_unused_configs = true
-ignore_missing_imports = true
 explicit_package_bases = true
+ignore_missing_imports = true       # TODO: Eliminar cuando stubs estén completos
+show_error_codes = true             # saber qué se ignora
+disallow_untyped_defs = true        # el más importante: forza type hints
+warn_return_any = true              # previene erosión del tipado
+warn_redundant_casts = true         # limpieza
+warn_unused_ignores = true          # no acumular ignores obsoletos
+no_implicit_optional = true         # forza Optional[X] explícito
+check_untyped_defs = true           # chequea interiores de funciones sin tipos
 
 
 [tool.pytest.ini_options]
@@ -121,10 +148,3 @@ addopts = "-ra -q --cov=src --cov-report=term-missing --cov-fail-under=50"
 testpaths = ["tests"]
 
 asyncio_mode = "auto"
-
-[tool.bandit]
-skips = ["B101"]
-
-# disallow_untyped_def = true # Asegúrate de que esta línea y las siguientes usen # para comentarios si estaban activas
-# warn_redundant_cast = true
-# warn_unuused_ignore = true

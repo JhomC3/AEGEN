@@ -13,7 +13,7 @@ class EvolutionDetector:
     Detecta cambios evolutivos en el perfil del usuario usando LLM.
     """
 
-    def __init__(self, llm):
+    def __init__(self, llm: Any) -> None:
         self.llm = llm
         self.evolution_prompt = ChatPromptTemplate.from_messages([
             (

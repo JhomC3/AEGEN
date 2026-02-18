@@ -41,14 +41,13 @@ def retry_on_failure(
                             exc_info=True,
                         )
                         raise
-                    else:
-                        logger.warning(
-                            f"Intento {i + 1}/{retries} para '{func.__name__}' falló: {e}. "
-                            f"Reintentando en {current_delay:.2f} segundos...",
-                            exc_info=True,
-                        )
-                        await asyncio.sleep(current_delay)
-                        current_delay *= backoff
+                    logger.warning(
+                        f"Intento {i + 1}/{retries} para '{func.__name__}' falló: {e}. "
+                        f"Reintentando en {current_delay:.2f} segundos...",
+                        exc_info=True,
+                    )
+                    await asyncio.sleep(current_delay)
+                    current_delay *= backoff
             # Este punto no debería ser alcanzado teóricamente debido al `raise` en el bucle,
             # pero se incluye para satisfacer al type checker y por robustez.
             raise RuntimeError(

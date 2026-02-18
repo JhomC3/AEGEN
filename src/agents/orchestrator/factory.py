@@ -155,17 +155,17 @@ class LazyMasterOrchestrator:
         instance = self._get_instance()
         return getattr(instance, name)
 
-    async def run(self, initial_state):
+    async def run(self, initial_state: Any) -> Any:
         """Explicitly proxy the run method for better error handling."""
         instance = self._get_instance()
         return await instance.run(initial_state)
 
-    def get_cache_stats(self):
+    def get_cache_stats(self) -> dict[str, Any]:
         """Explicitly proxy the cache stats method."""
         instance = self._get_instance()
         return instance.get_cache_stats()
 
-    def get_available_strategies(self):
+    def get_available_strategies(self) -> list[str]:
         """Explicitly proxy the strategies method."""
         instance = self._get_instance()
         return instance.get_available_strategies()

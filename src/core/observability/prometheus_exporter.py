@@ -34,12 +34,12 @@ class PrometheusLLMExporter:
         if metrics.input_tokens:
             llm_tokens_total.labels(
                 provider=metrics.provider, model=metrics.model, token_type="input"
-            ).inc(metrics.input_tokens)  # nosec B106
+            ).inc(metrics.input_tokens)  # noqa: S106
 
         if metrics.output_tokens:
             llm_tokens_total.labels(
                 provider=metrics.provider, model=metrics.model, token_type="output"
-            ).inc(metrics.output_tokens)  # nosec B106
+            ).inc(metrics.output_tokens)  # noqa: S106
 
     def _update_latency_histogram(self, metrics: LLMCallMetrics) -> None:
         """Actualiza histograma de latencia."""

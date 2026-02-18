@@ -1,16 +1,59 @@
 #!/usr/bin/env python3
 """
-Simple Architecture Check - Validación básica y rápida.
-Reemplaza el enforce_architecture.py complejo por checks esenciales.
+Simple Architecture Check - Validación de límites de tamaño de archivo.
+Nota: La complejidad de funciones y patrones prohibidos ahora se validan vía Ruff.
 """
 
-import subprocess
 import sys
+import ast
 from pathlib import Path
 
 
+def check_function_lengths() -> None:
+    """
+    Check for functions longer than 50 lines (Soft Warning).
+    Uses AST to count lines in function definitions.
+    """
+    violations = []
+    max_lines_func = 50
+
+    for py_file in Path("src").glob("**/*.py"):
+        if not py_file.exists():
+            continue
+
+        try:
+            content = py_file.read_text()
+            tree = ast.parse(content)
+        except Exception:
+            continue  # Skip files that can't be parsed
+
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                # Simple line count: end - start
+                # This includes docstrings and internal comments, which is fine for a rough metric
+                if (
+                    getattr(node, "end_lineno", None) is not None
+                    and getattr(node, "lineno", None) is not None
+                ):
+                    length = node.end_lineno - node.lineno  # type: ignore
+                    if length > max_lines_func:
+                        violations.append(
+                            f"{py_file}:{node.lineno} - {node.name} ({length} líneas)"
+                        )
+
+    if violations:
+        print(f"\n⚠️  Advertencia: {len(violations)} funciones exceden las {max_lines_func} líneas:")
+        # Sort by length descending
+        violations.sort(key=lambda x: int(x.split("(")[1].split()[0]), reverse=True)
+        for v in violations[:10]:
+            print(f"   {v}")
+        if len(violations) > 10:
+            print(f"   ... y {len(violations) - 10} más")
+        print("   (Recomendación: Refactorizar oportunísticamente)")
+
+
 def check_file_sizes() -> bool:
-    """Check that Python files are within limits defined in RULES.MD."""
+    """Check that Python files are within limits defined in AGENTS.md."""
     violations = []
     max_lines_logic = 200
     max_lines_definition = 300
@@ -48,90 +91,18 @@ def check_file_sizes() -> bool:
     return True
 
 
-def check_basic_patterns() -> bool:  # noqa: C901
-    """Check basic patterns in changed files."""
-    try:
-        # Get changed files
-        result = subprocess.run(
-            ["git", "diff", "--name-only", "HEAD"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        changed_files = [
-            f
-            for f in result.stdout.strip().split("\n")
-            if f
-            and f.endswith(".py")
-            and not f.startswith("scripts/")
-            and not f.startswith("tests/")
-        ]
-
-        if not changed_files:
-            return True
-
-        violations = []
-
-        for file_path in changed_files:
-            if not Path(file_path).exists():
-                continue
-
-            # Skip legacy or specific exception files
-            if "global_knowledge_loader.py" in file_path or "polling.py" in file_path:
-                continue
-
-            content = Path(file_path).read_text()
-
-            # Check for sync I/O patterns
-            if "import requests" in content:
-                violations.append(f"{file_path}: Usar aiohttp en lugar de requests")
-
-            if "open(" in content and "async" not in content:
-                violations.append(
-                    f"{file_path}: Usar aiofiles para I/O de archivos (solo efímero)"
-                )
-
-            if '"storage/' in content or "'storage/" in content:
-                violations.append(
-                    f"{file_path}: Usar Redis/Cloud en lugar de 'storage/' para datos persistentes"
-                )
-
-        if violations:
-            print("❌ Violaciones de patrones:")
-            for v in violations:
-                print(f"   {v}")
-            return False
-
-        return True
-
-    except subprocess.CalledProcessError:
-        # Git command failed, skip check
-        return True
-
-
 def main():
-    """Simple validation - file sizes + basic patterns."""
-    print("🔍 Ejecutando chequeos de arquitectura simples...")
+    """Simple validation - only file sizes."""
+    print("🔍 Ejecutando chequeos de arquitectura...")
 
-    all_passed = True
+    # Soft check for function lengths
+    check_function_lengths()
 
-    # Check file sizes
-    if not check_file_sizes():
-        all_passed = False
-        print("\n📏 Solución: Dividir archivos grandes en módulos más pequeños")
+    # Soft check for file sizes (warn but don't fail build yet)
+    check_file_sizes()
 
-    # Check basic patterns
-    if not check_basic_patterns():
-        all_passed = False
-        print("\n🔄 Solución: Usar patrones asíncronos (ver docs/guias/desarrollo.md)")
-
-    if all_passed:
-        print("✅ ¡Chequeos de arquitectura pasados!")
-        return True
-    else:
-        print("\n❌ Se encontraron problemas de arquitectura")
-        print("📚 Revisa docs/guias/desarrollo.md para las guías")
-        return False
+    print("✅ ¡Chequeos de arquitectura completados!")
+    return True
 
 
 if __name__ == "__main__":

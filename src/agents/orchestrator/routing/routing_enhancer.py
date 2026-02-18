@@ -13,7 +13,7 @@ class RoutingEnhancer:
     Componente responsable de mejorar y validar las decisiones de enrutamiento.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.pattern_extractor = PatternExtractor()
         self.intent_validator = IntentValidator()
         self.specialist_mapper = SpecialistMapper()

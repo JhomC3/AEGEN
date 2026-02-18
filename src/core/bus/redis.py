@@ -20,7 +20,7 @@ class RedisEventBus(IEventBus):
     adecuada para un entorno de producción distribuido.
     """
 
-    def __init__(self, redis_client: aioredis.Redis):
+    def __init__(self, redis_client: aioredis.Redis) -> None:
         self._redis = redis_client
         self._subscribers: dict[str, list[Callable[[dict], Awaitable[None]]]] = {}
         self._tasks: list[asyncio.Task] = []
@@ -57,7 +57,7 @@ class RedisEventBus(IEventBus):
         self._tasks.append(task)
         logger.info(f"Handler {handler.__name__} subscribed to Redis stream '{topic}'.")
 
-    async def _ensure_consumer_group(self, topic: str, group_name: str):
+    async def _ensure_consumer_group(self, topic: str, group_name: str) -> None:
         """Asegura que el grupo de consumidores exista en el stream."""
         if (topic, group_name) in self._consumer_group_created:
             return
@@ -71,10 +71,9 @@ class RedisEventBus(IEventBus):
                     f"Failed to create consumer group '{group_name}' for stream '{topic}'."
                 )
                 raise
-            else:
-                logger.debug(
-                    f"Consumer group '{group_name}' already exists for stream '{topic}'."
-                )
+            logger.debug(
+                f"Consumer group '{group_name}' already exists for stream '{topic}'."
+            )
         self._consumer_group_created.add((topic, group_name))
 
     async def _consumer(
@@ -106,7 +105,8 @@ class RedisEventBus(IEventBus):
                             payload_str = message_data[b"payload"].decode("utf-8")
                             event = json.loads(payload_str)
                             logger.debug(
-                                f"Handler {handler.__name__} consumed event {message_id.decode()} from '{topic}'."
+                                f"Handler {handler.__name__} consumed event "
+                                f"{message_id.decode()} from '{topic}'."
                             )
                             await handler(event)
                             # Confirmar que el mensaje ha sido procesado
@@ -117,27 +117,32 @@ class RedisEventBus(IEventBus):
                             UnicodeDecodeError,
                         ) as e:
                             logger.error(
-                                f"Error processing message {message_id.decode()} from stream '{topic}': {e}"
+                                f"Error processing message {message_id.decode()} "
+                                f"from stream '{topic}': {e}"
                             )
                             # Podríamos mover el mensaje a una DLQ aquí
                         except Exception:
                             logger.exception(
-                                f"Unhandled error in handler {handler.__name__} for message {message_id.decode()}."
+                                f"Unhandled error in handler {handler.__name__} "
+                                f"for message {message_id.decode()}."
                             )
 
             except asyncio.CancelledError:
                 logger.info(
-                    f"Consumer task for handler {handler.__name__} on topic '{topic}' cancelled."
+                    f"Consumer task for handler {handler.__name__} "
+                    f"on topic '{topic}' cancelled."
                 )
                 break
             except RedisError as e:
                 logger.error(
-                    f"Redis error in consumer for topic '{topic}': {e}. Retrying in 5s..."
+                    f"Redis error in consumer for topic '{topic}': {e}. "
+                    "Retrying in 5s..."
                 )
                 await asyncio.sleep(5)
             except Exception:
                 logger.exception(
-                    f"Unexpected error in consumer for topic '{topic}'. Retrying in 5s..."
+                    f"Unexpected error in consumer for topic '{topic}'. "
+                    "Retrying in 5s..."
                 )
                 await asyncio.sleep(5)
 

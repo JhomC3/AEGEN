@@ -7,7 +7,7 @@ Extraído del MasterOrchestrator para cumplir SRP.
 """
 
 import logging
-from typing import cast
+from typing import Any, cast
 
 from src.agents.orchestrator.strategies import RoutingStrategy
 from src.core.interfaces.specialist import SpecialistInterface
@@ -74,7 +74,7 @@ class EventRouter(RoutingStrategy):
 
         return selected_specialist.name
 
-    def _find_capable_specialists(self, event_type: str) -> list:
+    def _find_capable_specialists(self, event_type: str) -> list[Any]:
         """
         Encuentra especialistas capaces de manejar el event_type.
 
@@ -90,7 +90,7 @@ class EventRouter(RoutingStrategy):
             if event_type in cast(SpecialistInterface, s).get_capabilities()
         ]
 
-    def _select_specialist(self, capable_specialists: list, event_type: str):
+    def _select_specialist(self, capable_specialists: list, event_type: str) -> Any:
         """
         Selecciona especialista cuando hay múltiples opciones.
 
@@ -105,11 +105,10 @@ class EventRouter(RoutingStrategy):
             specialist = capable_specialists[0]
             logger.info(f"Enrutamiento directo para '{event_type}' → {specialist.name}")
             return specialist
-        else:
-            # Múltiples especialistas, tomar el primero por ahora
-            # TODO: Implementar strategy más sofisticada de selección
-            specialist = capable_specialists[0]
-            logger.info(
-                f"Múltiples especialistas para '{event_type}', tomando: {specialist.name}"
-            )
-            return specialist
+        # Múltiples especialistas, tomar el primero por ahora
+        # TODO: Implementar strategy más sofisticada de selección
+        specialist = capable_specialists[0]
+        logger.info(
+            f"Múltiples especialistas para '{event_type}', tomando: {specialist.name}"
+        )
+        return specialist

@@ -28,7 +28,7 @@ class SQLiteStore:
     Utiliza aiosqlite para operaciones asíncronas y sqlite-vec para búsqueda semántica.
     """
 
-    def __init__(self, db_path: str):
+    def __init__(self, db_path: str) -> None:
         self.db_path = db_path
         self._connection: aiosqlite.Connection | None = None
         self._lock = asyncio.Lock()
@@ -62,14 +62,14 @@ class SQLiteStore:
 
         return self._connection
 
-    async def disconnect(self):
+    async def disconnect(self) -> None:
         """Cierra la conexión de forma segura."""
         if self._connection:
             await self._connection.close()
             self._connection = None
             logger.info("Conexión a SQLite cerrada.")
 
-    async def init_db(self, schema_path: str):
+    async def init_db(self, schema_path: str) -> None:
         """Inicializa la base de datos ejecutando el script SQL de esquema."""
         db = await self.connect()
 

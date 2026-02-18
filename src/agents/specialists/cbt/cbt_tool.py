@@ -67,10 +67,21 @@ async def cbt_therapeutic_guidance_tool(
 
         all_results = global_results + user_results
 
-        # Transparencia RAG
+        # Transparencia RAG enriquecida (ADR-0025)
+        global_sources = [
+            r.get("metadata", {}).get("filename", "?") for r in global_results
+        ]
         logger.info(
-            f"[CBT-RAG] Injecting context: {len(global_results)} global + "
-            f"{len(user_results)} user fragments for chat={chat_id}"
+            f"[CBT-RAG] Context injection for chat={chat_id}",
+            extra={
+                "event": "specialist_rag_injection",
+                "specialist": "cbt",
+                "chat_id": chat_id,
+                "global_count": len(global_results),
+                "user_count": len(user_results),
+                "global_sources": global_sources,
+                "total_context_chars": sum(len(r["content"]) for r in all_results),
+            },
         )
 
         knowledge_context = (

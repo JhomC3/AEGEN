@@ -26,7 +26,7 @@ class ConfigurableChainRouter(RoutingStrategy):
     - Decisión de finalización de chains
     """
 
-    def __init__(self, chaining_config: dict[str, Any]):
+    def __init__(self, chaining_config: dict[str, Any]) -> None:
         """
         Initialize router con configuración de chaining.
 
@@ -140,10 +140,7 @@ class ConfigurableChainRouter(RoutingStrategy):
             if self._rule_conditions_met(rule, payload, specialists_history):
                 logger.info(f"Chain: {last_specialist} → {next_specialist}")
                 return next_specialist
-            else:
-                logger.warning(
-                    f"Chain: Condiciones no cumplidas para {last_specialist}"
-                )
+            logger.warning(f"Chain: Condiciones no cumplidas para {last_specialist}")
         else:
             logger.debug(
                 f"Chain: Sin regla para especialista '{last_specialist}'. Reglas disponibles: {list(self._chain_rules.keys())}"
@@ -161,7 +158,10 @@ class ConfigurableChainRouter(RoutingStrategy):
         return self._fallback_action
 
     def _rule_conditions_met(
-        self, rule: dict[str, Any], payload: dict[str, Any], specialists_history: list
+        self,
+        rule: dict[str, Any],
+        payload: dict[str, Any],
+        specialists_history: list[str],
     ) -> bool:
         """
         Verifica si las condiciones de una regla se cumplen.

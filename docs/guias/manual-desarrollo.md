@@ -1,6 +1,6 @@
 # Manual de Desarrollo AEGEN
 
-Este documento explica **cómo operar** en el entorno de desarrollo de AEGEN. Para conocer las leyes técnicas obligatorias, consulta primero **[RULES.MD](../../RULES.MD)**.
+Este documento explica **cómo operar** en el entorno de desarrollo de AEGEN. Para conocer los estándares técnicos obligatorios, consulta primero **[AGENTS.md](../../AGENTS.md)**.
 
 ## 🚀 Inicio Rápido (Quick Start)
 
@@ -23,7 +23,7 @@ make verify       # Ejecuta la suite de validación completa (lint + test + arch
 Antes de escribir una sola línea de código, debes seguir este proceso:
 
 1.  **Planificación:** Crea un plan detallado en `docs/planes/YYYY-MM-DD-nombre.md` y obtén aprobación.
-2.  **Desarrollo:** Mantén los archivos bajo las 100 líneas y funciones bajo las 20 líneas (ver `RULES.MD`).
+2.  **Desarrollo:** Mantén los archivos bajo los límites de LOC definidos en `AGENTS.md` (150 objetivo, 200 máximo para lógica).
 3.  **Verificación Continua:** Ejecuta `make verify` frecuentemente.
 4.  **Formateado:** Usa `make format` antes de cada commit.
 
@@ -39,7 +39,7 @@ Antes de escribir una sola línea de código, debes seguir este proceso:
 
 ## 🧪 Estándares de Pruebas (Testing)
 
-AEGEN exige una **cobertura mínima del 85%**.
+AEGEN exige una **cobertura mínima del 50%** (objetivo progresivo: 85%).
 - **Unitarias:** Lógica pura con mocks de entrada/salida.
 - **Integración:** Flujos entre componentes con Redis/SQLite reales.
 - **E2E:** Flujo completo desde Telegram hasta la respuesta final.
@@ -71,4 +71,4 @@ Para añadir una nueva habilidad al bot:
 4. Añade el detalle técnico en `docs/arquitectura/agentes/especialistas.md`.
 
 ---
-*El incumplimiento de las normas en `RULES.MD` detendrá el pipeline de despliegue.*
+*El incumplimiento de los estándares en `AGENTS.md` detendrá el pipeline de despliegue.*

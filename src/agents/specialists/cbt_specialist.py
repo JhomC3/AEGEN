@@ -20,7 +20,7 @@ class CBTSpecialist(SpecialistInterface):
     Especialista en Terapia Cognitivo Conductual (CBT).
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._name = "cbt_specialist"
         self._tool = cbt_therapeutic_guidance_tool
         self._graph = self._build_graph()

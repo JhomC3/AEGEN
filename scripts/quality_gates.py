@@ -19,7 +19,7 @@ def simple_yaml_load(file_path: Path) -> dict:
     # Este es un parser muy básico que funciona para nuestro caso específico
     # En producción usaríamos PyYAML, pero para este demo evitamos la dependencia
 
-    config = {
+    return {
         "phases": {
             "Fase_3A": {
                 "description": "MasterRouter Básico - Enrutamiento funcional sin LLM",
@@ -73,14 +73,23 @@ def simple_yaml_load(file_path: Path) -> dict:
         },
     }
 
-    return config
-
 
 def run_command(cmd: str, timeout: int = 300) -> tuple[bool, str]:
     """Ejecuta un comando con timeout y retorna (success, output)."""
     try:
-        result = subprocess.run(
-            cmd, shell=True, capture_output=True, text=True, timeout=timeout, check=True
+        # Use shell=True only if necessary (pipes, redirects, complex shell logic)
+        # Otherwise, split command for safety (though this is a dev script)
+        use_shell = any(c in cmd for c in ["|", "&", ">", "<", ";"])
+
+        args = cmd if use_shell else cmd.split()
+
+        result = subprocess.run(  # noqa: S603
+            args,
+            shell=use_shell,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            check=True,
         )
         return True, result.stdout
     except subprocess.CalledProcessError as e:
@@ -106,11 +115,11 @@ def get_current_phase() -> str:
                 # Extraer fase (ej: "FASE 3A - MasterRouter Básico" -> "Fase_3A")
                 if "3A" in line:
                     return "Fase_3A"
-                elif "3B" in line:
+                if "3B" in line:
                     return "Fase_3B"
-                elif "3C" in line:
+                if "3C" in line:
                     return "Fase_3C"
-                elif "Producción" in line or "Production" in line:
+                if "Producción" in line or "Production" in line:
                     return "Produccion"
 
     return "Fase_3A"  # Default

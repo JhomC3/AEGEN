@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, BackgroundTasks, status
 
 from src.api.adapters.telegram_adapter import process_telegram_update
@@ -17,7 +19,7 @@ router = APIRouter()
 async def telegram_webhook(
     request: schemas.TelegramUpdate,
     background_tasks: BackgroundTasks,
-):
+) -> Any:
     """
     Endpoint que actúa como un 'Adaptador de Telegram' con acumulación.
     Delega el procesamiento al adaptador.

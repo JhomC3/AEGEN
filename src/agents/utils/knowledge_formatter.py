@@ -21,9 +21,7 @@ def format_knowledge_for_prompt(knowledge: dict[str, Any]) -> str:
         """Filtro de procedencia: solo hechos explícitos y confiables."""
         if item.get("source_type") == "inferred":
             return False
-        if item.get("confidence", 1.0) < MIN_CONFIDENCE_FOR_PROMPT:
-            return False
-        return True
+        return not item.get("confidence", 1.0) < MIN_CONFIDENCE_FOR_PROMPT
 
     entities = [e for e in knowledge.get("entities", []) if is_trusted(e)]
     if entities:

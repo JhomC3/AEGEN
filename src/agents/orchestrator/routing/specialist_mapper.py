@@ -47,12 +47,11 @@ class SpecialistMapper:
         for preferred in preferred_specialists:
             if preferred in available_specialists:
                 return preferred
-            else:
-                # Log cuando preferido no está disponible
-                logger.debug(
-                    f"Especialista preferido '{preferred}' para intent '{intent.value}' "
-                    f"no disponible. Probando siguiente opción."
-                )
+            # Log cuando preferido no está disponible
+            logger.debug(
+                f"Especialista preferido '{preferred}' para intent '{intent.value}' "
+                f"no disponible. Probando siguiente opción."
+            )
 
         logger.warning(
             f"Ningún especialista preferido disponible para intent '{intent.value}'. "

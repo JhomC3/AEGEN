@@ -134,7 +134,7 @@ class UserProfileManager:
             logger.error(f"Error listando perfiles: {e}")
             return []
 
-    async def save_profile(self, chat_id: str, profile: dict[str, Any]):
+    async def save_profile(self, chat_id: str, profile: dict[str, Any]) -> None:
         """
         3.7: Guarda el perfil en Redis y SQLite (Local-First).
         """
@@ -159,7 +159,7 @@ class UserProfileManager:
 
     async def add_evolution_entry(
         self, chat_id: str, event: str, type: str = "milestone"
-    ):
+    ) -> None:
         """3.9: Registra cambios en el timeline y evolución."""
         profile = await self.load_profile(chat_id)
         add_evolution_entry(profile, event, type)
@@ -179,7 +179,9 @@ class UserProfileManager:
         """Retorna la configuración de adaptación de personalidad."""
         return get_personality_adaptation(profile)
 
-    async def update_localization(self, chat_id: str, language_code: str | None):
+    async def update_localization(
+        self, chat_id: str, language_code: str | None
+    ) -> None:
         """
         C.9: Actualiza la información de localización en el perfil (Pasivo).
         """
@@ -201,7 +203,7 @@ class UserProfileManager:
 
     async def update_location_from_user_input(
         self, chat_id: str, country_code: str, region: str | None = None
-    ):
+    ) -> None:
         """
         Actualiza localización basada en entrada explícita del usuario.
         """

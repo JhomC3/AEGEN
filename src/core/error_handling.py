@@ -14,9 +14,7 @@ async def app_base_exception_handler(request: Request, exc: Exception) -> Respon
         return await generic_exception_handler(request, exc)
     logger.error(
         f"AppBaseException caught: {exc.message} (Status: {exc.status_code}) for URL {request.url.path}",
-        exc_info=(
-            True if exc.status_code >= 500 else False
-        ),  # Loguea traceback para errores 5xx
+        exc_info=(exc.status_code >= 500),  # Loguea traceback para errores 5xx
         extra={"status_code": exc.status_code, "detail": exc.detail},
     )
     return JSONResponse(
@@ -53,7 +51,7 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
     )
 
 
-def register_exception_handlers(app: FastAPI):
+def register_exception_handlers(app: FastAPI) -> None:
     app.add_exception_handler(AppBaseError, app_base_exception_handler)
     app.add_exception_handler(StarletteHTTPException, http_exception_handler)
     # El manejador genérico debe ser el último en ser añadido
