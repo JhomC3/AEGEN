@@ -6,6 +6,7 @@ from typing import Any
 
 from src.core.logging_config import setup_logging
 
+# --- Inicialización de Logs ---
 setup_logging()
 
 from fastapi import FastAPI, Request  # noqa: E402
@@ -14,20 +15,7 @@ from fastapi_cache import FastAPICache  # noqa: E402
 from fastapi_cache.backends.redis import RedisBackend  # noqa: E402
 from prometheus_fastapi_instrumentator import Instrumentator  # noqa: E402
 
-from src import agents  # noqa: F401, E402
-from src.api.routers import (  # noqa: E402
-    analysis,
-    diagnostics,
-    llm_metrics,
-    status,
-    webhooks,
-)
 from src.core.config import settings  # noqa: E402
-from src.core.dependencies import (  # noqa: E402
-    initialize_global_resources,
-    prime_dependencies,
-    shutdown_global_resources,
-)
 from src.core.error_handling import register_exception_handlers  # noqa: E402
 from src.core.middleware import CorrelationIdMiddleware  # noqa: E402
 
@@ -35,37 +23,49 @@ logger = logging.getLogger(settings.APP_NAME)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    """Ciclo de vida."""
-    logger.info("Arrancando %s...", settings.APP_NAME)
-    res = await initialize_global_resources()
-    redis_client, _ = res
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """Ciclo de vida asíncrono."""
+    logger.info(">>> Arrancando lifespan...")
 
-    if redis_client and settings.REDIS_URL:
-        try:
+    from src.core.dependencies import (
+        initialize_global_resources,
+        prime_dependencies,
+        shutdown_global_resources,
+    )
+
+    try:
+        res = await initialize_global_resources()
+        redis_client, _ = res
+
+        if redis_client and settings.REDIS_URL:
             FastAPICache.init(RedisBackend(redis_client), prefix="magi-cache")
-        except Exception:
-            logger.error("Error cache")
 
-    prime_dependencies()
-    from src.memory.global_knowledge_loader import global_knowledge_loader
+        prime_dependencies()
 
-    asyncio.create_task(global_knowledge_loader.check_and_bootstrap())
+        from src.memory.global_knowledge_loader import global_knowledge_loader
 
-    from src.memory.knowledge_watcher import KnowledgeWatcher
+        asyncio.create_task(global_knowledge_loader.check_and_bootstrap())
 
-    watcher = KnowledgeWatcher(global_knowledge_loader)
-    await watcher.start()
+        from src.memory.knowledge_watcher import KnowledgeWatcher
 
-    yield
-    await watcher.stop()
-    await shutdown_global_resources()
+        watcher = KnowledgeWatcher(global_knowledge_loader)
+        await watcher.start()
+
+        logger.info("Arranque completado.")
+        yield
+
+        await watcher.stop()
+        await shutdown_global_resources()
+
+    except Exception as e:
+        logger.critical("Fallo en arranque: %s", e, exc_info=True)
+        yield
 
 
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="Plataforma AEGEN.",
+    description="AEGEN Platform.",
     lifespan=lifespan,
     debug=settings.DEBUG_MODE,
 )
@@ -77,7 +77,7 @@ app.add_middleware(CorrelationIdMiddleware)
 async def log_all_requests(
     request: Request, call_next: Callable[[Request], Any]
 ) -> Any:
-    """Log middleware."""
+    """Interceptor logs."""
     return await call_next(request)
 
 
@@ -92,6 +92,15 @@ app.add_middleware(
 register_exception_handlers(app)
 Instrumentator().instrument(app).expose(app)
 
+# --- Routers ---
+from src.api.routers import (  # noqa: E402
+    analysis,
+    diagnostics,
+    llm_metrics,
+    status,
+    webhooks,
+)
+
 app.include_router(status.router, prefix="/system", tags=["Status"])
 app.include_router(llm_metrics.router, prefix="/system/llm")
 app.include_router(diagnostics.router, prefix="/system/diagnostics")
@@ -101,4 +110,4 @@ app.include_router(webhooks.router, prefix="/api/v1/webhooks")
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("src.main:app", host="0.0.0.0", port=8000)  # nosec B104
+    uvicorn.run("src.main:app", host="0.0.0.0", port=8000)
