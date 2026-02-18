@@ -11,7 +11,9 @@ logger = logging.getLogger(__name__)
 
 def _create_openrouter_llm() -> Any:
     """Crea instancia de OpenRouter con reintentos."""
-    logger.info(f"Initializing OpenRouter with model: {settings.OPENROUTER_MODEL_NAME}")
+    logger.info(
+        "Initializing OpenRouter with model: %s", settings.OPENROUTER_MODEL_NAME
+    )
 
     return ChatOpenAI(
         model=settings.OPENROUTER_MODEL_NAME,
@@ -94,7 +96,8 @@ def _initialize_llm() -> Any:
         ])
 
         logger.info(
-            "[LLM] Resilient chain created: Groq(Primary) -> Groq(Backup) -> Google -> OpenRouter"
+            "[LLM] Resilient chain created: Groq(Primary) -> "
+            "Groq(Backup) -> Google -> OpenRouter"
         )
         return resilient_llm
 

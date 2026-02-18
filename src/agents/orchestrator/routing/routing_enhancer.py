@@ -38,7 +38,9 @@ class RoutingEnhancer:
         if decision.target_specialist in tool_to_specialist:
             resolved_specialist = tool_to_specialist[decision.target_specialist]
             logger.info(
-                f"Traduciendo target '{decision.target_specialist}' (tool) → '{resolved_specialist}' (specialist)"
+                "Traduciendo target '%s' (tool) → '%s' (specialist)",
+                decision.target_specialist,
+                resolved_specialist,
             )
             decision.target_specialist = resolved_specialist
 

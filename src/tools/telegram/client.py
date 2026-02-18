@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import contextlib
 import http.client
 import json
 import logging
 import ssl
+from typing import Any, cast
 
 logger = logging.getLogger("polling_service")
 
@@ -17,7 +19,7 @@ class PersistentTelegramClient:
     Reutiliza el socket TLS evitando el handshake costoso en cada request.
     """
 
-    def __init__(self, token: str):
+    def __init__(self, token: str) -> None:
         self.token = token
         self.base_path = f"/bot{token}"
         self.conn: http.client.HTTPSConnection | None = None
@@ -27,10 +29,8 @@ class PersistentTelegramClient:
         """Crea o recrea la conexión TLS persistente."""
         try:
             if self.conn:
-                try:
+                with contextlib.suppress(Exception):
                     self.conn.close()
-                except Exception:  # noqa: BLE001
-                    pass  # nosec B110
 
             ctx = ssl.create_default_context()
             self.conn = http.client.HTTPSConnection(
@@ -48,7 +48,6 @@ class PersistentTelegramClient:
     def request(self, method: str, params: dict | None = None) -> dict | None:
         """
         Realiza una petición a la API de Telegram reutilizando la conexión TLS.
-        Si la conexión se pierde, la recrea automáticamente (1 solo reintento).
         """
         path = f"{self.base_path}/{method}"
         if params:
@@ -65,7 +64,7 @@ class PersistentTelegramClient:
                 self.conn.request("GET", path)
                 response = self.conn.getresponse()
                 data = response.read().decode()
-                return json.loads(data)
+                return cast(dict[str, Any], json.loads(data))
 
             except (
                 http.client.RemoteDisconnected,
@@ -91,7 +90,5 @@ class PersistentTelegramClient:
 
     def close(self) -> None:
         if self.conn:
-            try:
+            with contextlib.suppress(Exception):
                 self.conn.close()
-            except Exception:  # noqa: BLE001
-                pass  # nosec B110

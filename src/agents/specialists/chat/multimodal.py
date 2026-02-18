@@ -29,6 +29,6 @@ async def process_image_input(
     ]
     response = await llm.ainvoke(
         [HumanMessage(content=cast(Any, content_list))],
-        config=cast(RunnableConfig, config),
+        config=config,
     )
     return str(response.content).strip()

@@ -11,18 +11,13 @@ import ast
 import json
 import logging
 import re
-from typing import Any
+from typing import Any, cast
 
 logger = logging.getLogger(__name__)
 
 
 def safe_json_loads(raw: str | None) -> dict[str, Any] | None:
-    """
-    Parsea JSON con múltiples estrategias de reparación.
-
-    Intenta: json.loads → regex repair → ast.literal_eval.
-    Retorna None solo si todas las estrategias fallan.
-    """
+    """Parsea JSON con múltiples estrategias de reparación."""
     if not raw or not isinstance(raw, str):
         return None
 
@@ -32,14 +27,14 @@ def safe_json_loads(raw: str | None) -> dict[str, Any] | None:
 
     # Estrategia 1: JSON estándar
     try:
-        return json.loads(raw)
+        return cast(dict[str, Any], json.loads(raw))
     except json.JSONDecodeError:
         pass
 
     # Estrategia 2: Reparar comillas simples y comas finales
     repaired = _repair_json_string(raw)
     try:
-        return json.loads(repaired)
+        return cast(dict[str, Any], json.loads(repaired))
     except json.JSONDecodeError:
         pass
 
@@ -47,7 +42,7 @@ def safe_json_loads(raw: str | None) -> dict[str, Any] | None:
     try:
         result = ast.literal_eval(raw)
         if isinstance(result, dict):
-            return result
+            return cast(dict[str, Any], result)
     except (ValueError, SyntaxError):
         pass
 

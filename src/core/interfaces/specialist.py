@@ -21,13 +21,13 @@ class SpecialistInterface(ABC):
     @property
     @abstractmethod
     def graph(self) -> Any:
-        """El grafo de LangGraph compilado que define el flujo de trabajo del especialista."""
+        """El grafo de LangGraph compilado del especialista."""
         pass
 
     @property
     @abstractmethod
     def tool(self) -> BaseTool:
-        """La herramienta principal que expone la capacidad del especialista al orquestador."""
+        """La herramienta que expone la capacidad al orquestador."""
         pass
 
     @abstractmethod

@@ -3,7 +3,7 @@
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import yaml
 
@@ -38,7 +38,9 @@ def load_text_prompt(filename: str) -> str:
                 logger.error(f"Error reading prompt file {p}: {e}")
 
     logger.error(
-        f"Prompt file not found: {filename}. Looked in: {[str(p) for p in potential_paths]}"
+        "Prompt file not found: %s. Looked in: %s",
+        filename,
+        [str(p) for p in potential_paths],
     )
     return ""
 
@@ -59,15 +61,17 @@ def load_yaml_prompt(agent_name: str, version: str = "v1") -> dict[str, Any]:
     for p in potential_paths:
         if p.exists():
             try:
-                with open(p, encoding="utf-8") as f:
+                with p.open(encoding="utf-8") as f:
                     content = yaml.safe_load(f)
                 logger.debug(f"YAML prompts loaded successfully from: {p}")
-                return content or {}
+                return cast(dict[str, Any], content or {})
             except Exception as e:
                 logger.error(f"Error parsing YAML prompt {p}: {e}")
 
     logger.error(
-        f"YAML prompt file not found for {agent_name}. Looked in: {[str(p) for p in potential_paths]}"
+        "YAML prompt file not found for %s. Looked in: %s",
+        agent_name,
+        [str(p) for p in potential_paths],
     )
     return {}
 

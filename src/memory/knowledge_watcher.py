@@ -16,7 +16,9 @@ class KnowledgeWatcher:
     usando una estrategia de Async Polling.
     """
 
-    def __init__(self, loader: GlobalKnowledgeLoader, interval: int | float = 30):
+    def __init__(
+        self, loader: GlobalKnowledgeLoader, interval: int | float = 30
+    ) -> None:
         self.loader = loader
         self.interval = interval
         self.knowledge_path = loader.knowledge_path
@@ -24,7 +26,7 @@ class KnowledgeWatcher:
         self._watch_task: asyncio.Task | None = None
         self._is_running = False
 
-    async def start(self):
+    async def start(self) -> None:
         """Inicia el loop de vigilancia en segundo plano."""
         if self._is_running:
             logger.warning("KnowledgeWatcher ya está en ejecución.")
@@ -32,8 +34,8 @@ class KnowledgeWatcher:
 
         if not self.knowledge_path.exists():
             logger.warning(
-                f"Directorio de conocimiento no encontrado: {self.knowledge_path}. "
-                "No se puede iniciar el vigilante."
+                f"Directorio de conocimiento no encontrado: "
+                f"{self.knowledge_path}. No se puede iniciar el vigilante."
             )
             return
 
@@ -47,7 +49,7 @@ class KnowledgeWatcher:
             f"cada {self.interval}s"
         )
 
-    async def stop(self):
+    async def stop(self) -> None:
         """Detiene el loop de vigilancia."""
         self._is_running = False
         if self._watch_task:
@@ -76,12 +78,12 @@ class KnowledgeWatcher:
 
         return files
 
-    def _update_snapshots(self):
+    def _update_snapshots(self) -> None:
         """Actualiza el estado interno sin disparar ingestas."""
         current = self._get_current_files()
         self._file_snapshots = {name: mtime for name, (_, mtime) in current.items()}
 
-    async def _poll_loop(self):
+    async def _poll_loop(self) -> None:
         """Loop infinito de escaneo periódico."""
         while self._is_running:
             try:
@@ -92,7 +94,7 @@ class KnowledgeWatcher:
             except Exception as e:
                 logger.error(f"Error en loop de KnowledgeWatcher: {e}")
 
-    async def _check_for_changes(self):
+    async def _check_for_changes(self) -> None:
         """Detecta y procesa cambios en los archivos."""
         current_files = self._get_current_files()
         current_names = set(current_files.keys())

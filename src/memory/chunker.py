@@ -127,13 +127,15 @@ class RecursiveChunker:
             current_chunk.append(split)
             current_length += split_tokens
 
-        # Guardar último chunk
         if current_chunk:
             chunks.append(self._create_chunk("".join(current_chunk), metadata))
 
+        total_tokens = sum(c.metadata["tokens"] for c in chunks)
+        avg_tokens = total_tokens / len(chunks) if chunks else 0
         logger.info(
-            f"Chunked text into {len(chunks)} chunks "
-            f"(avg {sum(c.metadata['tokens'] for c in chunks) / len(chunks):.0f} tokens/chunk)"
+            "Chunked text into %d chunks (avg %.0f tokens/chunk)",
+            len(chunks),
+            avg_tokens,
         )
 
         return chunks

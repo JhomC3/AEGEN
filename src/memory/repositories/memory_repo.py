@@ -2,7 +2,7 @@ import json
 import logging
 import sqlite3
 import struct
-from typing import Any
+from typing import Any, cast
 
 import aiosqlite
 
@@ -10,15 +10,13 @@ logger = logging.getLogger(__name__)
 
 
 class MemoryRepository:
-    """
-    Repositorio para operaciones de memoria en SQLite.
-    """
+    """Repositorio de memorias."""
 
-    def __init__(self, store: Any):
+    def __init__(self, store: Any) -> None:
         self.store = store
 
     async def get_db(self) -> aiosqlite.Connection:
-        return await self.store.get_db()
+        return cast(aiosqlite.Connection, await self.store.get_db())
 
     async def insert_memory(
         self,
@@ -27,19 +25,14 @@ class MemoryRepository:
         content_hash: str,
         memory_type: str,
         namespace: str = "user",
-        metadata: dict | None = None,
+        metadata: dict[str, Any] | None = None,
         source_type: str = "explicit",
         confidence: float = 1.0,
         sensitivity: str = "low",
         evidence: str | None = None,
     ) -> int:
-        """
-        Inserta una memoria con metadatos de provenance.
-        Retorna el ID de la memoria insertada.
-        """
         db = await self.get_db()
         metadata_json = json.dumps(metadata or {})
-
         try:
             cursor = await db.execute(
                 """
@@ -61,105 +54,27 @@ class MemoryRepository:
                     evidence,
                 ),
             )
-            memory_id = cursor.lastrowid
+            mid = cursor.lastrowid
             await db.commit()
-            return memory_id if memory_id is not None else -1
+            return int(mid) if mid is not None else -1
         except sqlite3.IntegrityError:
-            # Probablemente duplicado por hash
-            logger.debug(f"Memory with hash {content_hash} already exists.")
             async with db.execute(
                 "SELECT id FROM memories WHERE content_hash = ?", (content_hash,)
             ) as cursor:
                 row = await cursor.fetchone()
-                return row[0] if row else -1
+                return int(row[0]) if row else -1
         except Exception as e:
-            logger.error(f"Error inserting memory: {e}")
+            logger.error("Insert error: %s", e)
             await db.rollback()
             raise
 
-    async def insert_vector(self, memory_id: int, embedding: list[float]) -> int:
-        """
-        Inserta un vector y lo vincula con una memoria.
-        """
+    async def get_memory_stats(self, chat_id: str) -> dict[str, Any]:
         db = await self.get_db()
-        vector_blob = struct.pack(f"{len(embedding)}f", *embedding)
-
-        try:
-            # 1. Insertar en tabla vectorial
-            cursor = await db.execute(
-                "INSERT INTO memory_vectors(embedding) VALUES (?)", (vector_blob,)
-            )
-            vector_id = cursor.lastrowid
-
-            # 2. Vincular en tabla de mapeo
-            await db.execute(
-                "INSERT INTO vector_memory_map (vector_id, memory_id) VALUES (?, ?)",
-                (vector_id, memory_id),
-            )
-            await db.commit()
-            return vector_id if vector_id is not None else -1
-        except Exception as e:
-            logger.error(f"Error inserting vector: {e}")
-            await db.rollback()
-            raise
-
-    async def hash_exists(self, content_hash: str) -> bool:
-        """Verifica si un hash de contenido ya existe en la DB."""
-        db = await self.get_db()
-        async with db.execute(
-            "SELECT 1 FROM memories WHERE content_hash = ?", (content_hash,)
-        ) as cursor:
-            row = await cursor.fetchone()
-            return row is not None
-
-    async def soft_delete_memories(self, memory_ids: list[int]) -> int:
-        """Marca memorias como inactivas (borrado suave). Retorna la cuenta actualizada."""
-        if not memory_ids:
-            return 0
-        db = await self.get_db()
-        placeholders = ",".join(["?"] * len(memory_ids))
-        try:
-            cursor = await db.execute(
-                f"UPDATE memories SET is_active = 0 WHERE id IN ({placeholders})",  # nosec B608
-                memory_ids,
-            )
-            await db.commit()
-            return cursor.rowcount
-        except Exception as e:
-            logger.error(f"Error en soft_delete_memories: {e}")
-            await db.rollback()
-            return 0
-
-    async def delete_memories_by_filename(
-        self, filename: str, namespace: str = "global"
-    ) -> int:
-        """
-        Inactiva todas las memorias asociadas a un nombre de archivo en un namespace.
-        Retorna la cantidad de registros afectados.
-        """
-        db = await self.get_db()
-        try:
-            cursor = await db.execute(
-                "UPDATE memories SET is_active = 0 "
-                "WHERE namespace = ? AND json_extract(metadata, '$.filename') = ?",
-                (namespace, filename),
-            )
-            await db.commit()
-            return cursor.rowcount
-        except Exception as e:
-            logger.error(f"Error en delete_memories_by_filename para {filename}: {e}")
-            await db.rollback()
-            return 0
-
-    async def get_memory_stats(self, chat_id: str) -> dict:
-        """Retorna estadísticas de memoria para un usuario."""
-        db = await self.get_db()
-        stats: dict = {"total": 0, "by_type": {}, "by_sensitivity": {}}
+        stats: dict[str, Any] = {"total": 0, "by_type": {}, "by_sensitivity": {}}
         try:
             async with db.execute(
-                "SELECT memory_type, sensitivity, COUNT(*) as cnt "
-                "FROM memories WHERE chat_id = ? AND is_active = 1 "
-                "GROUP BY memory_type, sensitivity",
+                "SELECT memory_type, sensitivity, COUNT(*) FROM memories "
+                "WHERE chat_id = ? AND is_active = 1 GROUP BY 1, 2",
                 (chat_id,),
             ) as cursor:
                 for row in await cursor.fetchall():
@@ -170,5 +85,57 @@ class MemoryRepository:
                     )
                     stats["total"] += cnt
         except Exception as e:
-            logger.error(f"Error in get_memory_stats: {e}")
+            logger.error("Stats error: %s", e)
         return stats
+
+    async def insert_vector(self, mid: int, embedding: list[float]) -> int:
+        db = await self.get_db()
+        blob = struct.pack(f"{len(embedding)}f", *embedding)
+        try:
+            await db.execute(
+                "INSERT INTO vec_memories (rowid, embedding) VALUES (?, ?)",
+                (mid, blob),
+            )
+            await db.commit()
+            return mid
+        except Exception as e:
+            logger.error("Vector error: %s", e)
+            await db.rollback()
+            raise
+
+    async def hash_exists(self, h: str) -> bool:
+        db = await self.get_db()
+        async with db.execute(
+            "SELECT 1 FROM memories WHERE content_hash = ?", (h,)
+        ) as cursor:
+            return await cursor.fetchone() is not None
+
+    async def soft_delete_memories(self, ids: list[int]) -> int:
+        if not ids:
+            return 0
+        db = await self.get_db()
+        marks = ",".join(["?"] * len(ids))
+        try:
+            sql = f"UPDATE memories SET is_active = 0 WHERE id IN ({marks})"  # noqa: S608
+            cursor = await db.execute(sql, ids)
+            await db.commit()
+            return int(cursor.rowcount)
+        except Exception as e:
+            logger.error("Delete error: %s", e)
+            await db.rollback()
+            return 0
+
+    async def delete_memories_by_filename(self, f: str, ns: str = "global") -> int:
+        db = await self.get_db()
+        try:
+            sql = (
+                "UPDATE memories SET is_active = 0 WHERE namespace = ? "
+                "AND json_extract(metadata, '$.filename') = ?"
+            )
+            cursor = await db.execute(sql, (ns, f))
+            await db.commit()
+            return int(cursor.rowcount)
+        except Exception as e:
+            logger.error("Delete file error: %s", e)
+            await db.rollback()
+            return 0

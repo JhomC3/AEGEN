@@ -148,9 +148,10 @@ class LazyMasterOrchestrator:
                     except Exception as e:
                         logger.error(f"Error en lazy initialization: {e}")
                         raise
+        # El double-check asegura que para este punto _instance no es None
         return self._instance
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str) -> Any:
         """Proxy all method calls to the actual instance."""
         instance = self._get_instance()
         return getattr(instance, name)

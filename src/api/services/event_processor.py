@@ -1,7 +1,7 @@
 import logging
 import tempfile
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from src.agents.orchestrator.factory import master_orchestrator
 from src.core import schemas
@@ -83,7 +83,8 @@ async def _run_orchestration(
             file_payload = await _download_event_files(event, Path(temp_dir))
             initial_state["payload"].update(file_payload)
             logger.info(f"[TaskID: {task_id}] Invocando al MasterOrchestrator.")
-            return await master_orchestrator.run(initial_state)
+            result = await master_orchestrator.run(initial_state)
+            return cast(dict[str, Any], result)
     except Exception as e:
         logger.error(f"[TaskID: {task_id}] Fallo no controlado: {e}", exc_info=True)
         final_state = dict(initial_state)

@@ -85,17 +85,16 @@ class RoutingAnalyzer:
             )
 
             logger.info(
-                f"Análisis completado: {enhanced_decision.intent.value} → "
-                f"{enhanced_decision.target_specialist} "
-                f"(confianza: {enhanced_decision.confidence:.2f})"
+                "Análisis completado: %s → %s (confianza: %.2f)",
+                enhanced_decision.intent.value,
+                enhanced_decision.target_specialist,
+                enhanced_decision.confidence,
             )
 
             return enhanced_decision
 
         except (ResourceExhaustedError, GoogleAPICallError) as e:
-            logger.warning(
-                f"Error de API de Google durante el enrutamiento: {e}. Se usará fallback."
-            )
+            logger.warning("Error de API de Google en routing: %s. Usando fallback.", e)
             return create_fallback_decision(message)
         except Exception as e:
             logger.error(

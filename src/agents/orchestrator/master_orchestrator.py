@@ -1,11 +1,4 @@
 # src/agents/orchestrator/master_orchestrator.py
-"""
-Refactored MasterOrchestrator as minimal coordinator.
-
-Responsabilidad única: coordinación de routing strategies y graph execution.
-Todas las responsabilidades complejas delegadas a strategies inyectadas.
-"""
-
 import logging
 from typing import Any, cast
 
@@ -39,7 +32,7 @@ class MasterOrchestrator:
         # Construir grafo con routing functions delegadas
         self.graph = self._build_orchestration_graph()
 
-        logger.info("MasterOrchestrator inicializado con dependencies inyectadas")
+        logger.info("MasterOrchestrator inicializado con dependencies.")
 
     def _build_orchestration_graph(self) -> Any:
         """
@@ -54,33 +47,24 @@ class MasterOrchestrator:
 
         return self._graph_builder.build(routing_functions)
 
-    async def run(self, initial_state: GraphStateV2) -> dict:
+    async def run(self, initial_state: GraphStateV2) -> dict[str, Any]:
         """
         Ejecuta el grafo del orquestador.
         """
         session_id = initial_state.get("session_id", "unknown-session")
-        logger.info(
-            f"[{session_id}] >>> Iniciando ejecución del grafo orquestador. Evento: {initial_state.get('event')}"
-        )
+        logger.info("[%s] >>> Iniciando ejecución del grafo.", session_id)
 
         if not self.graph:
-            logger.error(
-                f"[{session_id}] Grafo no disponible. No se puede ejecutar la orquestación."
-            )
+            logger.error("[%s] Grafo no disponible. No se puede ejecutar.", session_id)
             initial_state["error_message"] = "Orquestador no disponible"
             return dict(initial_state)
 
         try:
             final_state_dict = await self.graph.ainvoke(initial_state)
-            logger.info(
-                f"[{session_id}] <<< Finalizada ejecución del grafo orquestador."
-            )
-            return cast(dict, final_state_dict)
+            logger.info("[%s] <<< Finalizada ejecución del grafo.", session_id)
+            return cast(dict[str, Any], final_state_dict)
         except Exception as e:
-            logger.error(
-                f"[{session_id}] Error catastrófico ejecutando el grafo: {e}",
-                exc_info=True,
-            )
+            logger.error("[%s] Error catastrófico: %s", session_id, e)
             initial_state["error_message"] = f"Error de ejecución: {e}"
             return dict(initial_state)
 
@@ -88,6 +72,6 @@ class MasterOrchestrator:
         """Retorna estadísticas del cache para monitoring."""
         return self._cache.get_cache_stats()
 
-    def get_available_strategies(self) -> list:
+    def get_available_strategies(self) -> list[str]:
         """Retorna lista de strategies disponibles."""
         return list(self._routing_strategies.keys())

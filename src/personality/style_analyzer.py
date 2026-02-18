@@ -46,7 +46,7 @@ class StyleAnalyzer:
         return "es"  # Default
 
     def _detect_formality(self, raw_text: str, lower_text: str) -> str:
-        """Detecta nivel de formalidad por uso de pronombres, abreviaturas y mayúsculas."""
+        """Detecta nivel de formalidad."""
         # Indicadores formales
         formal_markers = [
             "usted",
@@ -73,7 +73,7 @@ class StyleAnalyzer:
         casual_score = sum(1 for m in casual_markers if m in lower_text)
 
         # Matiz por Capitalization (señal de formalidad)
-        # Si usa mayúsculas al inicio de oraciones y puntuación, sumamos puntos formales.
+        # Si usa mayúsculas al inicio y puntuación, sumamos puntos.
         if re.search(r"[A-Z][a-z]+[\.!\?]", raw_text):
             formal_score += 1
 

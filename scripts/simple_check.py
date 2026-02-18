@@ -1,110 +1,64 @@
-#!/usr/bin/env python3
-"""
-Simple Architecture Check - Validación de límites de tamaño de archivo.
-Nota: La complejidad de funciones y patrones prohibidos ahora se validan vía Ruff.
-"""
-
-import sys
 import ast
+import logging
 from pathlib import Path
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+
+def _analyze_file_functions(py_file: Path, max_lines_func: int) -> list[str]:
+    file_violations = []
+    try:
+        content = py_file.read_text()
+        tree = ast.parse(content)
+    except Exception as e:
+        logger.debug("Parse error %s: %s", py_file, e)
+        return []
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef):
+            continue
+        start = getattr(node, "lineno", None)
+        end = getattr(node, "end_lineno", None)
+        if start is not None and end is not None:
+            length = end - start
+            if length > max_lines_func:
+                file_violations.append(
+                    f"{py_file}:{start} - {node.name} ({length} lines)"
+                )
+    return file_violations
 
 
 def check_function_lengths() -> None:
-    """
-    Check for functions longer than 50 lines (Soft Warning).
-    Uses AST to count lines in function definitions.
-    """
+    max_lines = 50
     violations = []
-    max_lines_func = 50
-
     for py_file in Path("src").glob("**/*.py"):
-        if not py_file.exists():
-            continue
-
-        try:
-            content = py_file.read_text()
-            tree = ast.parse(content)
-        except Exception:
-            continue  # Skip files that can't be parsed
-
-        for node in ast.walk(tree):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                # Simple line count: end - start
-                # This includes docstrings and internal comments, which is fine for a rough metric
-                if (
-                    getattr(node, "end_lineno", None) is not None
-                    and getattr(node, "lineno", None) is not None
-                ):
-                    length = node.end_lineno - node.lineno  # type: ignore
-                    if length > max_lines_func:
-                        violations.append(
-                            f"{py_file}:{node.lineno} - {node.name} ({length} líneas)"
-                        )
-
+        violations.extend(_analyze_file_functions(py_file, max_lines))
     if violations:
-        print(f"\n⚠️  Advertencia: {len(violations)} funciones exceden las {max_lines_func} líneas:")
-        # Sort by length descending
-        violations.sort(key=lambda x: int(x.split("(")[1].split()[0]), reverse=True)
-        for v in violations[:10]:
+        print(f"Warning: {len(violations)} functions exceed {max_lines} lines.")
+        for v in sorted(violations, reverse=True)[:10]:
             print(f"   {v}")
-        if len(violations) > 10:
-            print(f"   ... y {len(violations) - 10} más")
-        print("   (Recomendación: Refactorizar oportunísticamente)")
 
 
-def check_file_sizes() -> bool:
-    """Check that Python files are within limits defined in AGENTS.md."""
+def check_file_lengths() -> None:
+    max_lines = 200
     violations = []
-    max_lines_logic = 200
-    max_lines_definition = 300
-
-    definition_paths = [
-        "src/core/schemas",
-        "src/core/config",
-        "src/core/routing_models.py",
-    ]
-
     for py_file in Path("src").glob("**/*.py"):
-        if not py_file.exists():
+        if py_file.name == "main.py":
             continue
-
-        lines = len(py_file.read_text().splitlines())
-
-        # Determine limit based on path
-        is_definition = any(str(py_file).startswith(p) for p in definition_paths)
-        limit = max_lines_definition if is_definition else max_lines_logic
-
-        if lines > limit:
-            type_str = "definición" if is_definition else "lógica"
-            violations.append(
-                f"{py_file}: {lines} líneas (máximo sugerido para {type_str}: {limit})"
-            )
-
+        count = len(py_file.read_text().splitlines())
+        if count > max_lines:
+            violations.append(f"{py_file}: {count} lines")
     if violations:
-        print("⚠️ Posibles violaciones de tamaño de archivo:")
-        for v in violations[:10]:  # Mostrar máximo 10
+        print(f"Warning: {len(violations)} files exceed {max_lines} lines.")
+        for v in violations:
             print(f"   {v}")
-        if len(violations) > 10:
-            print(f"   ... y {len(violations) - 10} más")
-        return False
-
-    return True
 
 
-def main():
-    """Simple validation - only file sizes."""
-    print("🔍 Ejecutando chequeos de arquitectura...")
-
-    # Soft check for function lengths
+def main() -> None:
     check_function_lengths()
-
-    # Soft check for file sizes (warn but don't fail build yet)
-    check_file_sizes()
-
-    print("✅ ¡Chequeos de arquitectura completados!")
-    return True
+    check_file_lengths()
+    print("Done")
 
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    main()

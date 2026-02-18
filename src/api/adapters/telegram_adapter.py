@@ -69,11 +69,14 @@ async def process_telegram_update(
 
             if latency > 5.0:
                 logger.warning(
-                    f"⚠️ ALTA LATENCIA DE RED DETECTADA: El mensaje tardó {latency:.2f}s en llegar desde Telegram. "
-                    f"(Enviado: {msg_date}, Recibido: {now})"
+                    "⚠️ ALTA LATENCIA: El mensaje tardó %.2fs desde Telegram. "
+                    "(Enviado: %s, Recibido: %s)",
+                    latency,
+                    msg_date,
+                    now,
                 )
             else:
-                logger.info(f"Latencia de red normal: {latency:.2f}s")
+                logger.info("Latencia de red normal: %.2fs", latency)
     except Exception as e:
         logger.warning(f"No se pudo calcular la latencia de red: {e}")
 

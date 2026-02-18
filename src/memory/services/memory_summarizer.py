@@ -1,5 +1,6 @@
 import json
 import logging
+from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -16,18 +17,28 @@ class MemorySummarizer:
     Servicio de sumarización de memoria.
     """
 
-    def __init__(self, llm):
+    def __init__(self, llm: Any) -> None:
         self.llm = llm
         self.summary_prompt = ChatPromptTemplate.from_messages([
             (
                 "system",
-                "Eres un experto en síntesis de memoria. Tu tarea es actualizar el 'Perfil Histórico' de un usuario basado en nuevos mensajes. "
-                "Mantén detalles críticos como nombres, preferencias, hechos importantes y el estado de proyectos actuales. "
-                "Sé conciso pero preciso. No borres información antigua a menos que haya sido corregida por el usuario.",
+                (
+                    "Eres un experto en síntesis de memoria. Tu tarea es "
+                    "actualizar el 'Perfil Histórico' de un usuario basado en "
+                    "nuevos mensajes. Mantén detalles críticos como nombres, "
+                    "preferencias, hechos importantes y el estado de "
+                    "proyectos actuales. Sé conciso pero preciso. No borres "
+                    "información antigua a menos que haya sido corregida por "
+                    "el usuario."
+                ),
             ),
             (
                 "user",
-                "PERFIL ACTUAL:\n{current_summary}\n\nNUEVOS MENSAJES:\n{new_messages}\n\nActualiza el perfil integrando los nuevos mensajes:",
+                (
+                    "PERFIL ACTUAL:\n{current_summary}\n\nNUEVOS MENSAJES:\n"
+                    "{new_messages}\n\nActualiza el perfil integrando los "
+                    "nuevos mensajes:"
+                ),
             ),
         ])
 

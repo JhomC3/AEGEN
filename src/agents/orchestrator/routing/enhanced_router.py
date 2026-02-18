@@ -64,11 +64,9 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
         if not self._cache.has_routable_tools():
             return route_to_chat(state)
 
-        # ✅ FAST PATH: Detección de charla simple sin costo LLM
+        # ✅ FAST PATH
         if is_conversational_only(user_message):
-            logger.info(
-                "Fast Path: Mensaje puramente conversacional detectado -> ChatDirecto"
-            )
+            logger.info("Fast Path: Mensaje conversacional detectado -> Chat")
             return route_to_chat(state)
 
         # ✅ EXPLICIT COMMANDS
@@ -96,11 +94,10 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
     def _apply_routing_decision(
         self, state: GraphStateV2, decision: RoutingDecision
     ) -> str:
-        """Aplica la decisión de routing al state con sistema multi-nivel."""
+        """Aplica la decisión de routing al state."""
 
         # A.4: Lógica de Stickiness (Afinidad)
-        # Si el especialista sugerido es el mismo que el anterior, y la confianza es media,
-        # aplicamos un boost para mantener la continuidad del hilo.
+        # Boost si es el mismo especialista anterior y confianza media.
         last_specialist = state.get("payload", {}).get("last_specialist")
         if (
             last_specialist
@@ -123,8 +120,10 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
         # Verificar confianza mínima global
         if decision.confidence < MIN_CONFIDENCE_THRESHOLD:
             logger.warning(
-                f"Confianza muy baja ({decision.confidence:.2f} < {MIN_CONFIDENCE_THRESHOLD}), "
-                f"fallback a ChatBot. Intent detectado: {decision.intent.value}"
+                "Confianza muy baja (%.2f < %.2f), fallback a ChatBot. Intent: %s",
+                decision.confidence,
+                MIN_CONFIDENCE_THRESHOLD,
+                decision.intent.value,
             )
             return route_to_chat(state)
 

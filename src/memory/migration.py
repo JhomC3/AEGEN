@@ -28,11 +28,17 @@ _PROVENANCE_COLUMNS: list[tuple[str, str]] = [
 _INDEXES: list[tuple[str, str]] = [
     (
         "idx_memories_chat_namespace",
-        "CREATE INDEX IF NOT EXISTS idx_memories_chat_namespace ON memories(chat_id, namespace)",
+        (
+            "CREATE INDEX IF NOT EXISTS idx_memories_chat_namespace "
+            "ON memories(chat_id, namespace)"
+        ),
     ),
     (
         "idx_memories_active",
-        "CREATE INDEX IF NOT EXISTS idx_memories_active ON memories(is_active) WHERE is_active = 1",
+        (
+            "CREATE INDEX IF NOT EXISTS idx_memories_active "
+            "ON memories(is_active) WHERE is_active = 1"
+        ),
     ),
 ]
 

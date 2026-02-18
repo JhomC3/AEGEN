@@ -1,11 +1,5 @@
-# src/memory/embeddings.py
-"""
-Embedding service for generating vector representations of text.
-
-Uses Google GenAI gemini-embedding-001 model with 768 dimensions.
-"""
-
 import logging
+from typing import cast
 
 import google.generativeai as genai
 
@@ -17,15 +11,12 @@ logger = logging.getLogger(__name__)
 class EmbeddingService:
     """
     Wrapper para el servicio de embeddings de Google.
-    Genera vectores de 768 dimensiones usando gemini-embedding-001.
     """
 
     _configured: bool = False
 
-    def __init__(self, model_name: str = "models/gemini-embedding-001"):
-        """
-        Inicializa el cliente de Google GenAI una sola vez (Singleton-like config).
-        """
+    def __init__(self, model_name: str = "models/gemini-embedding-001") -> None:
+        """Inicializa el cliente de Google GenAI."""
         self.model_name = model_name
 
         if not EmbeddingService._configured:
@@ -37,38 +28,23 @@ class EmbeddingService:
 
             if not api_key:
                 logger.error("GOOGLE_API_KEY not found in settings")
-                raise ValueError("GOOGLE_API_KEY is required for EmbeddingService")
+                raise ValueError("GOOGLE_API_KEY is required")
 
             genai.configure(api_key=api_key)
             EmbeddingService._configured = True
-            logger.info(
-                f"EmbeddingService configured for first time with model: {model_name}"
-            )
+            logger.info("EmbeddingService configured: %s", model_name)
         else:
-            logger.debug(
-                f"EmbeddingService already configured. Reusing connection for {model_name}"
-            )
+            logger.debug("Reusing EmbeddingService for %s", model_name)
 
     async def embed_texts(
         self, texts: list[str], task_type: str = "RETRIEVAL_DOCUMENT"
     ) -> list[list[float]]:
-        """
-        Genera embeddings para una lista de textos.
-
-        Args:
-            texts: Lista de fragmentos de texto
-            task_type: Tipo de tarea para Google (RETRIEVAL_DOCUMENT | RETRIEVAL_QUERY)
-
-        Returns:
-            Lista de vectores (listas de floats)
-        """
+        """Genera embeddings para una lista de textos."""
         if not texts:
             return []
 
         try:
-            from typing import cast
-
-            # Google GenAI SDK (actualmente sincrónico, pero lo envolvemos en async)
+            # SDK sincrónico envuelto en async implicito por la arquitectura
             response = genai.embed_content(
                 model=self.model_name,
                 content=texts,
@@ -76,19 +52,15 @@ class EmbeddingService:
                 output_dimensionality=768,
             )
 
-            # genai.embed_content devuelve un diccionario con la llave 'embedding'
-            # que es una lista de vectores si content es una lista de strings
             embeddings = response.get("embedding", [])
-            logger.debug(f"Generated {len(embeddings)} embeddings")
+            logger.debug("Generated %d embeddings", len(embeddings))
             return cast(list[list[float]], embeddings)
 
         except Exception as e:
-            logger.error(f"Error generating embeddings: {e}")
+            logger.error("Error generating embeddings: %s", e)
             raise
 
     async def embed_query(self, query: str) -> list[float]:
-        """
-        Genera embedding para una búsqueda (query).
-        """
+        """Genera embedding para una búsqueda."""
         embeddings = await self.embed_texts([query], task_type="RETRIEVAL_QUERY")
         return embeddings[0] if embeddings else []

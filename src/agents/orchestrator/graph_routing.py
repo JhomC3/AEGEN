@@ -17,7 +17,7 @@ class GraphRoutingHandler:
         self,
         routing_strategies: dict[str, RoutingStrategy],
         specialist_cache: SpecialistCache,
-    ):
+    ) -> None:
         self._routing_strategies = routing_strategies
         self._cache = specialist_cache
 
@@ -43,18 +43,21 @@ class GraphRoutingHandler:
                 await self._routing_strategies["function_calling"].route(state)
             else:
                 logger.warning(
-                    f"[{session_id}] FunctionCallingRouter no disponible para evento de texto."
+                    f"[{session_id}] FunctionCallingRouter no disponible "
+                    "para evento de texto."
                 )
         else:
             if "event_router" in self._routing_strategies:
                 await self._routing_strategies["event_router"].route(state)
             else:
                 logger.warning(
-                    f"[{session_id}] EventRouter no disponible para evento tipo '{event.event_type}'."
+                    f"[{session_id}] EventRouter no disponible para evento "
+                    f"tipo '{event.event_type}'."
                 )
 
         logger.info(
-            f"[{session_id}] Meta-routing finalizado. Próximo nodo tentativo: {state.get('payload', {}).get('next_node')}"
+            f"[{session_id}] Meta-routing finalizado. Próximo nodo "
+            f"tentativo: {state.get('payload', {}).get('next_node')}"
         )
         return state
 
@@ -68,7 +71,8 @@ class GraphRoutingHandler:
             next_specialist = await self._routing_strategies["chaining"].route(state)
             state["payload"]["next_specialist"] = next_specialist
             logger.info(
-                f"[{session_id}] Chain routing result: next_specialist = {next_specialist}"
+                f"[{session_id}] Chain routing result: next_specialist = "
+                f"{next_specialist}"
             )
         else:
             logger.warning(f"[{session_id}] ChainingRouter no disponible.")
@@ -82,14 +86,16 @@ class GraphRoutingHandler:
         session_id = state.get("session_id", "unknown-session")
         if state.get("error_message"):
             logger.error(
-                f"[{session_id}] Error de enrutamiento detectado: {state['error_message']}"
+                f"[{session_id}] Error de enrutamiento detectado: "
+                f"{state['error_message']}"
             )
             return "__end__"
 
         next_node = state.get("payload", {}).get("next_node")
         if not next_node:
             logger.warning(
-                f"[{session_id}] No se pudo determinar el siguiente nodo desde el payload. Finalizando."
+                f"[{session_id}] No se pudo determinar el siguiente nodo desde "
+                "el payload. Finalizando."
             )
             return "__end__"
 
@@ -100,7 +106,8 @@ class GraphRoutingHandler:
 
         if next_node not in valid_nodes:
             logger.warning(
-                f"[{session_id}] Nodo '{next_node}' no es un especialista válido. Nodos válidos: {valid_nodes}. Finalizando."
+                f"[{session_id}] Nodo '{next_node}' no es un especialista "
+                f"válido. Nodos válidos: {valid_nodes}. Finalizando."
             )
             return "__end__"
 

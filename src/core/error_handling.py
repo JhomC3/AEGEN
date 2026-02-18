@@ -13,7 +13,8 @@ async def app_base_exception_handler(request: Request, exc: Exception) -> Respon
     if not isinstance(exc, AppBaseError):
         return await generic_exception_handler(request, exc)
     logger.error(
-        f"AppBaseException caught: {exc.message} (Status: {exc.status_code}) for URL {request.url.path}",
+        f"AppBaseException caught: {exc.message} (Status: {exc.status_code}) "
+        f"for URL {request.url.path}",
         exc_info=(exc.status_code >= 500),  # Loguea traceback para errores 5xx
         extra={"status_code": exc.status_code, "detail": exc.detail},
     )
@@ -27,7 +28,8 @@ async def http_exception_handler(request: Request, exc: Exception) -> Response:
     if not isinstance(exc, StarletteHTTPException):
         return await generic_exception_handler(request, exc)
     logger.warning(
-        f"HTTPException caught: {exc.status_code} - {exc.detail} for URL {request.url.path}",
+        f"HTTPException caught: {exc.status_code} - {exc.detail} "
+        f"for URL {request.url.path}",
         extra={"status_code": exc.status_code, "detail": exc.detail},
     )
     return JSONResponse(
@@ -39,14 +41,17 @@ async def http_exception_handler(request: Request, exc: Exception) -> Response:
 async def generic_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     # Este es el último recurso para excepciones no manejadas.
     logger.critical(
-        f"Unhandled critical exception: {exc.__class__.__name__} - {str(exc)} for URL {request.url.path}",
+        f"Unhandled critical exception: {exc.__class__.__name__} - {str(exc)} "
+        f"for URL {request.url.path}",
         exc_info=True,  # Siempre loguea traceback para excepciones inesperadas
         extra={"exception_type": exc.__class__.__name__},
     )
     return JSONResponse(
         status_code=500,
         content={
-            "detail": "An unexpected internal server error occurred. Please contact support."
+            "detail": (
+                "An unexpected internal server error occurred. Please contact support."
+            )
         },
     )
 

@@ -21,11 +21,14 @@ from src.core.logging.types import LoggersConfig, LoggingDictConfiguration
 from .config import settings
 
 # Formatos
-TEXT_FORMAT = "%(asctime)s | %(correlation_id)s | %(name)-12s | %(levelname)-8s | %(filename)s:%(lineno)d | %(funcName)s | %(message)s"
+TEXT_FORMAT = (
+    "%(asctime)s | %(correlation_id)s | %(name)-12s | %(levelname)-8s | "
+    "%(filename)s:%(lineno)d | %(funcName)s | %(message)s"
+)
 
 
 def setup_logging() -> logging.Logger:
-    """Configura el sistema de logging usando una configuración basada en diccionario."""
+    """Configura el sistema de logging."""
     log_dir = Path("logs")
     log_dir.mkdir(exist_ok=True)
 
@@ -97,7 +100,7 @@ def setup_logging() -> logging.Logger:
                 "datefmt": "%Y-%m-%d %H:%M:%S",
             },
             "standard_json": {  # Coincide con dict[str, Any] dentro de FormatterEntry
-                "()": JsonFormatter,  # type: ignore[assignment]
+                "()": JsonFormatter,
                 "datefmt": "%Y-%m-%d %H:%M:%S",
             },
         },
@@ -110,7 +113,7 @@ def setup_logging() -> logging.Logger:
                 "filters": ["correlation_id"],
             },
             "file": {  # Coincide con dict[str, Any] dentro de HandlerEntry
-                "()": RotatingFileHandler,  # type: ignore[assignment]
+                "()": RotatingFileHandler,
                 "level": "DEBUG",
                 "formatter": "standard_json" if is_production else "standard_text",
                 "filename": str(log_file),
@@ -129,10 +132,10 @@ def setup_logging() -> logging.Logger:
     module_logger.info(
         f"Sistema de logging configurado con nivel raíz: {effective_log_level}"
     )
-    module_logger.info(f"Los logs de archivo se guardarán en: {log_file.resolve()}")
-    module_logger.info(f"Entorno actual: {settings.APP_ENV.value}")
+    module_logger.info("Los logs de archivo se guardarán en: %s", log_file.resolve())
+    module_logger.info("Entorno actual: %s", settings.APP_ENV.value)
     module_logger.info(
-        f"Formato de log en consola: {'JSON' if is_production else 'Texto'}"
+        "Formato de log en consola: %s", "JSON" if is_production else "Texto"
     )
     module_logger.info("Configuración de logging completada usando dictConfig.")
 

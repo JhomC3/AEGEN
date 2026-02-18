@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class PersonalityLoader:
     """Carga y parsea archivos Markdown de personalidad."""
 
-    def __init__(self, base_path: str = "src/personality/"):
+    def __init__(self, base_path: str = "src/personality/") -> None:
         self.base_path = Path(base_path)
 
     async def load_base(self) -> PersonalityBase:
@@ -68,7 +68,7 @@ class PersonalityLoader:
         )
 
     def _extract_section(self, content: str, section_name: str) -> str:
-        """Extrae contenido bajo un encabezado ## hasta el siguiente encabezado."""
+        """Extrae contenido bajo un encabezado ##."""
         pattern = rf"## {section_name}\n(.*?)(?=\n## |\Z)"
         match = re.search(pattern, content, re.DOTALL)
         return match.group(1).strip() if match else ""

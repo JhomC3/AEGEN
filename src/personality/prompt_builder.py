@@ -6,8 +6,12 @@ from zoneinfo import ZoneInfo
 
 from src.core.profiling_manager import profiling_manager
 from src.personality.manager import personality_manager
+from src.personality.prompt_renders import (
+    render_dialect_rules,
+    render_style_adaptation,
+)
 from src.personality.style_analyzer import style_analyzer
-from src.personality.types import LinguisticProfile, StyleSignals
+from src.personality.types import LinguisticProfile
 
 logger = logging.getLogger(__name__)
 
@@ -73,7 +77,7 @@ class SystemPromptBuilder:
         profile: dict[str, Any],
         recent_user_messages: list[str] | None = None,
     ) -> str:
-        """Capa 3: El Espejo. Adaptación lingüística basada en datos confirmados y observados."""
+        """Capa 3: El Espejo."""
         adaptation = profile.get("personality_adaptation", {})
         localization = profile.get("localization", {})
         user_name = profile.get("identity", {}).get("name", "Usuario")
@@ -99,11 +103,11 @@ class SystemPromptBuilder:
         # 3. Generar sección del prompt
         section = f"# ESPEJO: CÓMO ME ADAPTO A TI ({user_name})\n"
 
-        # Dialecto e Idioma (Prioridad: Preferencia > Confirmación > Neutro)
-        section += self._render_dialect_rules(linguistic)
+        # Dialecto e Idioma (Uso de sub-renders extraídos)
+        section += render_dialect_rules(linguistic)
 
-        # Adaptación de Estilo (Formalidad, Brevedad, Emoji) desde StyleAnalyzer
-        section += self._render_style_adaptation(style)
+        # Adaptación de Estilo
+        section += render_style_adaptation(style)
 
         # Profiling hint (Contexto de largo plazo)
         hint = await profiling_manager.get_profiling_hint(profile)
@@ -111,73 +115,11 @@ class SystemPromptBuilder:
             section += f"- **Profiling:** {hint}\n"
 
         # Preferencias aprendidas explícitamente
-        if adaptation.get("learned_preferences"):
-            prefs = "\n".join([f"  - {p}" for p in adaptation["learned_preferences"]])
+        if learned := adaptation.get("learned_preferences"):
+            prefs = "\n".join([f"  - {p}" for p in learned])
             section += f"- **Preferencias Aprendidas:**\n{prefs}\n"
 
         return section
-
-    def _render_dialect_rules(self, linguistic: LinguisticProfile) -> str:
-        """Genera reglas de dialecto basadas en PREFERENCIA > CONFIRMACIÓN > NEUTRO."""
-        base = "- **Idioma:** Responde SIEMPRE en el mismo idioma en el que te escribe el usuario.\n"
-
-        # Prioridad 1: Preferencia Explícita (Highest Priority)
-        if linguistic.preferred_dialect:
-            return (
-                base
-                + f"- **Dialecto ACTIVO:** {linguistic.preferred_dialect}. Úsalo con naturalidad.\n"
-            )
-
-        # Prioridad 2: Ubicación Confirmada (Middle Priority - Sugerencia suave)
-        if linguistic.dialect_confirmed and linguistic.dialect != "neutro":
-            return base + (
-                f"- **Contexto Regional:** El usuario está en {linguistic.dialect}. "
-                "Puedes usar modismos locales suaves si él los usa primero, pero NO fuerces el acento.\n"
-            )
-
-        # Default: Neutralidad Cálida (Español Latinoamericano Estándar) + Eco Léxico
-        return base + (
-            "- **Dialecto Base:** Neutralidad Cálida (Español Latinoamericano Estándar).\n"
-            "- **ECO LÉXICO:** Adopta el vocabulario específico del usuario (sustantivos/verbos) "
-            "para generar cercanía, pero mantén la gramática neutra.\n"
-        )
-
-    def _render_style_adaptation(self, style: StyleSignals | None) -> str:
-        """Adapta el tono del prompt según las señales de estilo detectadas."""
-        if not style:
-            return ""
-
-        rules = ["- **Adaptación de Estilo (Observada):**"]
-
-        # Formalidad
-        if style.formality_indicator == "muy_formal":
-            rules.append(
-                "  * El usuario es MUY FORMAL. Elimina coloquialismos y sé impecablemente profesional."
-            )
-        elif style.formality_indicator == "formal":
-            rules.append("  * El usuario es formal. Mantén un tono respetuoso.")
-        elif style.formality_indicator == "muy_casual":
-            rules.append(
-                "  * El usuario es MUY CASUAL. Puedes usar mucha jerga y humor relajado."
-            )
-        else:  # casual
-            rules.append("  * El usuario es casual. Sé cercano y relajado.")
-
-        # Brevedad
-        if style.brevity == "telegrafico":
-            rules.append(
-                "  * El usuario es telegráfico. Sé ULTRA-CONCISO, ve directo al grano."
-            )
-        elif style.brevity == "verboso":
-            rules.append(
-                "  * El usuario se extiende. Puedes dar respuestas más detalladas y profundas."
-            )
-
-        # Emoji
-        if not style.uses_emoji:
-            rules.append("  * El usuario NO usa emojis. Reduce su uso al mínimo.")
-
-        return "\n".join(rules) + "\n"
 
     def _build_skill_section(self, overlay: Any) -> str:
         section = f"# MODO ACTIVO: {overlay.name.upper()}\n"
@@ -198,7 +140,10 @@ class SystemPromptBuilder:
         try:
             user_time = datetime.now(ZoneInfo(user_tz))
             time_str = user_time.strftime("%A, %d de %B de %Y, %H:%M")
-            section = f"# CONTEXTO RUNTIME\n- **Hora Local del Usuario:** {time_str} ({user_tz})\n"
+            section = (
+                f"# CONTEXTO RUNTIME\n- **Hora Local del Usuario:** "
+                f"{time_str} ({user_tz})\n"
+            )
         except Exception:
             # Fallback a UTC si falla zoneinfo
             now_utc = datetime.now().strftime("%A, %d de %B de %Y, %H:%M")
@@ -208,18 +153,14 @@ class SystemPromptBuilder:
             section += f"- **Canal:** {context['channel']}\n"
 
         # Integrar Memoria de Largo Plazo si viene en el contexto
-        if context.get("history_summary"):
-            section += (
-                f"\n## Memoria de Largo Plazo (Resumen)\n{context['history_summary']}\n"
-            )
+        if summary := context.get("history_summary"):
+            section += f"\n## Memoria de Largo Plazo (Resumen)\n{summary}\n"
 
-        if context.get("knowledge_context"):
-            section += (
-                f"\n## Conocimiento Relevante (RAG)\n{context['knowledge_context']}\n"
-            )
+        if rag := context.get("knowledge_context"):
+            section += f"\n## Conocimiento Relevante (RAG)\n{rag}\n"
 
-        if context.get("structured_knowledge"):
-            section += f"\n## Bóveda de Conocimiento (Hechos Confirmados)\n{context['structured_knowledge']}\n"
+        if kb := context.get("structured_knowledge"):
+            section += f"\n## Bóveda de Conocimiento\n{kb}\n"
 
         return section
 

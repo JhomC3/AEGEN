@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
 from src.core.routing_models import EntityInfo, IntentType, RoutingDecision
 
@@ -31,7 +31,7 @@ def extract_tool_result(response: Any) -> dict[str, Any]:
     # Verificar si hay tool calls en la response
     if hasattr(response, "tool_calls") and response.tool_calls:
         tool_call = response.tool_calls[0]  # Primer tool call
-        return tool_call.get("args", {})
+        return cast(dict[str, Any], tool_call.get("args", {}))
 
     # Si es AIMessage con tool_calls
     if (
@@ -40,7 +40,10 @@ def extract_tool_result(response: Any) -> dict[str, Any]:
     ):
         tool_calls = response.additional_kwargs["tool_calls"]
         if tool_calls:
-            return tool_calls[0].get("function", {}).get("arguments", {})
+            return cast(
+                dict[str, Any],
+                tool_calls[0].get("function", {}).get("arguments", {}),
+            )
 
     # Fallback si no hay tool calls válidos
     logger.warning("No se encontraron tool calls válidos en response")

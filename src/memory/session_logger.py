@@ -31,12 +31,11 @@ async def log_session_to_memory(chat_id: str, summary: str, buffer_len: int) -> 
             memory_type="document",
             metadata={"filename": f"session_{timestamp}.json", "type": "log"},
         )
-        logger.info(f"Log de sesión guardado en SQLite para {chat_id}")
+        logger.info("Log de sesión guardado para %s", chat_id)
 
-        # Trigger Cloud Backup (Fase 7)
-        backup_mgr = CloudBackupManager(store)
-        # Ejecutar en segundo plano para no bloquear la respuesta
+        # Trigger Cloud Backup
+        backup_mgr = CloudBackupManager()
         asyncio.create_task(backup_mgr.create_backup())
 
     except Exception as e:
-        logger.warning(f"Error guardando log de sesión en SQLite para {chat_id}: {e}")
+        logger.warning("Error guardando log de sesión para %s: %s", chat_id, e)

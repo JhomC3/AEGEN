@@ -14,7 +14,9 @@ router = APIRouter()
     response_model=schemas.IngestionResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Webhook for Telegram events",
-    description="Receives events forwarded from a Telegram bot and implements dynamic debounce.",
+    description=(
+        "Receives events forwarded from a Telegram bot and implements dynamic debounce."
+    ),
 )
 async def telegram_webhook(
     request: schemas.TelegramUpdate,

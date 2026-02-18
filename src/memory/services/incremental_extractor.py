@@ -32,7 +32,7 @@ async def incremental_fact_extraction(chat_id: str, buffer: RedisMessageBuffer) 
             if not raw_buffer:
                 return
 
-            # Usar los últimos 10 mensajes para contexto (en caso de que el buffer sea largo)
+            # Usar últimos 10 mensajes
             recent_msgs = raw_buffer[-10:]
             conversation_text = "\n".join([
                 f"{m['role']}: {m['content']}" for m in recent_msgs

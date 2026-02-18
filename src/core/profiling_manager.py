@@ -27,21 +27,21 @@ class ProfilingManager:
         # 1. País no confirmado
         if not loc.get("confirmed_by_user") or not loc.get("country_code"):
             return (
-                "Todavía no estamos seguros de su país/ubicación exacta. "
-                "Si surge de forma natural, podrías preguntar '¿Desde dónde me escribes?' "
+                "Todavía no estamos seguros de su ubicación exacta. "
+                "Si surge natural, pregunta '¿Desde dónde me escribes?' "
                 "para ajustar mejor tu tono y zona horaria."
             )
 
-        # 2. Región no especificada (solo para países con regiones mapeadas)
+        # 2. Región no especificada
         country_code = loc.get("country_code")
         country_info = get_country_info(country_code)
 
         if country_info and country_info.get("regions") and not loc.get("region"):
             regions_list = ", ".join(list(country_info["regions"].keys())[:5])
             return (
-                f"Sabemos que está en {country_info['name']}, pero no su ciudad/región. "
+                f"Sabemos que está en {country_info['name']}, pero no su ciudad. "
                 "Si el tema sale, podrías preguntar en qué ciudad está. "
-                f"(Ejemplos de regiones que conozco: {regions_list})"
+                f"(Conozco regiones como: {regions_list})"
             )
 
         return None

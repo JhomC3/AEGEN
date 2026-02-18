@@ -26,41 +26,14 @@ from .prompt_builder import (
 logger = logging.getLogger(__name__)
 
 
-@tool
-async def cbt_therapeutic_guidance_tool(
-    user_message: str,
-    chat_id: str,
-    conversation_history: list[dict[str, Any]] | None = None,
-    routing_metadata: dict[str, Any] | None = None,
-) -> str:
-    """
-    Ejecuta la guía terapéutica TCC inyectando el perfil completo del usuario.
-    """
-    if conversation_history is None:
-        conversation_history = []
-
-    routing_metadata = routing_metadata or {}
-    next_actions = routing_metadata.get("next_actions", [])
-
-    # 1. Cargar perfil (Diskless/Multi-user)
-    profile = await user_profile_manager.load_profile(chat_id)
-
-    # 2. Recuperar Memoria de Largo Plazo (Resumen + Hechos Estructurados)
-    memory_data = await long_term_memory.get_summary(chat_id)
-    history_summary = memory_data.get("summary", "Sin historial previo.")
-
-    knowledge_data = await knowledge_base_manager.load_knowledge(chat_id)
-    structured_knowledge = format_knowledge_for_prompt(knowledge_data)
-
-    # 3. Smart RAG (Conocimiento TCC)
+async def _get_cbt_rag_context(chat_id: str, user_message: str) -> str:
+    """Recupera contexto TCC relevante usando Smart RAG."""
     try:
         manager = get_vector_memory_manager()
-        # Buscar en conocimiento global (TCC)
+        # Buscar en conocimiento global (TCC) y del usuario
         global_results = await manager.retrieve_context(
             user_id="system", query=user_message, limit=3, namespace="global"
         )
-
-        # Buscar en conocimiento del usuario
         user_results = await manager.retrieve_context(
             user_id=chat_id, query=user_message, limit=2, namespace="user"
         )
@@ -84,26 +57,50 @@ async def cbt_therapeutic_guidance_tool(
             },
         )
 
-        knowledge_context = (
-            "\n\n".join([f"- {r['content']}" for r in all_results])
-            if all_results
-            else "No hay contexto documental disponible."
-        )
+        if all_results:
+            return "\n\n".join([f"- {r['content']}" for r in all_results])
+        return "No hay contexto documental disponible."
 
     except Exception as e:
         logger.warning(f"Error en RAG TCC: {e}")
-        knowledge_context = "No hay contexto documental disponible."
+        return "No hay contexto documental disponible."
 
-    # 4. Construir instrucciones adicionales basadas en next_actions
-    routing_instructions = build_routing_instructions(next_actions)
 
-    # Configurar límite de historial desde el perfil
+async def _get_cbt_memories(chat_id: str) -> tuple[str, str]:
+    """Recupera resumen de memoria y hechos para CBT."""
+    memory_data = await long_term_memory.get_summary(chat_id)
+    history_summary = memory_data.get("summary", "Sin historial previo.")
+
+    knowledge_data = await knowledge_base_manager.load_knowledge(chat_id)
+    structured_knowledge = format_knowledge_for_prompt(knowledge_data)
+    return history_summary, structured_knowledge
+
+
+@tool
+async def cbt_therapeutic_guidance_tool(
+    user_message: str,
+    chat_id: str,
+    conversation_history: list[dict[str, Any]] | None = None,
+    routing_metadata: dict[str, Any] | None = None,
+) -> str:
+    """
+    Ejecuta la guía terapéutica TCC inyectando el perfil completo del usuario.
+    """
+    if conversation_history is None:
+        conversation_history = []
+
+    routing_metadata = routing_metadata or {}
+    next_actions = routing_metadata.get("next_actions", [])
+
+    # 1. Cargar perfil y Contexto (RAG + Memoria)
+    profile = await user_profile_manager.load_profile(chat_id)
+    knowledge_context = await _get_cbt_rag_context(chat_id, user_message)
+    history_summary, structured_knowledge = await _get_cbt_memories(chat_id)
+
+    # 2. Configurar Persona y Prompts
     adaptation = user_profile_manager.get_personality_adaptation(profile)
     history_limit = adaptation.get("history_limit", 20)
     messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
-
-    # Extraer mensajes recientes del usuario para análisis de estilo (Espejo)
-    recent_user_msgs = extract_recent_user_messages(messages)
 
     persona_template = await system_prompt_builder.build(
         chat_id=chat_id,
@@ -114,24 +111,23 @@ async def cbt_therapeutic_guidance_tool(
             "knowledge_context": knowledge_context,
             "structured_knowledge": structured_knowledge,
         },
-        recent_user_messages=recent_user_msgs,
+        recent_user_messages=extract_recent_user_messages(messages),
     )
 
-    # Inyectar perfil enriquecido
+    # 3. Inyecciones Adicionales (Enriquecimiento + Guardrails + Routing)
     enriched_context = build_enriched_profile_context(profile)
     if enriched_context:
         persona_template += f"\n\n{enriched_context}"
 
-    # Inyectar guardrails clínicos
     persona_template += CLINICAL_GUARDRAILS
 
-    # Inyectar instrucciones de routing al final del system prompt
+    routing_instructions = build_routing_instructions(next_actions)
     if routing_instructions:
         persona_template += routing_instructions
 
+    # 4. Ejecución
     try:
         config = create_observable_config(call_type="cbt_therapeutic_response")
-
         conversational_prompt = ChatPromptTemplate.from_messages([
             ("system", persona_template),
             MessagesPlaceholder(variable_name="messages"),
@@ -147,4 +143,7 @@ async def cbt_therapeutic_guidance_tool(
 
     except Exception as e:
         logger.error(f"Error en CBT tool: {e}")
-        return "Respiro hondo. Mantén la calma, el mercado es solo ruido. Cuéntame más sobre lo que sientes."
+        return (
+            "Respiro hondo. Mantén la calma, el mercado es solo ruido. "
+            "Cuéntame más sobre lo que sientes."
+        )

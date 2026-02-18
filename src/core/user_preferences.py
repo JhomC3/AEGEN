@@ -1,4 +1,3 @@
-# src/core/user_preferences.py
 import logging
 from typing import Any
 
@@ -14,27 +13,26 @@ class UserPreferences:
         self.vector_manager = vector_memory_manager
 
     async def get_user_preferences(self, user_id: str) -> dict[str, Any]:
-        """Obtiene preferencias del usuario almacenadas en vector memory."""
+        """Obtiene preferencias del usuario."""
         try:
-            preferences_results = await self.vector_manager.retrieve_context(
+            results = await self.vector_manager.retrieve_context(
                 user_id=user_id,
                 query="user preferences and settings",
                 context_type=MemoryType.PREFERENCE,
                 limit=10,
             )
 
-            # Consolidar preferencias
             consolidated_preferences = {}
-            for result in preferences_results:
+            for result in results:
                 metadata = result.get("metadata", {})
                 if "preferences" in metadata:
                     consolidated_preferences.update(metadata["preferences"])
 
-            logger.info(f"Retrieved preferences for user {user_id}")
+            logger.info("Retrieved preferences for %s", user_id)
             return consolidated_preferences
 
         except Exception as e:
-            logger.error(f"Failed to get user preferences: {e}", exc_info=True)
+            logger.error("Failed to get preferences for %s: %s", user_id, e)
             return {}
 
     async def update_user_preferences(
@@ -42,7 +40,8 @@ class UserPreferences:
     ) -> bool:
         """Actualiza preferencias del usuario."""
         try:
-            content = f"User preferences: {', '.join(f'{k}: {v}' for k, v in preferences.items())}"
+            parts = [f"{k}: {v}" for k, v in preferences.items()]
+            content = f"User preferences: {', '.join(parts)}"
 
             stored_count = await self.vector_manager.store_context(
                 user_id=user_id,
@@ -53,5 +52,5 @@ class UserPreferences:
             return stored_count > 0
 
         except Exception as e:
-            logger.error(f"Failed to update user preferences: {e}", exc_info=True)
+            logger.error("Failed to update preferences for %s: %s", user_id, e)
             return False

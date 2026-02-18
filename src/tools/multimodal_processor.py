@@ -45,9 +45,7 @@ PROCESSOR_REGISTRY: dict[str, Callable[[dict[str, Any]], Awaitable[dict[str, Any
     ".m4a": lambda args: transcribe_audio.ainvoke(args),
 }
 
-logger.info(
-    f"MultimodalProcessor initialized with support for: {list(PROCESSOR_REGISTRY.keys())}"
-)
+logger.info("MultimodalProcessor ready for: %s", list(PROCESSOR_REGISTRY.keys()))
 
 
 @tool

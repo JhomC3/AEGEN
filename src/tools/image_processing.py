@@ -8,7 +8,7 @@ from PIL import Image
 
 
 class ImageToText:
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         self.stats: dict[str, int] = {"image_processed": 0, "errors": 0}
 

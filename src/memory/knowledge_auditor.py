@@ -9,21 +9,23 @@ del conocimiento almacenado en el namespace 'global'.
 import logging
 from typing import Any
 
+from src.memory.sqlite_store import SQLiteStore
+from src.memory.vector_memory_manager import VectorMemoryManager
+
 logger = logging.getLogger(__name__)
 
 
 class KnowledgeAuditor:
     """
     Audita el estado del conocimiento global almacenado en SQLite.
-    Verificación de recuperabilidad solo bajo demanda.
     """
 
-    def __init__(self):
-        self._store = None
-        self._manager = None
+    def __init__(self) -> None:
+        self._store: SQLiteStore | None = None
+        self._manager: VectorMemoryManager | None = None
 
     @property
-    def store(self):
+    def store(self) -> SQLiteStore:
         """Lazy load del SQLiteStore."""
         if self._store is None:
             from src.core.dependencies import get_sqlite_store
@@ -32,7 +34,7 @@ class KnowledgeAuditor:
         return self._store
 
     @property
-    def manager(self):
+    def manager(self) -> VectorMemoryManager:
         """Lazy load del VectorMemoryManager."""
         if self._manager is None:
             from src.core.dependencies import get_vector_memory_manager
@@ -80,6 +82,12 @@ class KnowledgeAuditor:
         """
         async with db.execute(query) as cursor:
             row = await cursor.fetchone()
+            if not row:
+                return {
+                    "total_documents": 0,
+                    "total_chunks": 0,
+                    "last_sync": None,
+                }
             return {
                 "total_documents": row["total_documents"] or 0,
                 "total_chunks": row["total_chunks"] or 0,

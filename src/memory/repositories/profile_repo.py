@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Any
+from typing import Any, cast
 
 import aiosqlite
 
@@ -14,13 +14,13 @@ class ProfileRepository:
     Repositorio para operaciones de perfil en SQLite.
     """
 
-    def __init__(self, store: Any):
+    def __init__(self, store: Any) -> None:
         self.store = store
 
     async def get_db(self) -> aiosqlite.Connection:
-        return await self.store.get_db()
+        return cast(aiosqlite.Connection, await self.store.get_db())
 
-    async def save_profile(self, chat_id: str, profile_data: dict) -> None:
+    async def save_profile(self, chat_id: str, profile_data: dict[str, Any]) -> None:
         """Guarda un perfil de usuario en la DB."""
         db = await self.get_db()
         payload = json.dumps(profile_data, ensure_ascii=False)
@@ -42,7 +42,7 @@ class ProfileRepository:
             await db.rollback()
             raise
 
-    async def load_profile(self, chat_id: str) -> dict | None:
+    async def load_profile(self, chat_id: str) -> dict[str, Any] | None:
         """Carga un perfil de usuario de la DB con reparación JSON."""
         db = await self.get_db()
         try:
@@ -55,9 +55,9 @@ class ProfileRepository:
                     if result is None:
                         logger.error(
                             f"Perfil corrupto irrecuperable para {chat_id}. "
-                            f"Se retorna None para activar fallback a defaults."
+                            "Se retorna None para activar fallback a defaults."
                         )
-                    return result
+                    return cast(dict[str, Any], result)
                 return None
         except Exception as e:
             logger.error(f"Error loading profile from SQLite: {e}")

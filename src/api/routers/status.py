@@ -1,7 +1,7 @@
 # src/api/routers/status.py
 import logging
 import time
-from typing import Any
+from typing import Any, cast
 
 from fastapi import APIRouter, Depends, status
 
@@ -15,7 +15,6 @@ from src.core.schemas import (
     HealthStatus,
     ServiceHealth,
     ServiceStatus,
-    StatusResponse,
 )
 
 router = APIRouter()
@@ -46,15 +45,14 @@ async def check_vector_db() -> ServiceStatus:
 
 async def check_llm_connection() -> ServiceStatus:
     """
-    Verifica la conectividad real del LLM con cache de 5 minutos
-    para evitar rate limiting y reducir latencia en el healthcheck.
+    Verifica la conectividad real del LLM con cache de 5 minutos.
     """
     now = time.time()
     if (
         _llm_health_cache["status"] is not None
         and now - _llm_health_cache["timestamp"] < LLM_HEALTH_CACHE_TTL
     ):
-        return _llm_health_cache["status"]
+        return cast(ServiceStatus, _llm_health_cache["status"])
 
     try:
         from src.core.engine import check_llm_health
@@ -74,25 +72,22 @@ async def check_llm_connection() -> ServiceStatus:
     return result
 
 
-# --- Endpoints ---
-
-
-@router.get("/", response_model=StatusResponse, tags=["Status"])
-async def read_root() -> StatusResponse:
-    """Endpoint raíz simple."""
-    logger.debug("Root endpoint '/' called")
-    return StatusResponse(
-        status="MAGI API is running!",
-        environment=AppEnvironment(settings.APP_ENV.value),
-        version=settings.APP_VERSION,
-    )
+async def _check_service(name: str, check_fn: Any) -> tuple[ServiceHealth, bool]:
+    """Helper para ejecutar un chequeo de servicio y retornar el estado."""
+    status = await check_fn()
+    is_healthy = status == ServiceStatus.OK
+    return ServiceHealth(
+        name=name,
+        status=status,
+        details="Connected" if is_healthy else "Connection failed",
+    ), is_healthy
 
 
 @router.get(
     "/health",
     response_model=HealthCheckResponse,
     tags=["Status"],
-    summary="Verifica la salud de la aplicación y sus dependencias críticas.",
+    summary="Verifica la salud de la aplicación.",
     status_code=status.HTTP_200_OK,
 )
 async def health_check(
@@ -100,63 +95,39 @@ async def health_check(
 ) -> HealthCheckResponse:
     """
     Verifica la salud de la aplicación y sus dependencias críticas.
-    Devuelve 200 OK si está saludable, o con estado degradado si algunas dependencias fallan.
     """
     logger.info("Health check requested.")
 
     service_checks: list[ServiceHealth] = []
     overall_healthy: bool = True
 
-    # Comprobar Vector DB
-    vector_db_status = await check_vector_db()
-    service_checks.append(
-        ServiceHealth(
-            name="vector_db",
-            status=vector_db_status,
-            details=(
-                "Connected"
-                if vector_db_status == ServiceStatus.OK
-                else "Connection failed"
-            ),
-        )
-    )
-    if vector_db_status != ServiceStatus.OK:
+    # 1. Vector DB
+    sh, ok = await _check_service("vector_db", check_vector_db)
+    service_checks.append(sh)
+    if not ok:
         overall_healthy = False
 
-    # Comprobar Conexión LLM
-    llm_connection_status = await check_llm_connection()
-    service_checks.append(
-        ServiceHealth(
-            name="llm_connection",
-            status=llm_connection_status,
-            details=(
-                "Connected"
-                if llm_connection_status == ServiceStatus.OK
-                else "Connection failed"
-            ),
-        )
-    )
-    if llm_connection_status != ServiceStatus.OK:
+    # 2. LLM Connection
+    sh, ok = await _check_service("llm_connection", check_llm_connection)
+    service_checks.append(sh)
+    if not ok:
         overall_healthy = False
 
-    # Comprobar Event Bus
-    event_bus_status = ServiceStatus.OK
-    event_bus_details = "Event Bus is initialized."
-    if not event_bus:
-        event_bus_status = ServiceStatus.ERROR
-        event_bus_details = "Event Bus is not available."
-        overall_healthy = False
-
+    # 3. Event Bus
+    eb_status = ServiceStatus.OK if event_bus else ServiceStatus.ERROR
+    eb_healthy = eb_status == ServiceStatus.OK
     service_checks.append(
         ServiceHealth(
-            name="event_bus", status=event_bus_status, details=event_bus_details
+            name="event_bus",
+            status=eb_status,
+            details="Initialized" if eb_healthy else "Not available",
         )
     )
-
-    main_status = HealthStatus.HEALTHY if overall_healthy else HealthStatus.DEGRADED
+    if not eb_healthy:
+        overall_healthy = False
 
     return HealthCheckResponse(
-        status=main_status,
+        status=HealthStatus.HEALTHY if overall_healthy else HealthStatus.DEGRADED,
         environment=AppEnvironment(settings.APP_ENV.value),
         services=service_checks,
     )

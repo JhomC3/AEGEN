@@ -23,35 +23,14 @@ from .multimodal import process_image_input
 logger = logging.getLogger(__name__)
 
 
-@tool
-async def conversational_chat_tool(
-    user_message: str,
-    chat_id: str,
-    conversation_history: list[dict[str, Any]] | None = None,
-    image_path: str | None = None,
-    routing_metadata: dict[str, Any] | None = None,
-) -> str:
-    """
-    Genera una respuesta empática y contextual usando el perfil del usuario.
-    """
-    if conversation_history is None:
-        conversation_history = []
-
-    routing_metadata = routing_metadata or {}
-    next_actions = routing_metadata.get("next_actions", [])
-
-    # 1. Cargar perfil (Diskless/Multi-user)
-    profile = await user_profile_manager.load_profile(chat_id)
-
-    # 2. Smart RAG
+async def _get_chat_rag_context(chat_id: str, user_message: str) -> str:
+    """Recupera contexto relevante usando Smart RAG (Global + Usuario)."""
     try:
         manager = get_vector_memory_manager()
-        # Buscar en conocimiento global
+        # Buscar en conocimiento global y del usuario
         global_results = await manager.retrieve_context(
             user_id="system", query=user_message, limit=2, namespace="global"
         )
-
-        # Buscar en conocimiento del usuario
         user_results = await manager.retrieve_context(
             user_id=chat_id, query=user_message, limit=2, namespace="user"
         )
@@ -75,39 +54,50 @@ async def conversational_chat_tool(
         )
 
         if all_results:
-            knowledge_context = "\n\n".join([f"- {r['content']}" for r in all_results])
-        else:
-            knowledge_context = ""
+            return "\n\n".join([f"- {r['content']}" for r in all_results])
+        return ""
 
     except Exception as e:
         logger.warning(f"Error en RAG Chat: {e}")
-        knowledge_context = ""
+        return ""
 
-    # Memoria de Largo Plazo (Resumen + Hechos)
+
+async def _get_chat_memories(chat_id: str) -> tuple[str, str]:
+    """Recupera resumen de memoria y conocimiento estructurado."""
     memory_data = await long_term_memory.get_summary(chat_id)
     history_summary = memory_data.get("summary", "Perfil activo.")
 
     knowledge_data = await knowledge_base_manager.load_knowledge(chat_id)
     structured_knowledge = format_knowledge_for_prompt(knowledge_data)
+    return history_summary, structured_knowledge
 
-    # Instrucciones de monitoreo emocional (Low Confidence Vulnerability)
-    routing_instructions = ""
-    if "monitor_emotional_cues" in next_actions:
-        routing_instructions = (
-            "\n\nAVISO DE ENRUTAMIENTO: Se han detectado señales sutiles de vulnerabilidad. "
-            "Mantén un tono empático y valida sus sentimientos si parece necesario, "
-            "pero sin forzar una conversación terapéutica profunda.\n"
-        )
 
-    # Configurar límite de historial desde el perfil
+@tool
+async def conversational_chat_tool(
+    user_message: str,
+    chat_id: str,
+    conversation_history: list[dict[str, Any]] | None = None,
+    image_path: str | None = None,
+    routing_metadata: dict[str, Any] | None = None,
+) -> str:
+    """
+    Genera una respuesta empática y contextual usando el perfil del usuario.
+    """
+    if conversation_history is None:
+        conversation_history = []
+
+    routing_metadata = routing_metadata or {}
+    next_actions = routing_metadata.get("next_actions", [])
+
+    # 1. Cargar perfil y Contexto (RAG + Memoria)
+    profile = await user_profile_manager.load_profile(chat_id)
+    knowledge_context = await _get_chat_rag_context(chat_id, user_message)
+    history_summary, structured_knowledge = await _get_chat_memories(chat_id)
+
+    # 2. Configurar Persona y Prompts
     adaptation = user_profile_manager.get_personality_adaptation(profile)
     history_limit = adaptation.get("history_limit", 20)
-
-    # Convertir historial a mensajes de LangChain
     messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
-
-    # Extraer mensajes recientes del usuario para análisis de estilo (Espejo)
-    recent_user_msgs = extract_recent_user_messages(messages)
 
     persona_template = await system_prompt_builder.build(
         chat_id=chat_id,
@@ -118,25 +108,26 @@ async def conversational_chat_tool(
             "knowledge_context": knowledge_context,
             "structured_knowledge": structured_knowledge,
         },
-        recent_user_messages=recent_user_msgs,
+        recent_user_messages=extract_recent_user_messages(messages),
     )
 
-    if routing_instructions:
-        persona_template += routing_instructions
+    # Inyección de instrucciones de enrutamiento
+    if "monitor_emotional_cues" in next_actions:
+        persona_template += (
+            "\n\nAVISO DE ENRUTAMIENTO: Se han detectado señales sutiles de "
+            "vulnerabilidad. Mantén un tono empático y valida sus sentimientos "
+            "si parece necesario, pero sin forzar una conversación profunda.\n"
+        )
 
-    # Usamos un template más simple ya que el builder construye casi todo
     conversational_prompt = ChatPromptTemplate.from_messages([
         ("system", persona_template),
         MessagesPlaceholder(variable_name="messages"),
         ("user", "{user_message}"),
     ])
 
-    prompt_input = {
-        "user_message": user_message,
-        "messages": messages,
-    }
-
+    # 3. Ejecución
     try:
+        prompt_input = {"user_message": user_message, "messages": messages}
         config = create_observable_config(call_type="chat_response")
 
         if image_path and Path(image_path).exists():
@@ -146,12 +137,12 @@ async def conversational_chat_tool(
                 conversational_prompt,
                 cast(RunnableConfig, config),
             )
+
         chain = conversational_prompt | llm
         response = await chain.ainvoke(
             prompt_input, config=cast(RunnableConfig, config)
         )
-
         return str(response.content).strip()
     except Exception as e:
         logger.error(f"Error en MAGI chat: {e}")
-        return "Lo siento, tuve un problema interno. ¿Podemos intentarlo de nuevo?"
+        return "Lo siento, tuve un problema interno. ¿Reintentamos?"

@@ -42,16 +42,18 @@ def build_enriched_profile_context(profile: dict[str, Any]) -> str:
 
 
 def build_routing_instructions(next_actions: list[str]) -> str:
-    """Helper para construir instrucciones de enrutamiento sin aumentar la complejidad de la tool."""
+    """Helper para construir instrucciones de enrutamiento."""
     if not next_actions:
         return ""
 
     instructions = "\n\nINSTRUCCIONES DE ENRUTAMIENTO PRIORITARIAS:\n"
     mapping = {
-        "depth_empathy": "- Prioriza la validación emocional profunda antes de cualquier técnica.\n",
-        "clarify_emotional_state": "- El estado emocional es ambiguo. Haz una pregunta suave para clarificar cómo se siente realmente.\n",
-        "active_listening": "- Usa escucha activa reflexiva. Parafrasea lo que el usuario dijo.\n",
-        "gentle_probe": "- Indaga con delicadeza sobre pensamientos automáticos subyacentes.\n",
+        "depth_empathy": ("- Prioriza la validación emocional profunda.\n"),
+        "clarify_emotional_state": (
+            "- Estado ambiguo. Haz una pregunta suave para clarificar.\n"
+        ),
+        "active_listening": ("- Usa escucha activa reflexiva. Parafrasea.\n"),
+        "gentle_probe": ("- Indaga sobre pensamientos automáticos subyacentes.\n"),
     }
 
     for action in next_actions:
@@ -63,13 +65,13 @@ def build_routing_instructions(next_actions: list[str]) -> str:
 
 CLINICAL_GUARDRAILS = (
     "\n\n[GUARDRAILS CLÍNICOS]\n"
-    "- NUNCA uses lenguaje diagnóstico. No digas 'tienes ansiedad generalizada'.\n"
+    "- NUNCA uses lenguaje diagnóstico.\n"
     "- Puedes decir 'lo que describes suena a lo que en psicología se llama..., "
     "pero solo un profesional puede evaluarlo'.\n"
-    "- Si el usuario pide diagnóstico, prescripción o evaluación clínica formal, "
+    "- Si el usuario pide diagnóstico, prescripción o evaluación, "
     "declina y sugiere buscar un profesional.\n"
-    "- Si detectas riesgo de autolesión o crisis, muestra los recursos de emergencia "
+    "- Si detectas riesgo de autolesión o crisis, muestra los recursos "
     "y sugiere contactar a un profesional inmediatamente.\n"
-    "- Los datos marcados como '(hipótesis)' en el conocimiento son inferencias "
-    "no confirmadas. Úsalos con precaución.\n"
+    "- Los datos marcados como '(hipótesis)' en el conocimiento son "
+    "inferencias no confirmadas. Úsalos con precaución.\n"
 )

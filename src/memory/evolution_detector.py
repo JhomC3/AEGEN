@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import Any
+from typing import Any, cast
 
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -19,14 +19,20 @@ class EvolutionDetector:
             (
                 "system",
                 (
-                    "Eres un Psicólogo Evolutivo y Analista de Personalidad. Tu objetivo es detectar cambios significativos "
-                    "en el perfil del usuario basándote en su última sesión de chat.\n"
+                    "Eres un Psicólogo Evolutivo y Analista de Personalidad. Tu "
+                    "objetivo es detectar cambios significativos en el perfil "
+                    "del usuario basándote en su última sesión de chat.\n"
                     "Busca:\n"
-                    "1. Evolución de vida: Nuevos valores, metas alcanzadas, hitos (milestones).\n"
-                    "2. Adaptación de MAGI: ¿Cómo prefiere el usuario que le hablen? (estilo, nivel de humor, formalidad).\n"
-                    "3. Preferencias aprendidas: Cosas que le gustan o disgustan específicamente.\n"
-                    "4. Preferencia lingüística: Detecta si el usuario prefiere un trato más formal o informal, si ha solicitado explícitamente un dialecto (ej. 'háblame como un paisa') o si se ha quejado del tono de MAGI.\n"
-                    "\n"
+                    "1. Evolución de vida: Nuevos valores, metas alcanzadas, "
+                    "hitos (milestones).\n"
+                    "2. Adaptación de MAGI: ¿Cómo prefiere el usuario que le "
+                    "hablen? (estilo, nivel de humor, formalidad).\n"
+                    "3. Preferencias aprendidas: Cosas que le gustan o "
+                    "disgustan específicamente.\n"
+                    "4. Preferencia lingüística: Detecta si el usuario prefiere "
+                    "un trato más formal o informal, si ha solicitado "
+                    "explícitamente un dialecto (ej. 'háblame como un paisa') "
+                    "o si se ha quejado del tono de MAGI.\n\n"
                     "Responde estrictamente en JSON con los campos:\n"
                     "- 'new_values': [lista]\n"
                     "- 'new_goals': [lista]\n"
@@ -40,14 +46,18 @@ class EvolutionDetector:
                     "- 'linguistic_preference': {{\n"
                     "    'prefers_more_formal': bool,\n"
                     "    'prefers_more_casual': bool,\n"
-                    "    'explicit_dialect_request': 'argentino'|'colombiano'|'mexicano'|'español'|'neutro' o null,\n"
+                    "    'explicit_dialect_request': 'argentino'|'colombiano'|"
+                    "'mexicano'|'español'|'neutro' o null,\n"
                     "    'language_feedback': 'string' o null\n"
                     "}}\n"
                 ),
             ),
             (
                 "user",
-                "PERFIL ACTUAL:\n{current_profile}\n\nRESUMEN DE SESIÓN:\n{session_summary}\n\nDetecta evolución:",
+                (
+                    "PERFIL ACTUAL:\n{current_profile}\n\nRESUMEN DE SESIÓN:\n"
+                    "{session_summary}\n\nDetecta evolución:"
+                ),
             ),
         ])
 
@@ -57,8 +67,8 @@ class EvolutionDetector:
             # Buscar el primer '{' y el último '}'
             match = re.search(r"(\{[\s\S]*\})", text)
             if match:
-                return json.loads(match.group(1))
-            return json.loads(text)  # Fallback a loads directo
+                return cast(dict[str, Any], json.loads(match.group(1)))
+            return cast(dict[str, Any], json.loads(text))  # Fallback
         except Exception as e:
             logger.error(f"Error extrayendo JSON: {e}")
             raise

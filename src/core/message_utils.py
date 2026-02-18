@@ -6,9 +6,7 @@ from src.core.schemas import V2ChatMessage
 
 
 def extract_recent_user_messages(messages: list[Any], limit: int = 10) -> list[str]:
-    """
-    Extrae el contenido de texto de los últimos mensajes humanos para análisis de estilo.
-    """
+    """Extrae contenido de mensajes humanos para análisis de estilo."""
     return [
         str(m.content) for m in messages if isinstance(m, HumanMessage) and m.content
     ][-limit:]
@@ -19,14 +17,7 @@ def dict_to_langchain_messages(
     limit: int = 8,
 ) -> list[BaseMessage]:
     """
-    Convierte una lista de diccionarios de mensajes (V2ChatMessage) a objetos BaseMessage de LangChain.
-
-    Args:
-        history: Lista de mensajes en formato diccionario/V2ChatMessage.
-        limit: Número máximo de mensajes recientes a incluir.
-
-    Returns:
-        Lista de objetos BaseMessage (HumanMessage, AIMessage, SystemMessage).
+    Convierte historial a objetos BaseMessage de LangChain.
     """
     messages: list[BaseMessage] = []
     # Tomar solo los últimos 'limit' mensajes
@@ -46,7 +37,6 @@ def dict_to_langchain_messages(
             messages.append(AIMessage(content=content))
         elif role == "system":
             messages.append(SystemMessage(content=content))
-        # Opcional: Manejar 'function' o 'tool' si es necesario en el futuro
 
     return messages
 
@@ -56,7 +46,7 @@ def format_history_as_text(
     limit: int = 8,
 ) -> str:
     """
-    Formatea el historial como texto plano (Fallback/Legacy).
+    Formatea el historial como texto plano.
     """
     recent_history = history[-limit:] if limit > 0 else history
 
