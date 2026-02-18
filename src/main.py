@@ -42,6 +42,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
         prime_dependencies()
 
+        # Registro diferido de especialistas para romper la cadena de imports eager
+        from src.agents.specialists import register_all_specialists
+
+        register_all_specialists()
+
         from src.memory.global_knowledge_loader import global_knowledge_loader
 
         asyncio.create_task(global_knowledge_loader.check_and_bootstrap())
