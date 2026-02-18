@@ -189,7 +189,7 @@ Telegram → Webhook (src/api/routers/webhooks.py)
   - `docs(scope): mensaje` — cambios de documentación
   - `test(scope): mensaje` — adición o corrección de tests
   - `chore(scope): mensaje` — mantenimiento, dependencias, CI
-- **Validación pre-commit:** `make verify` DEBE pasar antes de declarar una tarea como finalizada.
+- **Validación pre-commit:** `make verify` DEBE pasar al 100% (cero errores de Ruff, Mypy y arquitectura) antes de declarar una tarea como finalizada o realizar un commit. No se permiten excepciones "parciales".
 - **PR Template:** `.github/PULL_REQUEST_TEMPLATE.md` — seguir el checklist de verificación.
 - **CI Pipeline:** Push/PR a `main` o `develop` dispara `make verify` en Ubuntu.
 - Agrupar cambios relacionados; no mezclar refactors no relacionados en el mismo PR.
