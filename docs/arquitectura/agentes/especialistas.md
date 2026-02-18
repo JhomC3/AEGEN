@@ -16,9 +16,11 @@ AEGEN es un sistema multi-agente donde cada "especialista" posee una habilidad �
 - **Habilidad**: Conversión de voz a texto usando FasterWhisper.
 - **Flujo**: Siempre encadenado con el Chat Specialist tras completar la tarea.
 
-## 2. Registro de Habilidades
+## 2. Registro y Carga Diferida
 
-Cada especialista se registra automáticamente en el `MasterOrchestrator` mediante el `SpecialistRegistry`, permitiendo un crecimiento modular del sistema.
+Para evitar dependencias circulares y asegurar un arranque robusto de la aplicación, el registro de especialistas se realiza de forma diferida mediante la función `register_all_specialists()`, la cual es invocada durante el evento `lifespan` de FastAPI.
+
+Este mecanismo permite una **Degradación Suave**: si un especialista presenta errores en sus dependencias o configuración, el sistema registra el error en los logs pero permite que el resto de los especialistas y el motor principal continúen funcionando.
 
 ---
 *Ver `src/agents/specialists/`*

@@ -11,7 +11,12 @@ El sistema utiliza un **Webhook** para recibir actualizaciones en tiempo real. C
 - **Voz/Audio**: Descarga automática y delegación al `TranscriptionAgent`.
 - **Comandos**: Interceptación de comandos de sistema (`/privacidad`, `/olvidar`).
 
-## 2. Seguridad y Robustez
+## 2. Herramientas de Respuesta
+
+El sistema utiliza herramientas estandarizadas (`tools`) para enviar respuestas de vuelta al usuario:
+- **reply_to_telegram_chat**: Envía un mensaje de texto. Utiliza el campo estándar `text` para el contenido del mensaje, asegurando compatibilidad con los esquemas de validación internos y la API de Telegram.
+
+## 3. Seguridad y Robustez
 
 - **Validación de Token**: Solo se aceptan peticiones con el token de bot configurado.
 - **Reintentos**: El sistema de polling (sondeo) utiliza retroceso exponencial (backoff) para reconectar en caso de fallos de red.

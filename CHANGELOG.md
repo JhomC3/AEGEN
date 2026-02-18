@@ -5,6 +5,22 @@ y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.
 
 ## [No publicado]
 
+## [v0.8.4] - 2026-02-18
+### Añadido
+- **Módulo `prompt_renders.py`**: Restauración del motor de renderizado de la Capa 3 (Espejo) con lógica modular para dialectos y adaptación de estilo.
+- **Registro Diferido de Especialistas**: Implementación de `register_all_specialists()` invocado desde el `lifespan` de FastAPI para eliminar dependencias circulares y permitir un arranque resiliente.
+- **Tests de Personalidad**: Cobertura unitaria del 92% para el módulo de renderizado de prompts.
+
+### Cambiado
+- **Arquitectura de Arranque**: Desacoplamiento total de la cadena de imports eager en `src/agents/`, evitando fallos en cascada durante la inicialización de la aplicación.
+- **Esquema de Telegram**: Unificación del parámetro de mensaje a `text` en todas las herramientas de respuesta para cumplimiento estricto con la API de Telegram y consistencia interna.
+- **Gobernanza de Agentes**: Actualización de `AGENTS.md` estableciendo el cumplimiento del 100% de los estándares de código (`make verify`) como mandatorio y bloqueante.
+
+### Corregido
+- **Despliegue Crítico**: Solucionado el error `ModuleNotFoundError` que bloqueaba el despliegue tras la refactorización masiva.
+- **Fallo de Comunicación**: Corregido el error de validación de Pydantic en el `event_processor` al enviar respuestas al usuario.
+- **Calidad de Código**: Resolución de múltiples infracciones de Ruff y Mypy en el core y servicios de la API.
+
 ## [v0.8.0] - 2026-02-12
 ### Añadido
 - **Overhaul de Personalidad (Soul Stack v2)**: Implementación de una arquitectura de 5 capas (Identidad → Alma → Espejo → Skill → Runtime) para una personalidad coherente y adaptable.

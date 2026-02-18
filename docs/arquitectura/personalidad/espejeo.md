@@ -11,9 +11,13 @@ En lugar de imponer un dialecto basado en la ubicación geográfica (lo cual sue
 - **Adopción de Jerga**: Si el usuario utiliza modismos específicos (ej: "parce", "ché", "tío") de forma consistente, el bot los integra en su vocabulario hasta un 30%.
 - **Formalidad**: Ajuste dinámico entre tuteo y voseo/ustedeo basado en la interacción.
 
-## 2. Implementación
+## 2. Implementación Modular
 
-Esta lógica reside en el `SystemPromptBuilder`, que compone las instrucciones finales inyectando las preferencias de estilo detectadas en el `UserProfile`.
+Esta lógica reside en el `SystemPromptBuilder`, pero el renderizado técnico de las reglas se delega en el módulo `src/personality/prompt_renders.py`, lo que permite una mayor mantenibilidad y facilidad de prueba.
+
+### Componentes de Renderizado
+- **render_dialect_rules**: Aplica la jerarquía de prioridades (Preferencia > Confirmación > Neutro).
+- **render_style_adaptation**: Transforma las señales detectadas por el `StyleAnalyzer` (formalidad, brevedad, emojis) en instrucciones explícitas para el LLM.
 
 ---
 *Para detalles, ver `docs/arquitectura/personalidad/motor.md`*
