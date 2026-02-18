@@ -13,7 +13,7 @@ from src.core.schemas import CanonicalEventV1
 @respx.mock
 async def test_telegram_webhook_success_flow(
     async_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
-):
+) -> None:
     """
     Test de integración para el flujo exitoso del webhook de Telegram.
     Simula la recepción de un audio, su procesamiento y la respuesta.
@@ -110,7 +110,7 @@ async def test_telegram_webhook_success_flow(
     assert "task_id" in response_data
 
     # 5. Verificar el Proceso en Segundo Plano (Consolidación)
-    # Aumentamos el sleep para dar tiempo al debounce (aunque en test debería ser rápido)
+    # Aumentamos el sleep para dar tiempo al debounce
     await asyncio.sleep(3.5)
 
     mock_download_tool.ainvoke.assert_awaited_once()
@@ -125,5 +125,5 @@ async def test_telegram_webhook_success_flow(
     expected_message = "Este es un texto de prueba."
     mock_reply_tool.ainvoke.assert_awaited_once_with({
         "chat_id": str(test_chat_id),
-        "message": expected_message,
+        "text": expected_message,
     })

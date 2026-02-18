@@ -23,7 +23,7 @@ logger = logging.getLogger(settings.APP_NAME)
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+async def lifespan(app: FastAPI) -> AsyncGenerator:
     """Ciclo de vida asíncrono."""
     logger.info(">>> Arrancando lifespan...")
 

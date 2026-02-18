@@ -104,7 +104,7 @@ async def _send_response(
     try:
         await telegram_interface.reply_to_telegram_chat.ainvoke({
             "chat_id": chat_id,
-            "message": message,
+            "text": message,
         })
     except Exception as e:
         logger.error(f"[TaskID: {task_id}] Error enviando respuesta: {e}")

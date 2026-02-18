@@ -47,7 +47,7 @@ async def _handle_privacy_intercept(
         if response_text:
             await telegram_interface.reply_to_telegram_chat.ainvoke({
                 "chat_id": str(chat_id),
-                "message": response_text,
+                "text": response_text,
             })
             return True
     return False
