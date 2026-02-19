@@ -251,9 +251,8 @@ Las directrices de este documento constringen el **proceso de verificación**, n
 ### Antes de crear código nuevo (cambios localizados y estructurales)
 
 1. Verificar si la funcionalidad ya existe (`grep` en `src/` por nombre, clase, o función similar).
-2. Leer los ADRs relevantes en `adr/` para entender decisiones previas.
-3. **Solo para cambios estructurales:** Completar el Análisis de Impacto de la plantilla, verificar alineación con `PLAN-MAESTRO-ESTRATEGICO.md` en `docs/planes/`, y crear el plan en `docs/planes/` con formato `YYYY-MM-DD-nombre-descriptivo.md`.
-4. Obtener aprobación explícita del usuario antes de implementar.
+2. **Solo para cambios estructurales:** Leer los ADRs relevantes en `adr/`, completar el Análisis de Impacto de la plantilla, verificar alineación con `PLAN-MAESTRO-ESTRATEGICO.md` en `docs/planes/`, y crear el plan en `docs/planes/` con formato `YYYY-MM-DD-nombre-descriptivo.md`.
+3. Obtener aprobación explícita del usuario antes de implementar.
 - Si una instrucción del usuario contradice los Principios Core de `AGENTS.md`, pedir aclaración antes de proceder.
 
 ### Cuándo es obligatorio un ADR
