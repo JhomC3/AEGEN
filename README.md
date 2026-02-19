@@ -12,9 +12,8 @@ Toda la filosofía de desarrollo, los estándares de codificación, la guía de 
 
 Este documento es de **lectura obligatoria** para cualquier contribuidor (humano o IA).
 
-1.  **[📄 Constitución (PROJECT_OVERVIEW.md)](PROJECT_OVERVIEW.md)**: Visión, arquitectura de alto nivel y Hoja de Ruta (Roadmap).
-2.  **[📂 Arquitectura (docs/arquitectura/)](docs/arquitectura/)**: Detalle de subsistemas (Memoria, Personalidad, etc.).
-3.  **[📂 Guías (docs/guias/)](docs/guias/)**: Manuales de [Desarrollo](docs/guias/manual-desarrollo.md) y [Despliegue](docs/guias/manual-despliegue.md).
+1.  **[📂 Arquitectura (docs/arquitectura/)](docs/arquitectura/)**: Visión, flujos de datos y detalle de subsistemas.
+2.  **[📂 Guías (docs/guias/)](docs/guias/)**: Manuales de [Desarrollo](docs/guias/manual-desarrollo.md) y [Despliegue](docs/guias/manual-despliegue.md).
 4.  **[📜 Decisiones (adr/)](adr/)**: Registro histórico de decisiones técnicas vigentes.
 5.  **[📋 Planes (docs/planes/)](docs/planes/)**: Hojas de ruta detalladas para nuevas funcionalidades.
 6.  **[⚖️ Estándares y Gobernanza (AGENTS.md)](AGENTS.md)**: Estándares de código, seguridad y reglas para agentes de IA.

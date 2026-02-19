@@ -4,6 +4,14 @@
 - Stack: Python 3.13 · FastAPI · LangGraph · SQLite/sqlite-vec · Redis · Telegram
 - Issues/PRs en GitHub: usar heredoc `<<'EOF'` para newlines reales; nunca `"\\n"` inline.
 
+## Principios Core (Inmutables)
+
+1. **Arquitectura Evolutiva:** De monolito funcional a sistema distribuido cuando las métricas lo justifiquen.
+2. **Pragmatismo Medible:** Complejidad solo si ROI (Retorno de Inversión) > umbral definido.
+3. **Gobernanza Automática:** Las reglas se ejecutan mediante scripts, no solo se recuerdan.
+4. **LLM-First (IA Primero):** Diseñado para ser usado y entendido por Inteligencias Artificiales.
+5. **Observabilidad Nativa:** Métricas y trazas implementadas desde el inicio.
+
 ## Estructura del Proyecto y Organización de Módulos
 
 - Código fuente: `src/` (entrada principal en `src/main.py`).
@@ -126,7 +134,6 @@ src/
 
 ## Patrones de Arquitectura
 
-- **Fuente de verdad del diseño:** `PROJECT_OVERVIEW.md`.
 - **Event-Driven:** `CanonicalEventV1` como lenguaje común. Todo pasa por el bus de eventos (`src/core/bus/`).
 - **Registry Pattern:** Autodescubrimiento de especialistas y herramientas (`src/core/registry.py`).
 - **State Graphs:** LangGraph para orquestación declarativa (`src/agents/orchestrator/graph_builder.py`).
@@ -207,7 +214,7 @@ Telegram → Webhook (src/api/routers/webhooks.py)
 ## Documentación
 
 - **Idioma:** Toda la documentación en **Español**. Términos técnicos en inglés se permiten entre paréntesis ().
-- **Fuente de Verdad:** `PROJECT_OVERVIEW.md` es el documento rector del proyecto.
+- **Fuente de Verdad:** `AGENTS.md` es el documento rector para agentes. La documentación detallada vive en `docs/`.
 - **Estructura:**
   - Arquitectura detallada: `docs/arquitectura/` (subsistemas: agentes, core, memoria, personalidad, interfaces)
   - Guías operativas: `docs/guias/` (manual-desarrollo, manual-despliegue, manual-gestion-conocimiento)
@@ -219,17 +226,61 @@ Telegram → Webhook (src/api/routers/webhooks.py)
 - **Changelog:** `CHANGELOG.md` sigue Keep a Changelog + Semantic Versioning. Solo cambios visibles al usuario.
 - Cuando modifiques código, verificar si la documentación correspondiente necesita actualización.
 
-## Planificación Obligatoria
+## Planificación y Niveles de Cambio
 
-- **REGLA FUNDAMENTAL:** Ninguna modificación o creación de código puede iniciar sin un plan detallado previo aprobado por el usuario.
-- Los planes se almacenan en `docs/planes/`. Los completados se archivan en `docs/planes/archivo/`.
-- **Antes de crear código nuevo:**
-  1. Verificar si la funcionalidad ya existe (`grep` en `src/` por nombre, clase, o función similar).
-  2. Leer los ADRs relevantes en `adr/` para entender decisiones previas.
-  3. Verificar `PROJECT_OVERVIEW.md` para alineación con el roadmap.
-  4. Crear el plan en `docs/planes/` con nombre descriptivo.
-  5. Obtener aprobación explícita del usuario antes de implementar.
-- Si una instrucción del usuario contradice los principios de `PROJECT_OVERVIEW.md`, pedir aclaración antes de proceder.
+### Niveles de cambio
+
+No todo cambio merece el mismo proceso. La burocracia excesiva degrada la calidad tanto como la falta de proceso.
+
+| Nivel | Ejemplos | Proceso requerido |
+|---|---|---|
+| **Trivial** | Fix de typo, ajuste de config, corrección de docs | Sin plan formal. Describir el cambio en el commit message. `make verify` si toca `.py`. |
+| **Localizado** | Bug fix en un archivo, ajuste de lógica sin cambiar interfaces | Plan ligero: describir qué, por qué, y archivos afectados directamente en la conversación. `make verify` obligatorio. |
+| **Estructural** | Cruza múltiples módulos, modifica interfaces/schemas, añade especialista, altera el pipeline | Plan formal con plantilla completa (`docs/planes/plantilla-plan.md`). Análisis de impacto, ADR si aplica. Aprobación del usuario antes de implementar. |
+
+Los planes activos se almacenan en `docs/planes/`. Al completar un plan: cambiar su estado a "Completado" y moverlo a `docs/planes/archivo/`.
+
+### Juicio técnico del agente
+
+Las directrices de este documento constringen el **proceso de verificación**, no el **juicio técnico**. El agente debe:
+
+- Proponer soluciones arquitectónicamente superiores cuando las identifique, incluso si difieren del plan aprobado o de la idea original del usuario. Esto incluye reorientar funcionalidades cuando una alternativa produce mejor resultado. Documentar la desviación.
+- Elegir la solución más simple que resuelva el problema sin sobre-ingeniería.
+- Evaluar si un cambio necesita plan formal o si la burocracia excede el valor del cambio.
+
+### Antes de crear código nuevo (cambios localizados y estructurales)
+
+1. Verificar si la funcionalidad ya existe (`grep` en `src/` por nombre, clase, o función similar).
+2. Leer los ADRs relevantes en `adr/` para entender decisiones previas.
+3. **Solo para cambios estructurales:** Completar el Análisis de Impacto de la plantilla, verificar alineación con `PLAN-MAESTRO-ESTRATEGICO.md` en `docs/planes/`, y crear el plan en `docs/planes/` con formato `YYYY-MM-DD-nombre-descriptivo.md`.
+4. Obtener aprobación explícita del usuario antes de implementar.
+- Si una instrucción del usuario contradice los Principios Core de `AGENTS.md`, pedir aclaración antes de proceder.
+
+### Cuándo es obligatorio un ADR
+
+Un ADR es obligatorio si el cambio:
+- Modifica interfaces en `src/core/interfaces/` o schemas en `src/core/schemas/`.
+- Cambia contratos del bus de eventos (`CanonicalEventV1`).
+- Añade o elimina un especialista en `src/agents/specialists/`.
+- Altera el flujo de datos del pipeline (Telegram → Webhook → Evento → Router → Especialista → Respuesta).
+
+Para cualquier otro cambio, un ADR no es necesario.
+
+### Verificación durante la ejecución (Micro-Gates)
+
+- **Archivos `.py` modificados:** Ejecutar `make verify` inmediatamente después de cada tarea. Si falla, la tarea está **bloqueada** -- no se puede avanzar a la siguiente. Corregir o revertir.
+- **Schemas o interfaces modificados:** `make verify` + ejecutar el test de integración específico del subsistema afectado.
+- **Solo documentación:** Verificación al final de todas las fases.
+- **Regla absoluta:** No existe "deuda de verificación". Un fallo de verify no se pospone.
+
+### Checklist pre-commit obligatorio
+
+Antes de ejecutar `git add/commit`:
+1. `git status` muestra SOLO archivos relacionados con el plan (sin archivos huérfanos ni olvidados).
+2. Si se crearon archivos nuevos: confirmar que aparecen y agregarlos explícitamente.
+3. Si se eliminaron archivos: `grep -r 'from <modulo_eliminado>' src/` confirma que nadie los importa.
+4. `make verify` pasa al 100%.
+5. Si el cambio toca el pipeline de mensajería: ejecutar `pytest tests/integration/test_telegram_webhook.py` y verificar con `grep -r 'from <modulo_modificado>' src/api/ src/agents/` que las dependencias del pipeline siguen intactas.
 
 ## Gestión de Dependencias
 
@@ -254,11 +305,11 @@ Telegram → Webhook (src/api/routers/webhooks.py)
 ## Notas Específicas para Agentes
 
 - **AEGEN** = infraestructura técnica (este repositorio). **MAGI** = la interfaz conversacional que el usuario ve.
-- `PROJECT_OVERVIEW.md` es la fuente de verdad. Leerlo al iniciar una sesión de trabajo.
+- `AGENTS.md` es la fuente de verdad para directrices de agentes. Leerlo al iniciar una sesión de trabajo.
 - Verificar con `make verify` que todo pasa antes de declarar cualquier tarea como finalizada.
 - Responder con respuestas de alta confianza: verificar en código; no adivinar.
 - Cuando trabajes en un Issue o PR de GitHub, imprimir la URL completa al final de la tarea.
-- **Versión actual:** v0.8.0 según PROJECT_OVERVIEW.md (pyproject.toml puede mostrar 0.7.2 — la fuente de verdad es PROJECT_OVERVIEW.md).
+- **Versión actual:** v0.8.4 según CHANGELOG.md.
 - **Canales de mensajería:** al refactorizar lógica compartida, considerar el pipeline completo: Telegram → Webhook → Evento Canónico → Router → Especialista → Respuesta.
 - Al añadir un nuevo AGENTS.md en cualquier subdirectorio, crear también un symlink `CLAUDE.md` apuntando al mismo archivo.
 

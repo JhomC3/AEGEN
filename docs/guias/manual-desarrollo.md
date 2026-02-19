@@ -35,7 +35,7 @@ Antes de escribir una sola línea de código, debes seguir este proceso:
 | `make verify` | CI completa: Ruff, MyPy, Bandit y Pytest. |
 | `make format` | Corrección automática de estilo y orden de imports. |
 | `make status` | Estado del proyecto, arquitectura y sincronización. |
-| `make sync-docs` | Actualiza el estado operativo en `PROJECT_OVERVIEW.md`. |
+| `make sync-docs` | Sincroniza documentación con el estado del proyecto. |
 
 ## 🧪 Estándares de Pruebas (Testing)
 

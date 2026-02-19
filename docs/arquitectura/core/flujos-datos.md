@@ -48,5 +48,37 @@ graph TD
     M --> N[Responder a Usuario]
 ```
 
+## 3. Flujo de Datos de Alto Nivel (Arquitectura General)
+
+```mermaid
+graph TD
+    A[Telegram] --> B(Webhook);
+    B --> C{Evento Canónico};
+    C --> D[MasterOrchestrator];
+    D --> E{Router Mejorado};
+    E --> F[Analizador de Rutas];
+    F --> G{LLM Multi-Proveedor};
+    E --> H[Agente Especialista];
+    H --> I[Ejecución de Grafo];
+    I --> J[Búfer de Mensajes Redis];
+    J --> K[Trabajador de Consolidación];
+    K --> L[Almacén SQLite / sqlite-vec];
+    L -- "RAG: Origen/Confianza/Evidencia" --> Specialists;
+    L -.-> M[Respaldo: GCS];
+    I --> N(Respuesta);
+    N --> A;
+
+    Z[PDFs en storage/knowledge] -.-> Y[KnowledgeWatcher];
+    Y -- "Async Polling (Auto-Sync)" --> L;
+
+    subgraph Memoria
+        J
+        K
+        L
+        O[Gestor de Perfil Pydantic]
+        Y
+    end
+```
+
 ---
 *Referencia: Evolución de Arquitectura v2.0*
