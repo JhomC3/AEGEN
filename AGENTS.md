@@ -25,6 +25,8 @@
 - Lockfiles: `requirements.lock` (prod), `requirements-dev.lock` (dev), `uv.lock`.
 - Build output: `build/`, `dist/`, `*.egg-info` — todos en `.gitignore`.
 
+> **Nota:** Este árbol es referencia orientativa. Verificar con `glob`/`ls` antes de asumir que un archivo existe o no existe.
+
 ```
 src/
 ├── main.py                    # FastAPI entry point (lifespan, middleware, routers)
@@ -164,6 +166,54 @@ Telegram → Webhook (src/api/routers/webhooks.py)
 4. Añadir prompt overlay en `src/personality/skills/<nombre>_overlay.md`.
 5. Documentar en `docs/arquitectura/agentes/`.
 6. Escribir tests en `tests/unit/` antes de la implementación.
+
+### Patrones con Ejemplos de Referencia
+
+Ejemplos del código real de AEGEN. Seguir estos patrones exactos; las alternativas marcadas como incorrectas han causado fallos en producción.
+
+**Inyección de dependencias** (`src/core/dependencies.py:130`, `src/memory/redis_buffer.py:17`):
+```python
+# Correcto: recibir como argumento
+def __init__(self, specialist_registry: SpecialistRegistry): ...
+def __init__(self, redis_client: aioredis.Redis) -> None: ...
+
+# Incorrecto: instanciar internamente — no testeable, múltiples instancias
+def __init__(self):
+    self._store = SQLiteStore()
+```
+
+**Degradación suave** (`src/core/dependencies.py:57-72`):
+```python
+# Correcto: fallback a alternativa funcional
+try:
+    redis = aioredis.from_url(settings.REDIS_URL)
+    await redis.ping()
+    event_bus = RedisEventBus(redis)
+except Exception:
+    event_bus = InMemoryEventBus()  # El sistema sigue funcionando
+```
+
+**Registro diferido de especialistas** (`src/agents/specialists/__init__.py:7`):
+```python
+# Correcto: registro desde lifespan, cada uno en try/except individual
+def register_all_specialists() -> None:
+    for module_name, display_name in specialist_modules:
+        try:
+            __import__(f"src.agents.specialists.{module_name}")
+        except Exception:
+            logger.exception("Error registrando '%s'", display_name)
+
+# Incorrecto: import eager en __init__.py — un fallo cascadea todo
+from .cbt_specialist import CBTSpecialist
+```
+
+**Nombres de parámetros en `@tool`** (`src/tools/telegram/tools.py:33`):
+```python
+# El nombre del parámetro ES el schema que el LLM ve.
+# Si el tool define `text`, los callers DEBEN usar `text=`, no `message=`.
+@tool
+async def reply_to_telegram_chat(chat_id: str, text: str) -> bool: ...
+```
 
 ## Guías de Testing
 
