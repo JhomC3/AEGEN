@@ -26,13 +26,14 @@ class LifeReflectionNode:
         self.prompt = ChatPromptTemplate.from_messages([
             (
                 "system",
-                "Eres el Analista de MAGI. Detecta planes.\n"
+                "Eres el Analista de MAGI. Detecta planes o hitos importantes.\n"
                 "REGLAS:\n"
-                "1. Agenda si hay planes.\n"
-                "2. Agenda tras malestar.\n"
+                "1. Agenda seguimiento si hay planes (ej: gimnasio, médico).\n"
+                "2. Agenda seguimiento tras malestar acordado.\n"
                 "3. NO para trivialidades.\n"
                 "4. Intent corto.\n"
-                "5. delay: 4-24h."
+                "5. delay: 4-24h.\n\n"
+                "DEBES responder llamando a la función ReflectionDecision."
             ),
             ("human", "H: {history}\n\nR: {response}"),
         ])
@@ -82,7 +83,8 @@ class LifeReflectionNode:
                 )
 
         except Exception as e:
-            logger.error(f"[{session_id}] Error en LifeReflectionNode: {e}")
+            # Fallback: No agendar nada si el LLM falla o no usa la herramienta
+            logger.warning(f"[{session_id}] Skip reflection follow-up: {e}")
 
         return state
 

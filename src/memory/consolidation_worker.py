@@ -40,8 +40,9 @@ class ConsolidationManager:
         from src.memory.knowledge_base import knowledge_base_manager
         from src.memory.long_term_memory import long_term_memory
 
-        data = await long_term_memory.get_summary(chat_id)
-        raw_buffer = data["buffer"]
+        buffer = await long_term_memory.get_buffer()
+        raw_buffer = await buffer.get_messages(chat_id)
+
         if not raw_buffer:
             return
 
