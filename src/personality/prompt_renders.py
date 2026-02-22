@@ -27,6 +27,8 @@ def render_dialect_rules(linguistic: LinguisticProfile) -> str:
     return base + (
         "- **Dialecto Base:** Neutralidad Cálida (Español Latinoamericano "
         "Estándar).\n"
+        "- **GUARDRAIL LINGÜÍSTICO:** Prohibido usar voseo ('vos') o modismos de "
+        "España ('tío', 'vale'). Usa tuteo neutro ('tú').\n"
         "- **ECO LÉXICO:** Adopta el vocabulario específico del usuario "
         "(sustantivos/verbos) para generar cercanía, pero mantén la gramática "
         "neutra.\n"
