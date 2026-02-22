@@ -25,10 +25,10 @@ class KeywordSearch:
     @staticmethod
     def _sanitize_fts5_query(query: str) -> str:
         """
-        Escapa caracteres especiales para FTS5 MATCH para evitar errores de sintaxis.
-        Enfocado en robustez para consultas de chat (incluyendo signos de interrogación, comas, etc.).
+        Escapa caracteres especiales para FTS5 MATCH.
+        Enfocado en robustez para consultas de chat.
         """
-        # 1. Eliminar caracteres que FTS5 interpreta como operadores lógicos o de proximidad
+        # 1. Eliminar caracteres que FTS5 interpreta como operadores
         # Mantenemos letras, números y espacios.
         sanitized = re.sub(r"[^\w\s]", " ", query, flags=re.UNICODE)
 
@@ -38,17 +38,14 @@ class KeywordSearch:
         if not sanitized:
             return ""
 
-        # 3. Envolver cada término en comillas para búsqueda literal y permitir prefijos si es necesario.
-        # Para chats, lo más robusto es buscar términos individuales con operador OR o AND implícito.
+        # 3. Envolver cada término en comillas para búsqueda literal.
         # SQLite FTS5 maneja bien "termino1" "termino2" como AND implícito.
         terms = [f'"{t}"' for t in sanitized.split() if len(t) >= 2]
 
-        # Si no hay términos válidos tras la limpieza, devolver cadena vacía
         if not terms:
             return ""
 
-        # Unimos con espacios (AND implícito en FTS5) o podríamos usar OR si preferimos más flexibilidad.
-        # Usaremos espacio para mayor relevancia.
+        # Unimos con espacios (AND implícito en FTS5).
         return " ".join(terms)
 
     async def search(

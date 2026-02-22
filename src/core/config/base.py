@@ -16,7 +16,7 @@ class BaseAppSettings(BaseSettings):
 
     APP_NAME: str = "AEGEN"
     APP_ENV: Environment = APP_ENV  # Carga la variable de entorno
-    APP_VERSION: str = "0.1.1"
+    APP_VERSION: str = "0.7.2"  # Verificación de sincronización
     LOG_LEVEL: str = "INFO"
 
     # Secretos
@@ -54,9 +54,10 @@ class BaseAppSettings(BaseSettings):
     TELEGRAM_BOT_TOKEN: SecretStr | None = None
     NGROK_AUTHTOKEN: SecretStr | None = None
 
-    # SQLite Configuration
+    # Configuración de SQLite
     SQLITE_DB_PATH: str = "storage/aegen_memory.db"
     SQLITE_SCHEMA_PATH: str = "src/memory/schema.sql"
+    SQLITE_BACKUP_DIR: str = "storage/backups"
 
     # Cloud Backup (GCS)
     GCS_BACKUP_BUCKET: str | None = None
@@ -93,7 +94,7 @@ class BaseAppSettings(BaseSettings):
     # --- Validación ---
     # Validar que claves esenciales existan en producción
     @model_validator(mode="after")
-    def validate_production_secrets(self):
+    def validate_production_secrets(self) -> "BaseAppSettings":
         env = self.APP_ENV
         if env == Environment.PRODUCTION:
             required_secrets = ["GOOGLE_API_KEY"]

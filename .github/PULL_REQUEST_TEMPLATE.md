@@ -15,8 +15,8 @@ Describe de forma concisa el "qué" y el "porqué" de este cambio.
 
 Asegúrate de que tu PR cumple con los siguientes puntos. Marca las casillas completadas.
 
--   [ ] **He leído y seguido la [Constitución del Proyecto](PROJECT_OVERVIEW.md).**
--   [ ] **Mi código sigue los estándares definidos en `rules.md`.**
+-   [ ] **He leído y seguido las directrices de [AGENTS.md](AGENTS.md).**
+-   [ ] **Mi código sigue los estándares definidos en `AGENTS.md`.**
 -   [ ] **He ejecutado `make verify` localmente y todos los checks pasan.**
 -   [ ] **He añadido tests que prueban mis cambios.**
 -   [ ] La documentación relevante ha sido actualizada (si aplica).

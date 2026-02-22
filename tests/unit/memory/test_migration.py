@@ -9,7 +9,7 @@ from src.memory.sqlite_store import SQLiteStore
 
 @pytest.fixture
 async def migration_db():
-    db_path = "test_migration.db"
+    db_path = "storage/test_migration.db"
     if os.path.exists(db_path):
         os.remove(db_path)
     store = SQLiteStore(db_path)

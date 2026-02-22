@@ -9,9 +9,11 @@ from src.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-def _create_openrouter_llm():
+def _create_openrouter_llm() -> Any:
     """Crea instancia de OpenRouter con reintentos."""
-    logger.info(f"Initializing OpenRouter with model: {settings.OPENROUTER_MODEL_NAME}")
+    logger.info(
+        "Initializing OpenRouter with model: %s", settings.OPENROUTER_MODEL_NAME
+    )
 
     return ChatOpenAI(
         model=settings.OPENROUTER_MODEL_NAME,
@@ -23,7 +25,7 @@ def _create_openrouter_llm():
     )
 
 
-def _create_groq_llm(model_name: str | None = None):
+def _create_groq_llm(model_name: str | None = None) -> Any:
     """Crea instancia de Groq con reintentos agresivos."""
     try:
         from langchain_groq import ChatGroq
@@ -45,7 +47,7 @@ def _create_groq_llm(model_name: str | None = None):
     )
 
 
-def _create_google_llm(model_name: str | None = None):
+def _create_google_llm(model_name: str | None = None) -> Any:
     """Crea instancia de Google Gemini."""
     from langchain_google_genai import ChatGoogleGenerativeAI
 
@@ -62,7 +64,7 @@ def _create_google_llm(model_name: str | None = None):
     )
 
 
-def _initialize_llm():
+def _initialize_llm() -> Any:
     """
     Inicializa el LLM con una estrategia robusta de reintentos y fallbacks multinivel.
     Jerarquía:
@@ -94,7 +96,8 @@ def _initialize_llm():
         ])
 
         logger.info(
-            "[LLM] Resilient chain created: Groq(Primary) -> Groq(Backup) -> Google -> OpenRouter"
+            "[LLM] Resilient chain created: Groq(Primary) -> "
+            "Groq(Backup) -> Google -> OpenRouter"
         )
         return resilient_llm
 

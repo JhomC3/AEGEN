@@ -6,17 +6,17 @@ from typing import Any
 
 from src.core.dependencies import get_sqlite_store
 from src.memory.ingestion_pipeline import IngestionPipeline
+from src.memory.json_sanitizer import safe_json_loads
 
 logger = logging.getLogger(__name__)
 
 
 class KnowledgeBaseManager:
     """
-    Gestiona la Bóveda de Conocimiento Estructurado (Redis + Google Cloud).
-    Contiene hechos precisos sobre el usuario (entidades, preferencias, datos médicos).
+    Gestiona la Bóveda de Conocimiento Estructurado.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         logger.info("KnowledgeBaseManager initialized")
 
     def _get_default_knowledge(self) -> dict[str, Any]:
@@ -36,9 +36,7 @@ class KnowledgeBaseManager:
         return f"knowledge:{chat_id}"
 
     async def load_knowledge(self, chat_id: str) -> dict[str, Any]:
-        """
-        Carga la bóveda desde Redis. Si no existe, intenta recuperación desde SQLite.
-        """
+        """Carga la bóveda desde Redis o SQLite."""
         from src.core.dependencies import redis_connection
 
         # 1. Intentar desde Redis
@@ -49,13 +47,16 @@ class KnowledgeBaseManager:
                 if raw_data:
                     if isinstance(raw_data, bytes):
                         raw_data = raw_data.decode("utf-8")
-                    return json.loads(raw_data)
+
+                    parsed = safe_json_loads(raw_data)
+                    if parsed:
+                        return parsed
             except Exception as e:
                 logger.error(
-                    f"Error cargando conocimiento de Redis para {chat_id}: {e}"
+                    "Error cargando conocimiento de Redis para %s: %s", chat_id, e
                 )
 
-        # 2. Intentar desde SQLite (Búsqueda por tipo para obtener el más reciente)
+        # 2. Intentar desde SQLite
         try:
             from src.memory.hybrid_search import HybridSearch
 
@@ -65,17 +66,17 @@ class KnowledgeBaseManager:
                 memory_type="fact", limit=1, chat_id=chat_id, namespace="user"
             )
             if results:
-                # El contenido es el JSON de la KB
-                kb_data = json.loads(results[0]["content"])
-                return kb_data
+                kb_data = safe_json_loads(results[0]["content"])
+                if kb_data:
+                    return kb_data
         except Exception as e:
             logger.error(
-                f"Error recuperando conocimiento de SQLite para {chat_id}: {e}"
+                "Error recuperando conocimiento de SQLite para %s: %s", chat_id, e
             )
 
         return self._get_default_knowledge()
 
-    async def save_knowledge(self, chat_id: str, knowledge: dict[str, Any]):
+    async def save_knowledge(self, chat_id: str, knowledge: dict[str, Any]) -> None:
         """Guarda la bóveda en Redis y SQLite (Local-First)."""
         from src.core.dependencies import redis_connection
 
@@ -88,13 +89,11 @@ class KnowledgeBaseManager:
             if redis_connection:
                 await redis_connection.set(key, payload)
 
-            # 2. Sincronización con SQLite (Nueva Memoria Local-First)
+            # 2. Sincronización con SQLite
             try:
                 store = get_sqlite_store()
                 pipeline = IngestionPipeline(store)
 
-                # Ingerir el conocimiento estructurado como un documento
-                # Esto permite que sea recuperable vía búsqueda híbrida
                 await pipeline.process_text(
                     chat_id=chat_id,
                     text=payload,
@@ -106,15 +105,15 @@ class KnowledgeBaseManager:
                         "sensitivity": "medium",
                     },
                 )
-                logger.debug(f"Knowledge Base synchronized with SQLite for {chat_id}")
+                logger.debug("Knowledge Base synchronized with SQLite for %s", chat_id)
             except Exception as se:
-                logger.warning(f"Error synchronizing Knowledge Base with SQLite: {se}")
+                logger.warning("Error synchronizing Knowledge Base with SQLite: %s", se)
 
         except Exception as e:
-            logger.error(f"Error guardando conocimiento para {chat_id}: {e}")
+            logger.error("Error guardando conocimiento para %s: %s", chat_id, e)
 
-    async def sync_to_cloud(self, chat_id: str, knowledge: dict[str, Any]):
-        """OBSOLETO: No realiza ninguna acción en arquitectura Local-First."""
+    async def sync_to_cloud(self, chat_id: str, knowledge: dict[str, Any]) -> None:
+        """OBSOLETO."""
         pass
 
 

@@ -23,7 +23,7 @@ class AccessController:
     TODO: Integrar con sistema de roles más robusto en futuras iteraciones.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.logger = logging.getLogger(__name__)
         self.logger.info("Simple AccessController initialized (MVP mode)")
 

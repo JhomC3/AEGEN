@@ -31,9 +31,11 @@ class SessionProcessor:
             (
                 "system",
                 (
-                    "Eres un experto en extracción de conocimiento. Analiza la siguiente conversación "
-                    "y extrae hechos importantes, preferencias del usuario y resúmenes de temas discutidos. "
-                    "Formatea la salida como una lista de puntos clave claros y concisos."
+                    "Eres un experto en extracción de conocimiento. Analiza "
+                    "la siguiente conversación y extrae hechos importantes, "
+                    "preferencias del usuario y resúmenes de temas discutidos. "
+                    "Formatea la salida como una lista de puntos clave claros "
+                    "y concisos."
                 ),
             ),
             ("user", "CONVERSACIÓN:\n{conversation}\n\nExtrae los puntos clave:"),
@@ -72,9 +74,11 @@ class SessionProcessor:
                 },
             )
 
-            logger.info(f"Consolidated session for {chat_id}. New chunks: {new_chunks}")
+            logger.info(
+                "Consolidated session for %s. New chunks: %d", chat_id, new_chunks
+            )
             return new_chunks
 
         except Exception as e:
-            logger.error(f"Error processing session for {chat_id}: {e}", exc_info=True)
+            logger.error("Error processing session for %s: %s", chat_id, e)
             return 0

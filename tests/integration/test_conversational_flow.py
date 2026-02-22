@@ -15,6 +15,10 @@ sys.path.insert(0, str(project_root))
 
 from src.agents.orchestrator import master_orchestrator  # noqa: E402
 from src.core import schemas  # noqa: E402
+from src.core.dependencies import (  # noqa: E402
+    initialize_global_resources,
+    shutdown_global_resources,
+)
 from src.core.session_manager import session_manager  # noqa: E402
 
 
@@ -23,6 +27,9 @@ async def test_conversational_flow():
     chat_id = "test_conv_flow_456"
 
     print("🎭 Testing Conversational Flow Phase 3B...")
+
+    # Inicializar recursos (SQLite, etc.)
+    await initialize_global_resources()
 
     try:
         # Test 1: Primer mensaje de texto (nueva conversación)
@@ -36,6 +43,9 @@ async def test_conversational_flow():
             user_id=chat_id,
             content="Hola, mi nombre es Juan y me gusta la tecnología",
             timestamp="2023-01-01T00:00:00",
+            file_id=None,
+            first_name="Juan",
+            language_code="es",
         )
 
         # Simular carga de sesión existente (debería ser None)
@@ -77,6 +87,9 @@ async def test_conversational_flow():
             user_id=chat_id,
             content="¿Recuerdas mi nombre?",
             timestamp="2023-01-01T00:01:00",
+            file_id=None,
+            first_name="Juan",
+            language_code="es",
         )
 
         # Cargar sesión existente
@@ -135,6 +148,7 @@ async def test_conversational_flow():
         # Limpiar sesión de prueba
         await session_manager.delete_session(str(chat_id))
         await session_manager.close()
+        await shutdown_global_resources()
 
 
 if __name__ == "__main__":

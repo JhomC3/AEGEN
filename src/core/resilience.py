@@ -37,22 +37,23 @@ def retry_on_failure(
                 except Exception as e:
                     if i == retries - 1:
                         logger.error(
-                            f"La función '{func.__name__}' falló después de {retries} intentos. Rindiéndose.",
+                            f"La función '{func.__name__}' falló después "
+                            f"de {retries} intentos. Rindiéndose.",
                             exc_info=True,
                         )
                         raise
-                    else:
-                        logger.warning(
-                            f"Intento {i + 1}/{retries} para '{func.__name__}' falló: {e}. "
-                            f"Reintentando en {current_delay:.2f} segundos...",
-                            exc_info=True,
-                        )
-                        await asyncio.sleep(current_delay)
-                        current_delay *= backoff
-            # Este punto no debería ser alcanzado teóricamente debido al `raise` en el bucle,
-            # pero se incluye para satisfacer al type checker y por robustez.
+                    logger.warning(
+                        f"Intento {i + 1}/{retries} para '{func.__name__}' "
+                        f"falló: {e}. Reintentando en {current_delay:.2f} "
+                        "segundos...",
+                        exc_info=True,
+                    )
+                    await asyncio.sleep(current_delay)
+                    current_delay *= backoff
+            # Robustez para el type checker
             raise RuntimeError(
-                f"La función '{func.__name__}' falló inesperadamente después de todos los reintentos."
+                f"La función '{func.__name__}' falló inesperadamente "
+                "después de todos los reintentos."
             )
 
         return wrapper

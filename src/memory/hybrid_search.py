@@ -1,4 +1,7 @@
+# src/memory/hybrid_search.py
+# ruff: noqa: S608
 import asyncio
+import json
 import logging
 from typing import Any
 
@@ -11,11 +14,9 @@ logger = logging.getLogger(__name__)
 
 
 class HybridSearch:
-    """
-    Gestor de búsqueda híbrida (Vector + Keyword).
-    """
+    """Búsqueda híbrida."""
 
-    def __init__(self, store: SQLiteStore):
+    def __init__(self, store: SQLiteStore) -> None:
         self.store = store
         self.vector_search = VectorSearch(store)
         self.keyword_search = KeywordSearch(store)
@@ -28,88 +29,20 @@ class HybridSearch:
         chat_id: str | None = None,
         namespace: str = "user",
         rrf_k: int = 60,
-        vector_weight: float = 0.7,
-        keyword_weight: float = 0.3,
+        vw: float = 0.7,
+        kw: float = 0.3,
     ) -> list[dict[str, Any]]:
-        """
-        Realiza una búsqueda híbrida y combina resultados con RRF.
-        """
-        # 1. Obtener embedding para la búsqueda vectorial
-        query_embedding = await self.embedding_service.embed_query(query)
-
-        # 2. Ejecutar búsquedas en paralelo para reducir latencia
-        vector_results, keyword_results = await asyncio.gather(
-            self.vector_search.search(
-                query_embedding, limit=limit * 2, chat_id=chat_id, namespace=namespace
-            ),
-            self.keyword_search.search(
-                query, limit=limit * 2, chat_id=chat_id, namespace=namespace
-            ),
+        """Búsqueda principal."""
+        emb = await self.embedding_service.embed_query(query)
+        v_res, k_res = await asyncio.gather(
+            self.vector_search.search(emb, limit * 2, chat_id, namespace),
+            self.keyword_search.search(query, limit * 2, chat_id, namespace),
         )
-
-        # 3. Combinar resultados con RRF
-        # rrf_scores[memory_id] = score
-        rrf_scores: dict[int, float] = {}
-
-        # Procesar resultados vectoriales
-        for rank, (memory_id, _) in enumerate(vector_results, 1):
-            rrf_scores[memory_id] = rrf_scores.get(memory_id, 0.0) + (
-                vector_weight * (1.0 / (rrf_k + rank))
-            )
-
-        # Procesar resultados de palabras clave
-        for rank, (memory_id, _) in enumerate(keyword_results, 1):
-            rrf_scores[memory_id] = rrf_scores.get(memory_id, 0.0) + (
-                keyword_weight * (1.0 / (rrf_k + rank))
-            )
-
-        # 4. Ordenar por score y limitar
-        sorted_ids = sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True)[
-            :limit
-        ]
-
+        rrf = self._merge_rrf(v_res, k_res, rrf_k, vw, kw)
+        sorted_ids = sorted(rrf.items(), key=lambda x: x[1], reverse=True)[:limit]
         if not sorted_ids:
             return []
-
-        # 5. Hidratar resultados con el contenido de la DB
-        result_ids = [item[0] for item in sorted_ids]
-        db = await self.store.get_db()
-
-        # SQL para hidratar
-        placeholders = ",".join(["?"] * len(result_ids))
-        query_sql = f"""
-            SELECT id, chat_id, content, memory_type, metadata, created_at
-            FROM memories
-            WHERE id IN ({placeholders}) AND is_active = 1
-        """  # nosec B608
-
-        hydrated_results = []
-        try:
-            async with db.execute(query_sql, result_ids) as cursor:
-                rows = await cursor.fetchall()
-                # Crear mapeo para mantener el orden de RRF
-                rows_map = {row["id"]: row for row in rows}
-
-                import json
-
-                for memory_id, score in sorted_ids:
-                    if memory_id in rows_map:
-                        row = rows_map[memory_id]
-                        hydrated_results.append({
-                            "id": row["id"],
-                            "content": row["content"],
-                            "memory_type": row["memory_type"],
-                            "metadata": json.loads(row["metadata"])
-                            if isinstance(row["metadata"], str)
-                            else row["metadata"],
-                            "score": score,
-                            "chat_id": row["chat_id"],
-                            "created_at": row["created_at"],
-                        })
-        except Exception as e:
-            logger.error(f"Error hydrating hybrid search results: {e}")
-
-        return hydrated_results
+        return await self._hydrate([it[0] for it in sorted_ids], sorted_ids)
 
     async def search_by_type(
         self,
@@ -118,41 +51,68 @@ class HybridSearch:
         chat_id: str | None = None,
         namespace: str = "user",
     ) -> list[dict[str, Any]]:
-        """
-        Recupera memorias filtrando solo por tipo (sin búsqueda semántica).
-        """
+        """Búsqueda por tipo."""
         db = await self.store.get_db()
-        query = "SELECT * FROM memories WHERE memory_type = ? AND is_active = 1"
+        sql = (
+            "SELECT id, content, memory_type, metadata, chat_id "
+            "FROM memories WHERE memory_type = ? AND is_active = 1"
+        )
         params: list[Any] = [memory_type]
-
         if chat_id:
-            query += " AND chat_id = ?"
+            sql += " AND chat_id = ?"
             params.append(chat_id)
         if namespace:
-            query += " AND namespace = ?"
+            sql += " AND namespace = ?"
             params.append(namespace)
 
-        query += " ORDER BY created_at DESC LIMIT ?"
+        sql += " ORDER BY created_at DESC LIMIT ?"
         params.append(limit)
 
-        results = []
-        try:
-            async with db.execute(query, params) as cursor:
-                rows = await cursor.fetchall()
-                import json
+        async with db.execute(sql, params) as cursor:
+            return [
+                {
+                    "id": r[0],
+                    "content": r[1],
+                    "memory_type": r[2],
+                    "metadata": json.loads(r[3]),
+                    "chat_id": r[4],
+                }
+                for r in await cursor.fetchall()
+            ]
 
-                for row in rows:
-                    results.append({
-                        "id": row["id"],
-                        "content": row["content"],
-                        "memory_type": row["memory_type"],
-                        "metadata": json.loads(row["metadata"])
-                        if isinstance(row["metadata"], str)
-                        else row["metadata"],
-                        "chat_id": row["chat_id"],
-                        "created_at": row["created_at"],
+    def _merge_rrf(
+        self, v: list, k: list, k_val: int, vw: float, kw: float
+    ) -> dict[int, float]:
+        """Algoritmo RRF."""
+        scores: dict[int, float] = {}
+        for r, (mid, _) in enumerate(v, 1):
+            scores[mid] = scores.get(mid, 0.0) + (vw * (1.0 / (k_val + r)))
+        for r, (mid, _) in enumerate(k, 1):
+            scores[mid] = scores.get(mid, 0.0) + (kw * (1.0 / (k_val + r)))
+        return scores
+
+    async def _hydrate(
+        self, ids: list[int], sorted_ids: list[tuple[int, float]]
+    ) -> list[dict[str, Any]]:
+        """Carga de SQLite."""
+        db = await self.store.get_db()
+        m = ",".join(["?"] * len(ids))
+        sql = (
+            "SELECT id, chat_id, content, memory_type, metadata "
+            f"FROM memories WHERE id IN ({m}) AND is_active = 1"
+        )  # noqa: S608
+        res = []
+        async with db.execute(sql, ids) as cursor:
+            rows = {r["id"]: r for r in await cursor.fetchall()}
+            for mid, score in sorted_ids:
+                if mid in rows:
+                    r = rows[mid]
+                    res.append({
+                        "id": r["id"],
+                        "content": r["content"],
+                        "memory_type": r["memory_type"],
+                        "metadata": json.loads(r["metadata"]),
+                        "score": score,
+                        "chat_id": r["chat_id"],
                     })
-        except Exception as e:
-            logger.error(f"Error in search_by_type: {e}")
-
-        return results
+        return res

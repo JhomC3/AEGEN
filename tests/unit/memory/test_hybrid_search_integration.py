@@ -12,7 +12,7 @@ from src.memory.sqlite_store import SQLiteStore
 @pytest.fixture
 async def search_db():
     """Fixture para crear una DB temporal y limpiarla después."""
-    db_path = "test_search_filter.db"
+    db_path = "storage/test_search_filter.db"
 
     if os.path.exists(db_path):
         os.remove(db_path)
@@ -66,23 +66,25 @@ async def test_hybrid_search_excludes_inactive_memories(search_db):
     await search_db.soft_delete_memories([mid2])
 
     # Mock search components to return both IDs
-    with patch.object(
-        hybrid.vector_search,
-        "search",
-        AsyncMock(return_value=[(mid1, 0.1), (mid2, 0.2)]),
-    ):
-        with patch.object(
+    with (
+        patch.object(
+            hybrid.vector_search,
+            "search",
+            AsyncMock(return_value=[(mid1, 0.1), (mid2, 0.2)]),
+        ),
+        patch.object(
             hybrid.keyword_search,
             "search",
             AsyncMock(return_value=[(mid1, 1.0), (mid2, 0.5)]),
-        ):
-            with patch.object(
-                hybrid.embedding_service,
-                "embed_query",
-                AsyncMock(return_value=[0.1] * 768),
-            ):
-                results = await hybrid.search("test", chat_id="chat1")
+        ),
+        patch.object(
+            hybrid.embedding_service,
+            "embed_query",
+            AsyncMock(return_value=[0.1] * 768),
+        ),
+    ):
+        results = await hybrid.search("test", chat_id="chat1")
 
-                result_ids = {r["id"] for r in results}
-                assert mid1 in result_ids
-                assert mid2 not in result_ids
+        result_ids = {r["id"] for r in results}
+        assert mid1 in result_ids
+        assert mid2 not in result_ids

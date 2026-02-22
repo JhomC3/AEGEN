@@ -1,11 +1,16 @@
 import logging
 from datetime import datetime
 from typing import Any
-
 from zoneinfo import ZoneInfo
 
 from src.core.profiling_manager import profiling_manager
 from src.personality.manager import personality_manager
+from src.personality.prompt_renders import (
+    render_dialect_rules,
+    render_style_adaptation,
+)
+from src.personality.style_analyzer import style_analyzer
+from src.personality.types import LinguisticProfile
 
 logger = logging.getLogger(__name__)
 
@@ -21,33 +26,30 @@ class SystemPromptBuilder:
         profile: dict[str, Any],
         skill_name: str = "chat",
         runtime_context: dict[str, Any] | None = None,
+        recent_user_messages: list[str] | None = None,
     ) -> str:
         """
-        Compone el prompt final.
+        Compone el prompt final ensamblando las 5 capas del Soul Stack.
         """
         base = await personality_manager.get_base()
         overlay = await personality_manager.get_skill_overlay(skill_name)
 
-        # 1. Capa de Identidad y Alma
+        # 1. Capas 1 y 2: Identidad y Alma (Inmutables)
         identity_section = self._build_identity_section(base.identity)
         soul_section = self._build_soul_section(base.soul)
 
-        # 2. Capa de Adaptación al Usuario
-        adaptation = profile.get("personality_adaptation", {})
-        localization = profile.get("localization", {})
-        user_section = await self._build_user_adaptation_section(
-            profile, adaptation, localization
-        )
+        # 2. Capa 3: ESPEJO (The Mirror) - Adaptación al Usuario
+        user_section = await self._build_mirror_section(profile, recent_user_messages)
 
-        # 3. Capa de Skill Overlay
+        # 3. Capa 4: Skill Overlay (Dinámica por modo)
         skill_section = self._build_skill_section(overlay) if overlay else ""
 
-        # 4. Capa de Contexto Runtime
+        # 4. Capa 5: Contexto Runtime (Temporal, Episódico, RAG)
         runtime_section = self._build_runtime_section(
-            runtime_context or {}, localization
+            runtime_context or {}, profile.get("localization", {})
         )
 
-        # Composición Final
+        # Composición Final (Ensamblaje Raw)
         prompt = f"""
 {identity_section}
 
@@ -58,14 +60,8 @@ class SystemPromptBuilder:
 {skill_section}
 
 {runtime_section}
-
----
-REGLA DE ORO: Mantén tu esencia MAGI (casual, directa, con opinión) incluso cuando apliques las instrucciones del skill activo.
 """
         # ESCAPADO DE SEGURIDAD PARA LANGCHAIN
-        # LangChain interpreta las llaves {} como variables de plantilla.
-        # Como este builder ya inyectó todas las variables, el texto resultante debe ser tratado como literal.
-        # Escapamos todas las llaves para evitar que LangChain intente parsear JSONs o sets como variables faltantes.
         return prompt.strip().replace("{", "{{").replace("}", "}}")
 
     def _build_identity_section(self, identity: dict[str, str]) -> str:
@@ -75,64 +71,52 @@ REGLA DE ORO: Mantén tu esencia MAGI (casual, directa, con opinión) incluso cu
     def _build_soul_section(self, soul: str) -> str:
         return f"# TU ALMA Y FILOSOFÍA\n{soul}"
 
-    async def _build_user_adaptation_section(
+    async def _build_mirror_section(
         self,
         profile: dict[str, Any],
-        adaptation: dict[str, Any],
-        localization: dict[str, Any] | None = None,
+        recent_user_messages: list[str] | None = None,
     ) -> str:
-        user_name = profile.get("identity", {}).get("name")
-        if not user_name:
-            user_name = "Usuario"
+        """Capa 3: El Espejo."""
+        adaptation = profile.get("personality_adaptation", {})
+        localization = profile.get("localization", {})
+        user_name = profile.get("identity", {}).get("name", "Usuario")
 
-        style = adaptation.get("preferred_style", "casual")
+        # 1. Construir perfil lingüístico desde datos confirmados
+        linguistic = LinguisticProfile(
+            dialect=localization.get("dialect", "neutro"),
+            dialect_hint=localization.get("dialect_hint"),
+            preferred_dialect=adaptation.get("preferred_dialect"),
+            dialect_confirmed=localization.get("confirmed_by_user", False),
+            formality_level=adaptation.get("formality_level", 0.3),
+            humor_tolerance=adaptation.get("humor_tolerance", 0.7),
+            preferred_style=adaptation.get("preferred_style", "casual"),
+        )
 
-        section = f"""# ADAPTACIÓN AL USUARIO: {user_name}
-- **Estilo Preferido:** {style}
-- **Nivel de Comunicación:** {adaptation.get("communication_level", "intermediate")}
-- **Tolerancia al Humor:** {adaptation.get("humor_tolerance", 0.7)}
-- **Nivel de Formalidad:** {adaptation.get("formality_level", 0.3)}
-"""
-        if localization:
-            dialect = localization.get("dialect", "neutro")
-            tz = localization.get("timezone", "UTC")
-            section += f"- **Localización:** {dialect} (Zona Horaria: {tz})\n"
+        # 2. Analizar estilo conversacional si hay mensajes recientes
+        style = (
+            style_analyzer.analyze(recent_user_messages)
+            if recent_user_messages
+            else None
+        )
 
-            if localization.get("dialect_hint"):
-                section += f"- **Matiz Regional:** {localization['dialect_hint']}\n"
+        # 3. Generar sección del prompt
+        section = f"# ESPEJO: CÓMO ME ADAPTO A TI ({user_name})\n"
 
-            # Reglas de jerga dinámicas y mimetismo
-            section += "\n## REGLAS LINGÜÍSTICAS Y MIMETISMO\n"
+        # Dialecto e Idioma (Uso de sub-renders extraídos)
+        section += render_dialect_rules(linguistic)
 
-            # 1. Baseline por dialecto (Si el idioma es español)
-            # MAGI se adapta al idioma del usuario, pero si detecta español, aplica estos matices:
-            section += "- **Idioma y Adaptabilidad:** Responde SIEMPRE en el mismo idioma en el que te escribe el usuario (inglés, español, etc.).\n"
+        # Adaptación de Estilo
+        section += render_style_adaptation(style)
 
-            if dialect == "argentino":
-                section += "- **Matiz Español:** Usa español rioplatense (voseo: vos, che, tenés). Tono cercano y directo.\n"
-            elif dialect == "español":
-                section += "- **Matiz Español:** Usa español de España (tuteo, vosotros, modismos ibéricos).\n"
-            elif dialect == "mexicano":
-                section += "- **Matiz Español:** Usa español mexicano (tuteo, tono cálido y respetuoso).\n"
-            elif dialect == "colombiano":
-                section += "- **Matiz Español:** Usa español de Colombia (tuteo estándar, tono muy cálido y amable).\n"
-            else:
-                section += "- **Matiz Español:** Usa español neutro internacional si el usuario habla español.\n"
+        # Profiling hint (Contexto de largo plazo)
+        hint = await profiling_manager.get_profiling_hint(profile)
+        if hint:
+            section += f"- **Profiling:** {hint}\n"
 
-            # 2. Instrucción de Espejo (Mirroring)
-            section += """- **Mirroring (~30%):** Observa el vocabulario del usuario.
-  * Si el usuario usa jerga local (ej: 'parce', 'pibe', 'güey'), siéntete libre de mimetizarla suavemente para crear afinidad.
-  * Si el usuario es formal, mantén tu profesionalismo.
-  * NUNCA copies exactamente; mantén tu esencia MAGI (casual, directa, con opinión).\n"""
-
-            # 3. Profiling Hint (Dinámico)
-            hint = await profiling_manager.get_profiling_hint(profile)
-            if hint:
-                section += f"- **Profiling:** {hint}\n"
-
-        if adaptation.get("learned_preferences"):
-            prefs = "\n".join([f"  - {p}" for p in adaptation["learned_preferences"]])
-            section += f"- **Preferencias Aprendidas:**\n{prefs}"
+        # Preferencias aprendidas explícitamente
+        if learned := adaptation.get("learned_preferences"):
+            prefs = "\n".join([f"  - {p}" for p in learned])
+            section += f"- **Preferencias Aprendidas:**\n{prefs}\n"
 
         return section
 
@@ -155,7 +139,10 @@ REGLA DE ORO: Mantén tu esencia MAGI (casual, directa, con opinión) incluso cu
         try:
             user_time = datetime.now(ZoneInfo(user_tz))
             time_str = user_time.strftime("%A, %d de %B de %Y, %H:%M")
-            section = f"# CONTEXTO RUNTIME\n- **Hora Local del Usuario:** {time_str} ({user_tz})\n"
+            section = (
+                f"# CONTEXTO RUNTIME\n- **Hora Local del Usuario:** "
+                f"{time_str} ({user_tz})\n"
+            )
         except Exception:
             # Fallback a UTC si falla zoneinfo
             now_utc = datetime.now().strftime("%A, %d de %B de %Y, %H:%M")
@@ -165,18 +152,14 @@ REGLA DE ORO: Mantén tu esencia MAGI (casual, directa, con opinión) incluso cu
             section += f"- **Canal:** {context['channel']}\n"
 
         # Integrar Memoria de Largo Plazo si viene en el contexto
-        if context.get("history_summary"):
-            section += (
-                f"\n## Memoria de Largo Plazo (Resumen)\n{context['history_summary']}\n"
-            )
+        if summary := context.get("history_summary"):
+            section += f"\n## Memoria de Largo Plazo (Resumen)\n{summary}\n"
 
-        if context.get("knowledge_context"):
-            section += (
-                f"\n## Conocimiento Relevante (RAG)\n{context['knowledge_context']}\n"
-            )
+        if rag := context.get("knowledge_context"):
+            section += f"\n## Conocimiento Relevante (RAG)\n{rag}\n"
 
-        if context.get("structured_knowledge"):
-            section += f"\n## Bóveda de Conocimiento (Hechos Confirmados)\n{context['structured_knowledge']}\n"
+        if kb := context.get("structured_knowledge"):
+            section += f"\n## Bóveda de Conocimiento\n{kb}\n"
 
         return section
 

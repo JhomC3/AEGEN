@@ -1,0 +1,44 @@
+# AEGEN - Plan v0.7.2: Containerización del Polling de Telegram
+
+**Objetivo:** Eliminar el desacoplamiento entre el ciclo de vida de la aplicación y la recepción de mensajes de Telegram mediante la integración del servicio de polling en el ecosistema Docker.
+
+## 1. Diagnóstico del Problema
+Actualmente, el servicio de polling (`src/tools/polling.py`) corre como un proceso independiente en el Host (GCE) gestionado por `systemd`. Esto provoca:
+- **Desacoplamiento Silencioso:** Si Docker se reinicia o el contenedor de la App cambia de IP interna, el polling falla silenciosamente o intenta reenviar mensajes a un destino inexistente.
+- **Dificultad de Mantenimiento:** Requiere gestionar Python y dependencias en el Host, además del entorno Docker.
+- **Inconsistencia de Red:** El polling intenta conectar a `127.0.0.1:8000`, lo cual requiere que el puerto esté expuesto al Host, complicando la seguridad.
+
+## 2. Solución Arquitectónica
+Mover el servicio de polling dentro de `docker-compose.yml` como un contenedor independiente que utiliza la misma imagen base que la aplicación principal.
+
+### Beneficios:
+- **Resiliencia:** `restart: unless-stopped` garantiza que el polling siempre esté arriba.
+- **Orquestación:** `depends_on` asegura que el polling no inicie hasta que la API esté saludable.
+- **Aislamiento:** La comunicación entre Polling y App ocurre a través de la red interna de Docker (`magi_network`).
+
+## 3. Plan de Ejecución
+
+### Fase 1: Modificación de Infraestructura
+1. **`docker-compose.yml`**: Agregar el servicio `polling`.
+   - Utilizar la imagen construida por el servicio `app`.
+   - Configurar `LOCAL_API_URL` apuntando al nombre del servicio `app`.
+   - Definir `healthcheck` basado en la existencia del proceso PID 1.
+2. **`makefile`**: Actualizar los comandos de construcción para incluir todos los servicios.
+
+### Fase 2: Actualización de Documentación
+1. **`docs/guias/manual-despliegue.md`**: Eliminar la sección de configuración de `systemd` y reemplazarla por instrucciones simplificadas de Docker.
+
+### Fase 3: Verificación y Despliegue
+1. Validar que el comando `python -m src.tools.polling` funciona correctamente dentro del contenedor (manejo de imports).
+2. Verificar que el polling detecta correctamente las variables de entorno desde el archivo `.env` montado.
+
+## 4. Pasos Post-Implementación (Manual en VM)
+1. Detener y deshabilitar el servicio systemd legacy:
+   ```bash
+   sudo systemctl stop aegen-polling
+   sudo systemctl disable aegen-polling
+   ```
+2. Ejecutar `docker-compose up -d --build` para activar la nueva arquitectura.
+
+---
+*Nota: Este plan complementa al v0.7.0 enfocado en el saneamiento de raíz.*

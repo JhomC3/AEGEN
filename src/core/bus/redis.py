@@ -20,7 +20,7 @@ class RedisEventBus(IEventBus):
     adecuada para un entorno de producción distribuido.
     """
 
-    def __init__(self, redis_client: aioredis.Redis):
+    def __init__(self, redis_client: aioredis.Redis) -> None:
         self._redis = redis_client
         self._subscribers: dict[str, list[Callable[[dict], Awaitable[None]]]] = {}
         self._tasks: list[asyncio.Task] = []
@@ -55,26 +55,37 @@ class RedisEventBus(IEventBus):
         # Para simplificar, creamos una tarea por handler suscrito
         task = asyncio.create_task(self._consumer(topic, handler))
         self._tasks.append(task)
-        logger.info(f"Handler {handler.__name__} subscribed to Redis stream '{topic}'.")
+        logger.info(
+            "Handler %s subscribed to Redis stream '%s'.",
+            handler.__name__,
+            topic,
+        )
 
-    async def _ensure_consumer_group(self, topic: str, group_name: str):
+    async def _ensure_consumer_group(self, topic: str, group_name: str) -> None:
         """Asegura que el grupo de consumidores exista en el stream."""
         if (topic, group_name) in self._consumer_group_created:
             return
         try:
             await self._redis.xgroup_create(topic, group_name, id="0", mkstream=True)
-            logger.info(f"Consumer group '{group_name}' created for stream '{topic}'.")
+            logger.info(
+                "Consumer group '%s' created for stream '%s'.",
+                group_name,
+                topic,
+            )
         except RedisError as e:
-            # 'BUSYGROUP Consumer Group name already exists' es esperado si ya existe.
+            # 'BUSYGROUP' es esperado si ya existe.
             if "BUSYGROUP" not in str(e):
                 logger.exception(
-                    f"Failed to create consumer group '{group_name}' for stream '{topic}'."
+                    "Failed to create consumer group '%s' for stream '%s'.",
+                    group_name,
+                    topic,
                 )
                 raise
-            else:
-                logger.debug(
-                    f"Consumer group '{group_name}' already exists for stream '{topic}'."
-                )
+            logger.debug(
+                "Consumer group '%s' already exists for stream '%s'.",
+                group_name,
+                topic,
+            )
         self._consumer_group_created.add((topic, group_name))
 
     async def _consumer(
@@ -91,7 +102,8 @@ class RedisEventBus(IEventBus):
         while True:
             try:
                 # Leer nuevos mensajes del stream para este grupo
-                # '>' significa leer mensajes nuevos que no han sido consumidos por nadie en el grupo
+                # '>' significa leer mensajes nuevos que no han sido
+                # consumidos por nadie en el grupo
                 messages = await self._redis.xreadgroup(
                     group_name, consumer_name, {topic: ">"}, count=1, block=1000
                 )
@@ -102,14 +114,17 @@ class RedisEventBus(IEventBus):
                 for _, stream_messages in messages:
                     for message_id, message_data in stream_messages:
                         try:
-                            # El payload está en bytes, decodificar y deserializar
+                            # El payload está en bytes
                             payload_str = message_data[b"payload"].decode("utf-8")
                             event = json.loads(payload_str)
                             logger.debug(
-                                f"Handler {handler.__name__} consumed event {message_id.decode()} from '{topic}'."
+                                "Handler %s consumed event %s from '%s'.",
+                                handler.__name__,
+                                message_id.decode(),
+                                topic,
                             )
                             await handler(event)
-                            # Confirmar que el mensaje ha sido procesado
+                            # Confirmar procesado
                             await self._redis.xack(topic, group_name, message_id)
                         except (
                             json.JSONDecodeError,
@@ -117,27 +132,37 @@ class RedisEventBus(IEventBus):
                             UnicodeDecodeError,
                         ) as e:
                             logger.error(
-                                f"Error processing message {message_id.decode()} from stream '{topic}': {e}"
+                                "Error processing message %s from stream '%s': %s",
+                                message_id.decode(),
+                                topic,
+                                e,
                             )
                             # Podríamos mover el mensaje a una DLQ aquí
                         except Exception:
                             logger.exception(
-                                f"Unhandled error in handler {handler.__name__} for message {message_id.decode()}."
+                                "Unhandled error in handler %s for message %s.",
+                                handler.__name__,
+                                message_id.decode(),
                             )
 
             except asyncio.CancelledError:
                 logger.info(
-                    f"Consumer task for handler {handler.__name__} on topic '{topic}' cancelled."
+                    "Consumer task for handler %s on topic '%s' cancelled.",
+                    handler.__name__,
+                    topic,
                 )
                 break
             except RedisError as e:
                 logger.error(
-                    f"Redis error in consumer for topic '{topic}': {e}. Retrying in 5s..."
+                    "Redis error in consumer for topic '%s': %s. Retrying in 5s...",
+                    topic,
+                    e,
                 )
                 await asyncio.sleep(5)
             except Exception:
                 logger.exception(
-                    f"Unexpected error in consumer for topic '{topic}'. Retrying in 5s..."
+                    "Unexpected error in consumer for topic '%s'. Retrying in 5s...",
+                    topic,
                 )
                 await asyncio.sleep(5)
 

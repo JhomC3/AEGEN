@@ -7,7 +7,7 @@ Extraído del MasterOrchestrator para cumplir SRP y hacer configurable las regla
 """
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from src.agents.orchestrator.strategies import RoutingStrategy
 from src.core.schemas import GraphStateV2
@@ -26,7 +26,7 @@ class ConfigurableChainRouter(RoutingStrategy):
     - Decisión de finalización de chains
     """
 
-    def __init__(self, chaining_config: dict[str, Any]):
+    def __init__(self, chaining_config: dict[str, Any]) -> None:
         """
         Initialize router con configuración de chaining.
 
@@ -105,12 +105,6 @@ class ConfigurableChainRouter(RoutingStrategy):
     def _apply_chaining_rules(self, state: GraphStateV2) -> str:
         """
         Aplica las reglas de chaining configuradas.
-
-        Args:
-            state: Estado del grafo
-
-        Returns:
-            str: Siguiente nodo según las reglas
         """
         # Verificar errores primero
         if state.get("error_message"):
@@ -139,14 +133,12 @@ class ConfigurableChainRouter(RoutingStrategy):
             # Verificar condiciones de la regla
             if self._rule_conditions_met(rule, payload, specialists_history):
                 logger.info(f"Chain: {last_specialist} → {next_specialist}")
-                return next_specialist
-            else:
-                logger.warning(
-                    f"Chain: Condiciones no cumplidas para {last_specialist}"
-                )
+                return cast(str, next_specialist)
+            logger.warning(f"Chain: Condiciones no cumplidas para {last_specialist}")
         else:
             logger.debug(
-                f"Chain: Sin regla para especialista '{last_specialist}'. Reglas disponibles: {list(self._chain_rules.keys())}"
+                f"Chain: Sin regla para especialista '{last_specialist}'. "
+                f"Reglas disponibles: {list(self._chain_rules.keys())}"
             )
 
         # Reglas especiales para acciones
@@ -158,10 +150,13 @@ class ConfigurableChainRouter(RoutingStrategy):
         logger.info(
             f"Chain: Sin regla específica, usando fallback: {self._fallback_action}"
         )
-        return self._fallback_action
+        return cast(str, self._fallback_action)
 
     def _rule_conditions_met(
-        self, rule: dict[str, Any], payload: dict[str, Any], specialists_history: list
+        self,
+        rule: dict[str, Any],
+        payload: dict[str, Any],
+        specialists_history: list[str],
     ) -> bool:
         """
         Verifica si las condiciones de una regla se cumplen.
@@ -178,12 +173,16 @@ class ConfigurableChainRouter(RoutingStrategy):
         next_specialist = rule.get("next_specialist")
         if next_specialist in specialists_history:
             logger.warning(
-                f"Chain condition FAIL: Especialista {next_specialist} ya ejecutado en history {specialists_history}"
+                "Chain condition FAIL: Especialista %s ya ejecutado en %s",
+                next_specialist,
+                specialists_history,
             )
             return False
 
         logger.info(
-            f"Chain condition OK: Especialista {next_specialist} no está en history {specialists_history}"
+            "Chain condition OK: Especialista %s no está en %s",
+            next_specialist,
+            specialists_history,
         )
 
         # Verificar condiciones adicionales si existen

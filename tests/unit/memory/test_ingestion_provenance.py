@@ -11,7 +11,7 @@ from src.memory.sqlite_store import SQLiteStore
 
 @pytest.fixture
 async def pipeline_db():
-    db_path = "test_ingestion_prov.db"
+    db_path = "storage/test_ingestion_prov.db"
     if os.path.exists(db_path):
         os.remove(db_path)
     store = SQLiteStore(db_path)

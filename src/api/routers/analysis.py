@@ -20,12 +20,15 @@ event_bus_dependency = Depends(get_event_bus)
     response_model=IngestionResponse,
     status_code=status.HTTP_202_ACCEPTED,
     summary="Ingests a query for asynchronous processing",
-    description="Receives a query, publishes it to the event bus for processing, and returns immediately.",
+    description=(
+        "Receives a query, publishes it to the event bus for processing, "
+        "and returns immediately."
+    ),
 )
 async def ingest_request(
     request: AnalyzeQuery,
     event_bus: IEventBus = event_bus_dependency,
-):
+) -> IngestionResponse:
     """
     Endpoint de ingestión no bloqueante.
 

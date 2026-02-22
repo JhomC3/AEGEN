@@ -1,224 +1,95 @@
-# src/memory/long_term_memory.py
-import json
 import logging
 from typing import Any
 
-from langchain_core.prompts import ChatPromptTemplate
-
-from src.core.dependencies import get_sqlite_store
 from src.core.engine import llm
-from src.memory.ingestion_pipeline import IngestionPipeline
 from src.memory.redis_buffer import RedisMessageBuffer
+from src.memory.services.memory_summarizer import MemorySummarizer
 
 logger = logging.getLogger(__name__)
 
 
 class LongTermMemoryManager:
-    """
-    Gestiona la memoria episódica de largo plazo (Diskless).
-    Usa Redis para el buffer caliente y la Google File API para persistencia de largo plazo.
-    """
+    """Gestiona la memoria episódica de largo plazo."""
 
-    def __init__(self):
-        # Reutilizamos el LLM global configurado en el sistema
+    def __init__(self) -> None:
         self.llm = llm
-        self._buffer_instance = None
-
-        logger.info("LongTermMemoryManager initialized (Diskless Architecture)")
-
-        self.summary_prompt = ChatPromptTemplate.from_messages([
-            (
-                "system",
-                "Eres un experto en síntesis de memoria. Tu tarea es actualizar el 'Perfil Histórico' de un usuario basado en nuevos mensajes. "
-                "Mantén detalles críticos como nombres, preferencias, hechos importantes y el estado de proyectos actuales. "
-                "Sé conciso pero preciso. No borres información antigua a menos que haya sido corregida por el usuario.",
-            ),
-            (
-                "user",
-                "PERFIL ACTUAL:\n{current_summary}\n\nNUEVOS MENSAJES:\n{new_messages}\n\nActualiza el perfil integrando los nuevos mensajes:",
-            ),
-        ])
+        self._buffer_instance: RedisMessageBuffer | None = None
+        self._summarizer = MemorySummarizer(llm)
+        logger.info("LongTermMemoryManager initialized")
 
     async def get_buffer(self) -> RedisMessageBuffer:
-        """Obtiene la instancia del buffer de Redis (Lazy Initialization)."""
+        """Obtiene la instancia del buffer."""
         if self._buffer_instance is None:
             from src.core.dependencies import redis_connection
 
             if redis_connection is None:
-                raise RuntimeError(
-                    "Redis connection not available for LongTermMemoryManager"
-                )
+                raise RuntimeError("Redis not available")
             self._buffer_instance = RedisMessageBuffer(redis_connection)
         return self._buffer_instance
 
     async def get_summary(self, chat_id: str) -> dict[str, Any]:
-        """Recupera el resumen histórico de Redis y el buffer caliente."""
-        buffer = await self.get_buffer()
-
-        # 1. Recuperar resumen de Redis
+        """Obtiene el resumen actual de Redis."""
         from src.core.dependencies import redis_connection
 
-        if redis_connection is None:
-            logger.error("Redis no disponible para get_summary")
-            return {"summary": "Sin historial previo profesional.", "buffer": []}
+        if redis_connection:
+            key = f"chat:summary:{chat_id}"
+            val = await redis_connection.get(key)
+            if val:
+                if isinstance(val, bytes):
+                    val = val.decode("utf-8")
+                import json
 
-        summary_key = f"chat:summary:{chat_id}"
-        summary = "Sin historial previo profesional."
-        try:
-            raw_summary = await redis_connection.get(summary_key)
-            if raw_summary:
-                if isinstance(raw_summary, bytes):
-                    raw_summary = raw_summary.decode("utf-8")
-                summary_data = json.loads(raw_summary)
-                summary = summary_data.get("summary", summary)
-        except Exception as e:
-            logger.error(f"Error recuperando resumen de Redis para {chat_id}: {e}")
+                try:
+                    data = json.loads(val)
+                    return {"summary": data.get("summary", "Perfil activo.")}
+                except Exception:
+                    return {"summary": val}
+        return {"summary": "Perfil activo."}
 
-        # 2. Recuperar buffer de Redis
-        raw_buffer = await buffer.get_messages(chat_id)
-
-        return {"summary": summary, "buffer": raw_buffer}
-
-    async def store_raw_message(self, chat_id: str, role: str, content: str):
-        """Guarda un mensaje en el búfer de Redis inmediatamente."""
-        # Ephemeral mode guard
+    async def store_raw_message(self, chat_id: str, role: str, content: str) -> None:
+        """Guarda un mensaje en el búfer."""
         try:
             from src.core.profile_manager import user_profile_manager
 
             profile = await user_profile_manager.load_profile(chat_id)
-            if profile.get("memory_settings", {}).get("ephemeral_mode", False):
-                logger.debug(
-                    f"Ephemeral mode active for {chat_id}, skipping persistence"
-                )
+            if profile.get("memory_settings", {}).get("ephemeral_mode"):
                 return
         except Exception as e:
-            logger.warning(f"Could not check ephemeral mode for {chat_id}: {e}")
+            logger.debug("Profile load error for ephemeral check: %s", e)
 
         buffer = await self.get_buffer()
         await buffer.push_message(chat_id, role, content)
 
-        # 4.6: Integración con ConsolidationManager
-        from src.memory.consolidation_worker import consolidation_manager
-
         count = await buffer.get_message_count(chat_id)
-
-        # PHASE 2.3: Extracción incremental (cada 5 mensajes)
         if count > 0 and count % 5 == 0:
-            logger.info(
-                f"Triggering incremental fact extraction for {chat_id} (count: {count})"
-            )
             import asyncio
 
-            asyncio.create_task(self._incremental_fact_extraction(chat_id))
+            from src.memory.services.incremental_extractor import (
+                incremental_fact_extraction,
+            )
+
+            asyncio.create_task(incremental_fact_extraction(chat_id, buffer))
+
+        from src.memory.consolidation_worker import consolidation_manager
 
         if await consolidation_manager.should_consolidate(chat_id, count):
-            logger.info(f"Triggering background consolidation for {chat_id}")
             import asyncio
 
             asyncio.create_task(consolidation_manager.consolidate_session(chat_id))
 
-    async def _incremental_fact_extraction(self, chat_id: str):
-        """
-        Realiza una extracción de hechos parcial sin limpiar el buffer.
-        """
-        try:
-            from src.memory.fact_extractor import fact_extractor
-            from src.memory.knowledge_base import knowledge_base_manager
-
-            # 1. Obtener mensajes recientes del buffer
-            buffer = await self.get_buffer()
-            raw_buffer = await buffer.get_messages(chat_id)
-
-            if not raw_buffer:
-                return
-
-            # Usar los últimos 10 mensajes para contexto (en caso de que el buffer sea largo)
-            recent_msgs = raw_buffer[-10:]
-            conversation_text = "\n".join([
-                f"{m['role']}: {m['content']}" for m in recent_msgs
-            ])
-
-            # 2. Cargar conocimiento actual
-            current_knowledge = await knowledge_base_manager.load_knowledge(chat_id)
-
-            # 3. Extraer hechos
-            updated_knowledge = await fact_extractor.extract_facts(
-                conversation_text, current_knowledge
-            )
-
-            # 4. Guardar (y sincronizar a la nube)
-            await knowledge_base_manager.save_knowledge(chat_id, updated_knowledge)
-            logger.info(f"Incremental fact extraction complete for {chat_id}")
-
-        except Exception as e:
-            logger.error(f"Error in incremental fact extraction for {chat_id}: {e}")
-
-    async def update_memory(self, chat_id: str):
-        """
-        Analiza el búfer, actualiza el resumen en Redis y sincroniza con Google Cloud.
-        """
-        data = await self.get_summary(chat_id)
-        current_summary = data["summary"]
-        raw_buffer = data["buffer"]
-
-        if not raw_buffer:
+    async def update_memory(self, chat_id: str) -> None:
+        """Actualiza el resumen analizando el buffer."""
+        buffer = await self.get_buffer()
+        messages = await buffer.get_messages(chat_id)
+        if not messages:
             return
 
-        # Convertir búfer a texto para el resumen
-        new_messages_text = "\n".join([
-            f"{m['role']}: {m['content']}" for m in raw_buffer
-        ])
-
-        try:
-            # Generar nuevo resumen incremental
-            chain = self.summary_prompt | self.llm
-            response = await chain.ainvoke({
-                "current_summary": current_summary,
-                "new_messages": new_messages_text,
-            })
-
-            new_summary = str(response.content).strip()
-
-            # 1. Persistir resumen en Redis
-            from src.core.dependencies import redis_connection
-
-            if redis_connection is None:
-                raise RuntimeError("Redis no disponible para update_memory")
-
-            summary_key = f"chat:summary:{chat_id}"
-            await redis_connection.set(
-                summary_key,
-                json.dumps(
-                    {"summary": new_summary, "chat_id": chat_id}, ensure_ascii=False
-                ),
-            )
-
-            # 2. Limpiar el búfer
-            buffer = await self.get_buffer()
-            await buffer.clear_buffer(chat_id)
-
-            # 3. Sincronizar con SQLite (Nueva Memoria Local-First)
-            try:
-                store = get_sqlite_store()
-                pipeline = IngestionPipeline(store)
-
-                new_chunks = await pipeline.process_text(
-                    chat_id=chat_id,
-                    text=new_summary,
-                    memory_type="conversation",
-                    metadata={"source": "long_term_memory_summary"},
-                )
-                logger.info(f"Summary persisted to SQLite. New chunks: {new_chunks}")
-            except Exception as fe:
-                logger.warning(f"No se pudo sincronizar con SQLite: {fe}")
-
-            logger.info(f"Memoria consolidada exitosamente para {chat_id}")
-
-        except Exception as e:
-            logger.error(
-                f"Error consolidando memoria para {chat_id}: {e}", exc_info=True
-            )
+        old_data = await self.get_summary(chat_id)
+        # La firma del summarizer es (chat_id, old_summary, raw_buffer, buffer)
+        await self._summarizer.update_memory(
+            chat_id, old_data.get("summary", ""), messages, buffer
+        )
+        logger.info("Memory summary update triggered for %s", chat_id)
 
 
-# Instancia singleton
 long_term_memory = LongTermMemoryManager()

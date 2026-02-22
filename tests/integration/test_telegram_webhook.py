@@ -13,7 +13,7 @@ from src.core.schemas import CanonicalEventV1
 @respx.mock
 async def test_telegram_webhook_success_flow(
     async_client: AsyncClient, monkeypatch: pytest.MonkeyPatch
-):
+) -> None:
     """
     Test de integración para el flujo exitoso del webhook de Telegram.
     Simula la recepción de un audio, su procesamiento y la respuesta.
@@ -38,7 +38,8 @@ async def test_telegram_webhook_success_flow(
         }
     )
     monkeypatch.setattr(
-        "src.api.routers.webhooks.master_orchestrator.run", mock_orchestrator_run
+        "src.api.services.event_processor.master_orchestrator.run",
+        mock_orchestrator_run,
     )
 
     # Mockear la herramienta de descarga de Telegram
@@ -91,7 +92,10 @@ async def test_telegram_webhook_success_flow(
         ]
     )
     monkeypatch.setattr(
-        "src.api.routers.webhooks.ingestion_buffer", mock_ingestion_buffer
+        "src.api.adapters.telegram_adapter.ingestion_buffer", mock_ingestion_buffer
+    )
+    monkeypatch.setattr(
+        "src.api.services.debounce_manager.ingestion_buffer", mock_ingestion_buffer
     )
 
     # 3. Ejecutar la Petición
@@ -106,7 +110,7 @@ async def test_telegram_webhook_success_flow(
     assert "task_id" in response_data
 
     # 5. Verificar el Proceso en Segundo Plano (Consolidación)
-    # Aumentamos el sleep para dar tiempo al debounce (aunque en test debería ser rápido)
+    # Aumentamos el sleep para dar tiempo al debounce
     await asyncio.sleep(3.5)
 
     mock_download_tool.ainvoke.assert_awaited_once()
@@ -121,5 +125,5 @@ async def test_telegram_webhook_success_flow(
     expected_message = "Este es un texto de prueba."
     mock_reply_tool.ainvoke.assert_awaited_once_with({
         "chat_id": str(test_chat_id),
-        "message": expected_message,
+        "text": expected_message,
     })

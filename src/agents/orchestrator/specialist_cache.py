@@ -33,7 +33,7 @@ class OptimizedSpecialistCache(SpecialistCache):
     Implementa optimizaciones recomendadas por Gemini para performance.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize cache con estado limpio."""
         self._routable_specialists: list[Any] = []
         self._routable_tools: list[Any] = []
@@ -64,12 +64,10 @@ class OptimizedSpecialistCache(SpecialistCache):
             s.tool.name: s.name for s in self._routable_specialists
         }
 
-        # LLM con herramientas pre-vinculadas para Function Calling
+        # LLM con herramientas pre-vinculadas
         if self._routable_tools:
             self._llm_with_tools = llm.bind_tools(self._routable_tools)
-            logger.info(
-                f"LLM vinculado con {len(self._routable_tools)} herramientas de especialistas"
-            )
+            logger.info("LLM vinculado con %d herramientas", len(self._routable_tools))
         else:
             self._llm_with_tools = llm
             logger.warning(

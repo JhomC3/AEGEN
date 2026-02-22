@@ -1,6 +1,7 @@
 # src/core/dependencies.py
 import logging
 from functools import lru_cache
+from pathlib import Path
 
 from fastapi import HTTPException, status
 from redis import asyncio as aioredis
@@ -29,12 +30,11 @@ async def initialize_global_resources() -> tuple[aioredis.Redis | None, IEventBu
     """Inicializa recursos globales como Redis y el bus de eventos."""
     global redis_connection, event_bus, sqlite_store
 
-    import os
-
     from src.memory.backup import CloudBackupManager
 
-    # 1. Recuperación Automática (si la DB no existe y tenemos bucket configurado)
-    if not os.path.exists(settings.SQLITE_DB_PATH) and settings.GCS_BACKUP_BUCKET:
+    # 1. Recuperación Automática (si la DB no existe)
+    db_path = Path(settings.SQLITE_DB_PATH)
+    if not db_path.exists() and settings.GCS_BACKUP_BUCKET:
         logger.info("Database not found locally. Attempting restore from GCS...")
         backup_mgr = CloudBackupManager()
         await backup_mgr.restore_latest()
@@ -55,7 +55,8 @@ async def initialize_global_resources() -> tuple[aioredis.Redis | None, IEventBu
         raise
 
     try:
-        # Usamos decode_responses=False porque nuestro RedisEventBus maneja la (de)serialización
+        # Usamos decode_responses=False porque nuestro RedisEventBus
+        # maneja la (de)serialización
         redis_connection = aioredis.from_url(settings.REDIS_URL, decode_responses=False)
         await redis_connection.ping()
         logger.info("Successfully connected to Redis.")
@@ -73,18 +74,13 @@ async def initialize_global_resources() -> tuple[aioredis.Redis | None, IEventBu
     return redis_connection, event_bus
 
 
-async def initialize_global_collections():
-    """No-op: ChromaDB eliminado."""
-    pass
-
-
-async def shutdown_global_resources():
+async def shutdown_global_resources() -> None:
     """Cierra conexiones y recursos globales."""
     if sqlite_store:
         await sqlite_store.disconnect()
         logger.info("SQLite connection closed.")
 
-    if isinstance(event_bus, RedisEventBus) or isinstance(event_bus, InMemoryEventBus):
+    if isinstance(event_bus, RedisEventBus | InMemoryEventBus):
         await event_bus.shutdown()
         logger.info("Event Bus shut down.")
 
@@ -107,7 +103,7 @@ def get_event_bus() -> IEventBus:
 
 
 # Dependencia para obtener la conexión Redis (si algún componente la necesita)
-async def get_redis_dependency():
+async def get_redis_dependency() -> aioredis.Redis:
     if redis_connection is None:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
@@ -154,7 +150,7 @@ def get_sqlite_store() -> SQLiteStore:
     return sqlite_store
 
 
-def prime_dependencies():
+def prime_dependencies() -> None:
     """
     "Calienta" las dependencias singleton al arranque de la aplicación.
     """

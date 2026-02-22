@@ -74,42 +74,25 @@ class EventRouter(RoutingStrategy):
 
         return selected_specialist.name
 
-    def _find_capable_specialists(self, event_type: str) -> list:
-        """
-        Encuentra especialistas capaces de manejar el event_type.
-
-        Args:
-            event_type: Tipo de evento a enrutar
-
-        Returns:
-            Lista de especialistas con capabilities para el event_type
-        """
+    def _find_capable_specialists(self, event_type: str) -> list[SpecialistInterface]:
+        """Encuentra especialistas que manejen el event_type."""
         return [
-            s
+            cast(SpecialistInterface, s)
             for s in self._specialist_registry.get_all_specialists()
             if event_type in cast(SpecialistInterface, s).get_capabilities()
         ]
 
-    def _select_specialist(self, capable_specialists: list, event_type: str):
-        """
-        Selecciona especialista cuando hay múltiples opciones.
-
-        Args:
-            capable_specialists: Lista de especialistas capaces
-            event_type: Tipo de evento para logging
-
-        Returns:
-            Especialista seleccionado
-        """
+    def _select_specialist(
+        self, capable_specialists: list[SpecialistInterface], event_type: str
+    ) -> SpecialistInterface:
+        """Selecciona especialista cuando hay múltiples opciones."""
         if len(capable_specialists) == 1:
             specialist = capable_specialists[0]
             logger.info(f"Enrutamiento directo para '{event_type}' → {specialist.name}")
             return specialist
-        else:
-            # Múltiples especialistas, tomar el primero por ahora
-            # TODO: Implementar strategy más sofisticada de selección
-            specialist = capable_specialists[0]
-            logger.info(
-                f"Múltiples especialistas para '{event_type}', tomando: {specialist.name}"
-            )
-            return specialist
+        # Múltiples especialistas, tomar el primero
+        specialist = capable_specialists[0]
+        logger.info(
+            f"Múltiples especialistas para '{event_type}', tomando: {specialist.name}"
+        )
+        return specialist

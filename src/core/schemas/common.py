@@ -41,14 +41,6 @@ class ServiceStatus(str, Enum):
     DEGRADED = "degraded"
 
 
-class SystemState(str, Enum):
-    """Enum para representar el estado recomendado del sistema."""
-
-    # TODO: Evaluar eliminación - sin consumidores activos externos detectados
-    STAY_LOCAL = "STAY_LOCAL"
-    MIGRATE_TO_DISTRIBUTED = "MIGRATE_TO_DISTRIBUTED"
-
-
 class UserRole(str, Enum):
     """Roles disponibles en el sistema multi-tenant."""
 

@@ -14,12 +14,12 @@ class RedisMessageBuffer:
     Implementa almacenamiento temporal de conversaciones antes de la consolidación.
     """
 
-    def __init__(self, redis_client: aioredis.Redis):
+    def __init__(self, redis_client: aioredis.Redis) -> None:
         self._redis = redis_client
         self.PREFIX = "chat:buffer:"
         self.ACTIVITY_PREFIX = "chat:last_activity:"
 
-    async def push_message(self, chat_id: str, role: str, content: str):
+    async def push_message(self, chat_id: str, role: str, content: str) -> None:
         """Añade un mensaje al buffer de Redis."""
         key = f"{self.PREFIX}{chat_id}"
         message = {"role": role, "content": content, "timestamp": time.time()}
@@ -50,7 +50,7 @@ class RedisMessageBuffer:
 
         return messages
 
-    async def clear_buffer(self, chat_id: str):
+    async def clear_buffer(self, chat_id: str) -> None:
         """Elimina el buffer de mensajes de Redis."""
         key = f"{self.PREFIX}{chat_id}"
         await self._redis.delete(key)
@@ -61,7 +61,7 @@ class RedisMessageBuffer:
         key = f"{self.PREFIX}{chat_id}"
         return await self._redis.llen(key)
 
-    async def update_last_activity(self, chat_id: str):
+    async def update_last_activity(self, chat_id: str) -> None:
         """Actualiza el timestamp de última actividad."""
         key = f"{self.ACTIVITY_PREFIX}{chat_id}"
         await self._redis.set(key, str(time.time()))

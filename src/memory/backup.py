@@ -1,116 +1,86 @@
-# src/memory/backup.py
-"""
-Cloud backup and restore manager for SQLite memory.
-
-Provides functionality to snapshot, compress, and sync the local database
-with Google Cloud Storage.
-"""
-
 import asyncio
 import gzip
 import logging
-import os
 import shutil
-from datetime import datetime
+import time
 from pathlib import Path
-
-from google.cloud import storage
-from google.oauth2 import service_account
+from typing import Any
 
 from src.core.config import settings
-from src.memory.sqlite_store import SQLiteStore
+from src.core.dependencies import get_sqlite_store
 
 logger = logging.getLogger(__name__)
 
 
 class CloudBackupManager:
-    """
-    Gestiona el respaldo y recuperación de la base de datos en GCS.
-    """
+    """Gestiona copias de seguridad en Google Cloud Storage."""
 
-    def __init__(self, store: SQLiteStore | None = None):
-        self.store = store or SQLiteStore(settings.SQLITE_DB_PATH)
-        self.bucket_name = settings.GCS_BACKUP_BUCKET
-        self._client = None
+    def __init__(self, bucket_name: str | None = None) -> None:
+        self.bucket_name = bucket_name or settings.GCS_BACKUP_BUCKET
+        self.store = get_sqlite_store()
 
-    def _get_client(self):
-        """Inicializa el cliente de GCS."""
-        if self._client:
-            return self._client
-
+    def _get_client(self) -> Any:
         try:
-            if settings.GCS_CREDENTIALS_JSON:
-                import json
+            from google.cloud import storage
 
-                creds_dict = json.loads(
-                    settings.GCS_CREDENTIALS_JSON.get_secret_value()
-                )
-                credentials = service_account.Credentials.from_service_account_info(
-                    creds_dict
-                )
-                self._client = storage.Client(credentials=credentials)
-            else:
-                # Usa GOOGLE_APPLICATION_CREDENTIALS env var por defecto
-                self._client = storage.Client()
-            return self._client
-        except Exception as e:
-            logger.error(f"Error initializing GCS client: {e}")
+            return storage.Client()
+        except ImportError:
+            logger.warning("google-cloud-storage not installed.")
             return None
 
     async def create_backup(self) -> str | None:
-        """
-        Crea un snapshot de la DB, lo comprime y lo sube a GCS.
-        """
+        """Crea un backup comprimido y lo sube a GCS."""
         if not self.bucket_name:
-            logger.warning("GCS_BACKUP_BUCKET not configured. Skipping backup.")
+            logger.warning("GCS_BACKUP_BUCKET not configured.")
             return None
 
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M")
-        snapshot_path = Path(f"data/snapshot_{timestamp}.db")
-        compressed_path = Path(f"data/backup_{timestamp}.db.gz")
+        db_path = Path(settings.SQLITE_DB_PATH)
+        timestamp = int(time.time())
+        snapshot_path = db_path.parent / f"snapshot_{timestamp}.db"
+        compressed_path = db_path.parent / f"backup_{timestamp}.db.gz"
 
         try:
-            # 1. Crear snapshot seguro (VACUUM INTO)
+            # 1. Snapshot
             db = await self.store.get_db()
-            await db.execute(f"VACUUM INTO '{snapshot_path}'")
-            logger.info(f"Snapshot created at {snapshot_path}")
+            # SQLite VACUUM INTO
+            await db.execute(f"VACUUM INTO '{snapshot_path}'")  # noqa: S608
+            logger.info("Snapshot created at %s", snapshot_path)
 
             # 2. Comprimir
-            def compress_file():
-                with open(snapshot_path, "rb") as f_in:
-                    with gzip.open(compressed_path, "wb") as f_out:
-                        shutil.copyfileobj(f_in, f_out)
+            def compress_file() -> None:
+                with (
+                    snapshot_path.open("rb") as f_in,
+                    gzip.open(compressed_path, "wb") as f_out,
+                ):
+                    shutil.copyfileobj(f_in, f_out)
 
             await asyncio.to_thread(compress_file)
-            logger.info(f"Backup compressed to {compressed_path}")
 
-            # 3. Subir a GCS
+            # 3. Subir
             client = self._get_client()
             if client:
                 bucket = client.bucket(self.bucket_name)
                 blob = bucket.blob(f"backups/{compressed_path.name}")
                 blob.upload_from_filename(str(compressed_path))
                 logger.info(
-                    f"Backup uploaded to GCS: gs://{self.bucket_name}/backups/{compressed_path.name}"
+                    "Backup uploaded: gs://%s/backups/%s",
+                    self.bucket_name,
+                    compressed_path.name,
                 )
                 return str(compressed_path.name)
 
         except Exception as e:
-            logger.error(f"Error during backup process: {e}", exc_info=True)
-            return None
+            logger.error("Backup failed: %s", e)
         finally:
-            # Limpiar archivos temporales locales
             if snapshot_path.exists():
-                os.remove(snapshot_path)
+                snapshot_path.unlink()
             if compressed_path.exists():
-                os.remove(compressed_path)
+                compressed_path.unlink()
 
         return None
 
     async def restore_latest(self) -> bool:
-        """
-        Busca el backup más reciente en GCS y lo restaura localmente.
-        """
+        """Descarga y restaura el último backup desde GCS."""
         if not self.bucket_name:
             return False
 
@@ -121,38 +91,25 @@ class CloudBackupManager:
         try:
             bucket = client.bucket(self.bucket_name)
             blobs = list(client.list_blobs(bucket, prefix="backups/"))
-
             if not blobs:
                 logger.info("No backups found in GCS.")
                 return False
 
-            # Ordenar por nombre (que incluye fecha ISO) para obtener el último
-            latest_blob = sorted(blobs, key=lambda x: x.name, reverse=True)[0]
-
-            local_gz = Path(f"data/{os.path.basename(latest_blob.name)}")
-            db_path = Path(settings.SQLITE_DB_PATH)
-
-            # Asegurar que el directorio data existe
-            db_path.parent.mkdir(exist_ok=True)
-
-            print(f"📥 Descargando backup desde GCS: {latest_blob.name}...")
+            latest_blob = max(blobs, key=lambda b: b.updated)
+            local_gz = Path(settings.SQLITE_DB_PATH).parent / latest_blob.name
             latest_blob.download_to_filename(str(local_gz))
 
-            # Descomprimir directamente al destino
-            print(f"📂 Restaurando base de datos a {db_path}...")
+            db_path = Path(settings.SQLITE_DB_PATH)
+            db_path.parent.mkdir(parents=True, exist_ok=True)
 
-            def decompress_file():
-                with gzip.open(local_gz, "rb") as f_in:
-                    with open(db_path, "wb") as f_out:
-                        shutil.copyfileobj(f_in, f_out)
+            def decompress() -> None:
+                with gzip.open(local_gz, "rb") as f_in, db_path.open("wb") as f_out:
+                    shutil.copyfileobj(f_in, f_out)
 
-            await asyncio.to_thread(decompress_file)
-
-            # Limpiar temporal
-            os.remove(local_gz)
-            logger.info("Database restored successfully from GCS.")
+            await asyncio.to_thread(decompress)
+            local_gz.unlink()
+            logger.info("Restored from %s", latest_blob.name)
             return True
-
         except Exception as e:
-            logger.error(f"Error during restore process: {e}", exc_info=True)
+            logger.error("Restore failed: %s", e)
             return False

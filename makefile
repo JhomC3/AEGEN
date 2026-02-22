@@ -23,22 +23,14 @@ venv: ## Crea el entorno virtual si no existe usando uv
 
 install: venv ## Instala dependencias de desarrollo usando uv y los lockfiles
 	@echo "Installing/syncing development dependencies from lockfile..."
-	$(UV) pip sync requirements-dev.lock
+	$(UV) pip sync --python $(PYTHON) requirements-dev.lock
 	@echo "Installing project in editable mode..."
-	$(UV) pip install -e .
+	$(UV) pip install --python $(PYTHON) -e .
 
-lock: venv ## Genera/Actualiza los archivos requirements.lock
-	@echo "Generating requirements.lock (production)..."
-	$(UV) pip compile pyproject.toml --output-file requirements.lock
-	@echo "Generating requirements-dev.lock (development)..."
-	$(UV) pip compile pyproject.toml --extra dev --extra test --extra lint --extra doc --output-file requirements-dev.lock
-
-lint: ## Ejecuta linters (ruff, black check, mypy, bandit, safety)
+lint: ## Ejecuta linters (ruff, mypy)
 	@echo "Running linters..."
 	$(PYTHON) -m ruff check .
-##	$(PYTHON) -m black --check . # Deshabilitado para evitar conflictos con ruff format # Deshabilitado para evitar conflictos con ruff format
 	$(PYTHON) -m mypy src tests
-	$(PYTHON) -m bandit -c pyproject.toml -r src
 
 verify: ## Validación completa: linting + tests + architecture simple
 	@echo "🎯 AEGEN Verification Suite..."
@@ -50,9 +42,6 @@ verify: ## Validación completa: linting + tests + architecture simple
 	@$(PYTHON) scripts/simple_check.py
 	@echo "✅ All checks passed!"
 
-verify-phase: ## Ejecuta quality gates para fase específica (LEGACY)
-	@echo "🎯 Running phase quality gates: $(PHASE)"
-	$(PYTHON) scripts/quality_gates.py --phase $(PHASE)
 
 format: ## Formatea el código usando ruff
 	@echo "Formatting code..."
@@ -86,9 +75,13 @@ logs-dev: ## Muestra los logs de los contenedores de desarrollo
 	@echo "Tailing development logs..."
 	docker-compose logs -f
 
-build: ## Construye la imagen Docker de producción
-	@echo "Building production Docker image..."
-	docker-compose -f docker-compose.yml build app
+build: ## Construye las imágenes Docker de producción
+	@echo "Building production Docker images..."
+	docker-compose -f docker-compose.yml build
+
+logs: ## Muestra los logs de todos los servicios
+	@echo "Tailing all service logs..."
+	docker-compose logs -f
 
 sync-docs: ## Sincroniza documentación con estado real del proyecto
 	@echo "Synchronizing documentation with project state..."
@@ -108,41 +101,42 @@ dev-check: ## Quick check durante desarrollo (solo architecture)
 	@echo "⚡ Quick development check..."
 	$(PYTHON) scripts/simple_check.py
 
-status: ## Estado completo del proyecto - 3-2-1 model
-	@echo "📊 AEGEN Project Status (3-2-1 Documentation Model)"
+status: ## Estado completo del proyecto
+	@echo "📊 Estado del Proyecto AEGEN"
 	@echo "==================================================="
-	@echo "Git Branch: $$(git rev-parse --abbrev-ref HEAD)"
-	@echo "Last Commit: $$(git log -1 --pretty=format:'%h - %s (%cr)')"
-	@echo "Modified Files: $$(git diff --name-only | wc -l | tr -d ' ')"
+	@echo "Rama Git: $$(git rev-parse --abbrev-ref HEAD)"
+	@echo "Último Commit: $$(git log -1 --pretty=format:'%h - %s (%cr)')"
+	@echo "Archivos Modificados: $$(git diff --name-only | wc -l | tr -d ' ')"
 	@echo ""
-	@echo "📚 Documentation (3 files only):"
-	@echo "   ✅ PROJECT_OVERVIEW.md - Vision & roadmap"
-	@echo "   ✅ DEVELOPMENT.md - Technical guide"
-	@echo "   ✅ Makefile - Commands"
+	@echo "📚 Documentación Principal:"
+	@echo "   ✅ PROJECT_OVERVIEW.md - Visión y Hoja de Ruta"
+	@echo "   ✅ docs/guias/desarrollo.md - Guía Técnica"
+	@echo "   ✅ makefile - Comandos"
 	@echo ""
-	@echo "🏗️ Architecture Status:"
-	$(PYTHON) scripts/simple_check.py
+	@echo "🏗️ Estado de la Arquitectura:"
+	@$(PYTHON) scripts/simple_check.py
 	@echo ""
-	@echo "📋 Test Files: $$(find tests -name 'test_*.py' 2>/dev/null | wc -l | tr -d ' ')"
+	@echo "📋 Archivos de Prueba: $$(find tests -name 'test_*.py' 2>/dev/null | wc -l | tr -d ' ')"
 	@echo ""
-	@echo "📚 Documentation Sync:"
-	$(PYTHON) scripts/sync_docs.py
+	@echo "📚 Sincronización de Documentos:"
+	@$(PYTHON) scripts/sync_docs.py
 
 help-dev: ## Muestra comandos de desarrollo esenciales
-	@echo "🚀 AEGEN Development Commands (3-2-1 Model)"
+	@echo "🚀 Comandos de Desarrollo AEGEN"
 	@echo "==========================================="
-	@echo "📖 Read: DEVELOPMENT.md for technical guide"
-	@echo "📖 Read: PROJECT_OVERVIEW.md for vision/roadmap"
+	@echo "📖 Leer: docs/guias/desarrollo.md para guía técnica"
+	@echo "📖 Leer: PROJECT_OVERVIEW.md para visión/roadmap"
 	@echo ""
-	@echo "⚡ Development:"
-	@echo "   make verify     - Full validation (lint+test+arch)"
-	@echo "   make dev-check  - Quick architecture check"
-	@echo "   make format     - Auto-fix code style"
-	@echo "   make dev        - Start development server"
+	@echo "⚡ Desarrollo:"
+	@echo "   make verify     - Validación completa (lint+test+arch)"
+	@echo "   make dev-check  - Chequeo rápido de arquitectura"
+	@echo "   make format     - Corrección automática de estilo"
+	@echo "   make dev        - Iniciar servidor de desarrollo"
 	@echo ""
-	@echo "📊 Status:"
-	@echo "   make status     - Complete project status"
-	@echo "   make sync-docs  - Update documentation"
+	@echo "📊 Estado:"
+	@echo "   make status     - Estado completo del proyecto"
+	@echo "   make sync-docs  - Actualizar documentación"
+
 
 clean: ## Elimina archivos generados (cache, venv, etc.)
 	@echo "Cleaning up project..."

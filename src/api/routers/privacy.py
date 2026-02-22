@@ -1,8 +1,8 @@
 # src/api/routers/privacy.py
 """
-User privacy control commands.
+Comandos de control de privacidad del usuario.
 
-Handles /privacidad, /olvidar, /efimero before the orchestrator.
+Maneja /privacidad, /olvidar, /efimero antes del orquestador.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ _PRIVACY_COMMANDS = frozenset({"/privacidad", "/olvidar", "/efimero", "/disclaim
 
 
 def is_privacy_command(text: str | None) -> bool:
-    """Returns True if the message is a privacy command."""
+    """Retorna True si el mensaje es un comando de privacidad."""
     if not text:
         return False
     return text.strip().split()[0].lower() in _PRIVACY_COMMANDS
@@ -26,7 +26,8 @@ def is_privacy_command(text: str | None) -> bool:
 
 async def handle_privacy_command(text: str, chat_id: str) -> str | None:
     """
-    Handles a privacy command. Returns the response text, or None if not a privacy command.
+    Procesa un comando de privacidad. Retorna el texto de respuesta,
+    o None si no es un comando de privacidad.
     """
     parts = text.strip().split(maxsplit=1)
     command = parts[0].lower()
@@ -34,11 +35,11 @@ async def handle_privacy_command(text: str, chat_id: str) -> str | None:
 
     if command == "/privacidad":
         return await _handle_privacidad(chat_id)
-    elif command == "/olvidar":
+    if command == "/olvidar":
         return await _handle_olvidar(chat_id, arg)
-    elif command == "/efimero":
+    if command == "/efimero":
         return await _handle_efimero(chat_id)
-    elif command == "/disclaimer":
+    if command == "/disclaimer":
         return _handle_disclaimer()
 
     return None
@@ -72,7 +73,10 @@ async def _handle_privacidad(chat_id: str) -> str:
 
 async def _handle_olvidar(chat_id: str, topic: str) -> str:
     if not topic:
-        return "Uso: /olvidar [tema]\nEjemplo: /olvidar trabajo\n\nBuscaré y borraré memorias relacionadas con ese tema."
+        return (
+            "Uso: /olvidar [tema]\nEjemplo: /olvidar trabajo\n\n"
+            "Buscaré y borraré memorias relacionadas con ese tema."
+        )
 
     vmm = get_vector_memory_manager()
     count = await vmm.delete_memories_by_query(user_id=chat_id, query=topic)
@@ -91,18 +95,22 @@ async def _handle_efimero(chat_id: str) -> str:
     await user_profile_manager.save_profile(chat_id, profile)
 
     if not current:
-        return "Modo efímero ACTIVADO. No guardaré nada de esta sesión. Usa /efimero de nuevo para desactivar."
+        return (
+            "Modo efímero ACTIVADO. No guardaré nada de esta sesión. "
+            "Usa /efimero de nuevo para desactivar."
+        )
     return "Modo efímero DESACTIVADO. Volveré a guardar memorias normalmente."
 
 
 def _handle_disclaimer() -> str:
     return (
-        "AEGEN es una herramienta experimental de acompañamiento basada en técnicas de "
-        "Terapia Cognitivo Conductual (TCC). NO es un sustituto de atención profesional "
-        "de salud mental.\n\n"
+        "AEGEN es una herramienta experimental de acompañamiento basada en "
+        "técnicas de Terapia Cognitivo Conductual (TCC). NO es un sustituto "
+        "de atención profesional de salud mental.\n\n"
         "Si estás en crisis o necesitas ayuda urgente:\n"
         "- Línea 106 (Colombia)\n"
         "- Emergencias: 911\n\n"
-        "Tus datos se almacenan localmente. Usa /privacidad para ver qué sé de ti, "
-        "/olvidar para borrar datos, o /efimero para sesiones sin memoria."
+        "Tus datos se almacenan localmente. Usa /privacidad para ver qué "
+        "sé de ti, /olvidar para borrar datos, o /efimero para sesiones "
+        "sin memoria."
     )
