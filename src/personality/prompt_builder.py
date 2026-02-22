@@ -1,8 +1,13 @@
 import logging
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+import aiofiles
+import yaml
+
+from src.core.dependencies import get_sqlite_store
 from src.core.profiling_manager import profiling_manager
 from src.personality.manager import personality_manager
 from src.personality.prompt_renders import (
@@ -19,6 +24,45 @@ class SystemPromptBuilder:
     """
     Construye el system prompt de MAGI de forma modular y adaptativa.
     """
+
+    _gold_standards_cache: str | None = None
+
+    async def _get_gold_standards(self) -> str:
+        """Carga y formatea los ejemplos de Few-Shot desde yaml."""
+        if self._gold_standards_cache is not None:
+            return self._gold_standards_cache
+
+        path = Path("src/personality/base/gold_standards.yaml")
+        if not path.exists():
+            self._gold_standards_cache = ""
+            return ""
+
+        try:
+            async with aiofiles.open(path, encoding="utf-8") as f:
+                content = await f.read()
+            data = yaml.safe_load(content)
+
+            anchors = data.get("conversational_anchors", [])
+            if not anchors:
+                self._gold_standards_cache = ""
+                return ""
+
+            examples = ["## Interacciones Gold Standard (Ejemplos a imitar)\n"]
+            for anchor in anchors:
+                example = (
+                    f"**Situación:** {anchor.get('situation')}\n"
+                    f'**Usuario:** "{anchor.get("user_message")}"\n'
+                    f'**Respuesta Ideal (MAGI):** "{anchor.get("ideal_response")}"\n'
+                    f"*(Nota: {anchor.get('explanation')})*\n"
+                )
+                examples.append(example)
+
+            self._gold_standards_cache = "\n".join(examples)
+            return self._gold_standards_cache
+        except Exception as e:
+            logger.error(f"Error loading gold standards: {e}")
+            self._gold_standards_cache = ""
+            return ""
 
     async def build(
         self,
@@ -44,9 +88,14 @@ class SystemPromptBuilder:
         # 3. Capa 4: Skill Overlay (Dinámica por modo)
         skill_section = self._build_skill_section(overlay) if overlay else ""
 
+        # Inyectar Gold Standards
+        gold_standards = await self._get_gold_standards()
+        if gold_standards:
+            skill_section += f"\n{gold_standards}\n"
+
         # 4. Capa 5: Contexto Runtime (Temporal, Episódico, RAG)
-        runtime_section = self._build_runtime_section(
-            runtime_context or {}, profile.get("localization", {})
+        runtime_section = await self._build_runtime_section(
+            runtime_context or {}, profile.get("localization", {}), chat_id=chat_id
         )
 
         # Composición Final (Ensamblaje Raw)
@@ -130,8 +179,11 @@ class SystemPromptBuilder:
             section += f"## Anti-Patterns del Skill\n{overlay.anti_patterns}\n"
         return section
 
-    def _build_runtime_section(
-        self, context: dict[str, Any], localization: dict[str, Any] | None = None
+    async def _build_runtime_section(
+        self,
+        context: dict[str, Any],
+        localization: dict[str, Any] | None = None,
+        chat_id: str | None = None,
     ) -> str:
         # Obtener timezone del usuario
         user_tz = localization.get("timezone", "UTC") if localization else "UTC"
@@ -160,6 +212,42 @@ class SystemPromptBuilder:
 
         if kb := context.get("structured_knowledge"):
             section += f"\n## Bóveda de Conocimiento\n{kb}\n"
+
+        # Inyectar Hitos Activos si hay chat_id
+        if chat_id:
+            try:
+                store = get_sqlite_store()
+                milestones = await store.state_repo.get_recent_milestones(
+                    chat_id, limit=3
+                )
+                if milestones:
+                    section += "\n## Hitos Recientes del Usuario\n"
+                    for m in milestones:
+                        action = m.get("action")
+                        status = m.get("status")
+                        emotion = m.get("emotion")
+                        desc = (
+                            f" ({m.get('description')})" if m.get("description") else ""
+                        )
+                        section += (
+                            f"- **{action}**: {status}. Emoción: {emotion}{desc}\n"
+                        )
+                    section += "\n*(Úsalo para dar seguimiento al usuario)*\n"
+            except Exception as e:
+                logger.debug(f"Error fetching milestones: {e}")
+
+        # Inyectar intenciones pendientes (Soft Intent Injection)
+        if pending := context.get("pending_intents"):
+            intents_str = "\n".join([f"- {intent}" for intent in pending])
+            section += "\n## Intenciones Proactivas Pendientes\n"
+            section += "Tú (MAGI) tenías programado hablar de estos temas:\n"
+            section += f"{intents_str}\n\n"
+            section += "**INSTRUCCIÓN:** Si el tema permite, sácalos sutilmente.\n"
+
+        # 5. Instrucciones de Sistema Activas
+        if context and context.get("is_proactive"):
+            section += "\n## INSTRUCCIÓN DEL SISTEMA (MENSAJE PROACTIVO)\n"
+            section += "El usuario NO te ha hablado. Inicia tú la conversación basado en el último mensaje.\n"
 
         return section
 

@@ -89,15 +89,15 @@ class GraphRoutingHandler:
                 f"[{session_id}] Error de enrutamiento detectado: "
                 f"{state['error_message']}"
             )
-            return "__end__"
+            return "life_reflection"
 
         next_node = state.get("payload", {}).get("next_node")
         if not next_node:
             logger.warning(
                 f"[{session_id}] No se pudo determinar el siguiente nodo desde "
-                "el payload. Finalizando."
+                "el payload. Dirigiendo a reflexión."
             )
-            return "__end__"
+            return "life_reflection"
 
         # Validar que el nodo existe en specialists registrados
         all_specialists = self._cache.get_routable_specialists()
@@ -107,9 +107,9 @@ class GraphRoutingHandler:
         if next_node not in valid_nodes:
             logger.warning(
                 f"[{session_id}] Nodo '{next_node}' no es un especialista "
-                f"válido. Nodos válidos: {valid_nodes}. Finalizando."
+                f"válido. Nodos válidos: {valid_nodes}. Dirigiendo a reflexión."
             )
-            return "__end__"
+            return "life_reflection"
 
         logger.info(
             f"[{session_id}] Decisión de enrutamiento inicial: dirigir a '{next_node}'"
@@ -121,13 +121,13 @@ class GraphRoutingHandler:
         Función de routing para chaining conditional edges.
         """
         session_id = state.get("session_id", "unknown-session")
-        decision = "__end__"
+        decision = "life_reflection"
         if "chaining" in self._routing_strategies:
             payload = state.get("payload", {})
             next_action = payload.get("next_action")
 
             if next_action == "respond_to_user":
-                decision = "__end__"
+                decision = "life_reflection"
             else:
                 next_specialist = payload.get("next_specialist")
                 if next_specialist:

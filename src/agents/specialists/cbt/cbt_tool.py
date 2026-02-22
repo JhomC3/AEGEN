@@ -86,6 +86,7 @@ async def cbt_therapeutic_guidance_tool(
     chat_id: str,
     conversation_history: list[dict[str, Any]] | None = None,
     routing_metadata: dict[str, Any] | None = None,
+    session_context: dict[str, Any] | None = None,
 ) -> str:
     """
     Ejecuta la guía terapéutica TCC inyectando el perfil completo del usuario.
@@ -94,6 +95,7 @@ async def cbt_therapeutic_guidance_tool(
         conversation_history = []
 
     routing_metadata = routing_metadata or {}
+    session_context = session_context or {}
     next_actions = routing_metadata.get("next_actions", [])
 
     # 1. Cargar perfil y Contexto (RAG + Memoria)
@@ -106,6 +108,10 @@ async def cbt_therapeutic_guidance_tool(
     history_limit = adaptation.get("history_limit", 20)
     messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
 
+    # Extraer is_proactive y pending_intents
+    is_proactive = session_context.get("is_proactive", False)
+    pending_intents = session_context.get("pending_intents", [])
+
     persona_template = await system_prompt_builder.build(
         chat_id=chat_id,
         profile=profile,
@@ -114,6 +120,8 @@ async def cbt_therapeutic_guidance_tool(
             "history_summary": history_summary,
             "knowledge_context": knowledge_context,
             "structured_knowledge": structured_knowledge,
+            "is_proactive": is_proactive,
+            "pending_intents": pending_intents,
         },
         recent_user_messages=extract_recent_user_messages(messages),
     )

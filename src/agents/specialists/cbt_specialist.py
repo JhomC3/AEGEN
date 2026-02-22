@@ -61,12 +61,14 @@ class CBTSpecialist(SpecialistInterface):
 
         # 2. Ejecutar Tool
         routing_decision = state.get("payload", {}).get("routing_decision", {})
+        session_ctx = state.get("payload", {}).get("session_context", {})
 
         response_text = await self.tool.ainvoke({
             "user_message": user_content,
             "chat_id": chat_id,
             "conversation_history": raw_history,
             "routing_metadata": routing_decision,
+            "session_context": session_ctx,
         })
 
         # 3. Actualizar Estado

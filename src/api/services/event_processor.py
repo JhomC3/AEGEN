@@ -5,6 +5,7 @@ from typing import Any, cast
 
 from src.agents.orchestrator.factory import master_orchestrator
 from src.core import schemas
+from src.core.messaging.outbox import outbox_manager
 from src.core.profile_manager import user_profile_manager
 from src.core.schemas import GraphStateV2
 from src.core.session_manager import session_manager
@@ -54,14 +55,26 @@ async def _update_user_context(event: schemas.CanonicalEventV1) -> None:
 
 
 async def _load_session_context(chat_id: str) -> tuple[dict[str, Any], list[Any]]:
+    # Recuperar intenciones pendientes (Soft Intent Injection)
+    pending_intents = await outbox_manager.get_and_clear_pending_intents(chat_id)
+
     existing_session = await session_manager.get_session(chat_id)
     if existing_session:
+        session_ctx = existing_session.get("session_context", {})
+        if pending_intents:
+            session_ctx["pending_intents"] = pending_intents
+
         return {
             "last_specialist": existing_session.get("last_specialist"),
             "last_intent": existing_session.get("last_intent"),
-            "session_context": existing_session.get("session_context", {}),
+            "session_context": session_ctx,
         }, existing_session["conversation_history"]
-    return {}, []
+
+    return {
+        "session_context": {"pending_intents": pending_intents}
+        if pending_intents
+        else {}
+    }, []
 
 
 async def _run_orchestration(

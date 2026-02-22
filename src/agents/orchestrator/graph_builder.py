@@ -80,6 +80,10 @@ class OrchestratorGraphBuilder(GraphBuilder):
         # 3. Chain router para determinar siguiente especialista
         graph_builder.add_node("chain_router", routing_functions["chain_router_fn"])
 
+        # 4. Nodo de reflexión final (Life Reflection)
+        from .nodes.reflection import life_reflection_node
+        graph_builder.add_node("life_reflection", life_reflection_node.run)
+
         # 4. Configuración de routing points
         graph_builder.set_entry_point("meta_router")
 
@@ -93,6 +97,10 @@ class OrchestratorGraphBuilder(GraphBuilder):
             "chain_router",
             routing_functions["chain_router_decision_fn"],
         )
+
+        # 6. El nodo de reflexión es el punto final absoluto
+        from langgraph.graph import END
+        graph_builder.add_edge("life_reflection", END)
 
         compiled_graph = graph_builder.compile()
         logger.info("Grafo de orquestación compilado exitosamente")
