@@ -78,6 +78,22 @@ Aplicar el ADR-0027. Permitir al sistema agendar y despachar mensajes al futuro.
   - **Acción:** Modificar
   - **Descripción:** Añadir una tarea asíncrona en bucle (`asyncio.sleep(60)`) que revise la BD cada minuto y despache los mensajes a través del bot API de Telegram a su hora programada.
 
+## Fase 4: Inyección Suave de Intención (Soft Intent Injection)
+
+### Objetivo
+Asegurar que si el usuario habla primero, los mensajes proactivos pendientes no se borren sin más (Hard Cancel), sino que se inyecten como contexto en la nueva conversación.
+
+### Cambios Previstos
+- **Módulo/Archivo:** `src/core/messaging/outbox.py`
+  - **Acción:** Modificar
+  - **Descripción:** Cambiar `cancel_pending` por un método `get_and_clear_pending_intents` que devuelva las intenciones programadas y las elimine del Outbox.
+- **Módulo/Archivo:** `src/api/services/event_processor.py`
+  - **Acción:** Modificar
+  - **Descripción:** Al iniciar el procesamiento de un evento de usuario, consultar los `pending_intents` y agregarlos al `payload`.
+- **Módulo/Archivo:** `src/personality/prompt_builder.py`
+  - **Acción:** Modificar
+  - **Descripción:** Inyectar una instrucción en el prompt indicando que había una intención programada y que el LLM debe decidir si es prudente traerla a colación de forma natural.
+
 ---
 
 ## Seguimiento de Tareas

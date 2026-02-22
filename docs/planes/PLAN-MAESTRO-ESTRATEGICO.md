@@ -35,16 +35,24 @@ AEGEN dejará de ser un chatbot que responde preguntas para convertirse en un si
 - [ ] **2.3 Inyección de Hitos en Contexto:** Que el `prompt_builder.py` cargue los hitos recientes no resueltos para que MAGI tenga "temas pendientes" de los que hablar y establecer el hilo conductor.
 
 ## Bloque 3: Proactividad y Cronógrafos (Romper el Reactivismo)
-**Objetivo:** Permitir que AEGEN inicie conversaciones.
-**Justificación:** Un asistente real te pregunta "¿cómo te fue?" horas después del evento.
+**Objetivo:** Permitir que AEGEN inicie conversaciones o retome temas pendientes de forma natural.
+**Justificación:** Un asistente real te pregunta "¿cómo te fue?" horas después del evento, o aprovecha una nueva charla para ponerse al día.
 - [ ] **3.1 Bandeja de Salida Diferida (ADR-0027):** Creación de un sistema de cola (`outbox_messages`) en SQLite donde un agente puede programar un mensaje para el futuro (`send_at`).
 - [ ] **3.2 Integración de Polling Proactivo:** Modificar el webhook/polling de Telegram (`src/api/adapters/telegram_adapter.py`) para que evalúe periódicamente y despache los mensajes pendientes de la bandeja de salida.
+- [ ] **3.3 Inyección Suave de Intención (Soft Intent Injection):** Al recibir un mensaje, extraer intenciones pendientes del Outbox y pasarlas a MAGI en su system prompt para que decida, como LLM, si el contexto permite sacar a colación el tema programado sin forzarlo.
 
 ## Bloque 4: Reingeniería del Experto RAG (Separación de Preocupaciones)
 **Objetivo:** Mejorar el uso del Knowledge Base (TCC, Finanzas, etc.) sin que el agente suene como si estuviera leyendo un libro.
 **Justificación:** El conocimiento experto debe dictar la *estrategia*, no el *diálogo exacto*.
 - [ ] **4.1 Agente Estratega (Invisible):** Un nodo de LangGraph que consulta el RAG y define un "Plan de Intervención Interno" (ej. "Técnica a usar: Reestructuración cognitiva suave enfocada en el esfuerzo").
 - [ ] **4.2 Agente Interfaz (MAGI):** MAGI recibe el "Plan de Intervención" en su prompt y se encarga puramente de traducirlo a una charla humana, empática y natural, ejecutando la estrategia sutilmente sobre varios mensajes.
+
+## Bloque 5: Análisis Longitudinal y Life Review Agent
+**Objetivo:** Detectar progreso real a lo largo del tiempo (ej. mejora en métricas de gimnasio o cambio positivo en estado de ánimo).
+**Justificación:** La memoria de hitos aislados no sirve sin un motor que calcule la tendencia. Un "Soporte Vital" debe felicitarte por tus avances semanales o alertarte de recaídas.
+- [ ] **5.1 Life Review Worker:** Script asíncrono (Cron-Job periódico, ej. semanal) que recupera los hitos agrupados por `goal_type` o temas.
+- [ ] **5.2 Prompt de Análisis de Tendencia:** Un LLM chain que compara registros recientes e históricos y extrae conclusiones de progreso (ej. "aumento de repeticiones o peso", "mejora de estado de ánimo").
+- [ ] **5.3 Agendamiento Proactivo de Progreso:** Si el *Life Reviewer* detecta un avance significativo, agenda un `pending_intent` en el Outbox para que MAGI felicite al usuario o retome el tema de forma natural en la próxima interacción.
 
 ---
 
