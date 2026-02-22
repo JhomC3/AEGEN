@@ -83,9 +83,7 @@ class OutboxManager:
             )
             await db.execute(sql_update, (chat_id,))
             await db.commit()
-            logger.info(
-                f"Extraídas {len(intents)} intenciones pendientes en {chat_id}"
-            )
+            logger.info(f"Extraídas {len(intents)} intenciones pendientes en {chat_id}")
 
         return intents
 

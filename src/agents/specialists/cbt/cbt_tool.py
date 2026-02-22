@@ -73,7 +73,7 @@ async def _get_cbt_rag_context(chat_id: str, user_message: str) -> str:
 async def _get_cbt_memories(chat_id: str) -> tuple[str, str]:
     """Recupera resumen de memoria y hechos para CBT."""
     memory_data = await long_term_memory.get_summary(chat_id)
-    history_summary = memory_data.get("summary", "Sin historial previo.")
+    history_summary = memory_data.summary
 
     knowledge_data = await knowledge_base_manager.load_knowledge(chat_id)
     structured_knowledge = format_knowledge_for_prompt(knowledge_data)

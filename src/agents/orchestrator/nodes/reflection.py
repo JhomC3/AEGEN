@@ -33,13 +33,11 @@ class LifeReflectionNode:
                 "3. NO para trivialidades.\n"
                 "4. Intent corto.\n"
                 "5. delay: 4-24h.\n\n"
-                "DEBES responder llamando a la función ReflectionDecision."
+                "DEBES responder llamando a la función ReflectionDecision.",
             ),
             ("human", "H: {history}\n\nR: {response}"),
         ])
-        self.chain = self.prompt | llm_core.with_structured_output(
-            ReflectionDecision
-        )
+        self.chain = self.prompt | llm_core.with_structured_output(ReflectionDecision)
 
     async def run(self, state: GraphStateV2) -> GraphStateV2:
         """Procesa el estado para agendar seguimientos."""
@@ -52,8 +50,7 @@ class LifeReflectionNode:
 
         history_msgs = state.get("conversation_history", [])[-4:]
         history_text = "\n".join([
-            f"{m.get('role', 'u')}: {m.get('content', '')}"
-            for m in history_msgs
+            f"{m.get('role', 'u')}: {m.get('content', '')}" for m in history_msgs
         ])
         history_text += f"\nuser: {state['event'].content}"
 
@@ -64,15 +61,18 @@ class LifeReflectionNode:
                 config=cast(RunnableConfig, config),
             )
 
-            if (isinstance(decision, ReflectionDecision) and
-                    decision.should_follow_up and decision.follow_up_intent):
+            if (
+                isinstance(decision, ReflectionDecision)
+                and decision.should_follow_up
+                and decision.follow_up_intent
+            ):
                 chat_id = str(state["event"].chat_id)
                 delay_secs = decision.delay_hours * 3600
 
                 msg_id = await outbox_manager.schedule_message(
                     chat_id=chat_id,
                     intent=decision.follow_up_intent,
-                    delay_seconds=delay_secs
+                    delay_seconds=delay_secs,
                 )
 
                 logger.info(f"[{session_id}] Agendado ({msg_id})")

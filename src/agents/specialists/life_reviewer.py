@@ -30,14 +30,12 @@ class LifeReviewer:
                 "INSTRUCCIONES:\n"
                 "1. Compara registros.\n"
                 "2. Busca mejoras cuantitativas/cualitativas.\n"
-                "3. Genera felicitación/recomendación empática."
+                "3. Genera felicitación/recomendación empática.",
             ),
             ("human", "Hitos:\n{milestones_context}"),
         ])
         # Usamos with_structured_output con el motor CORE (120B)
-        self.chain = self.prompt | llm_core.with_structured_output(
-            ProgressAnalysis
-        )
+        self.chain = self.prompt | llm_core.with_structured_output(ProgressAnalysis)
 
     async def review_user_progress(self, chat_id: str) -> None:
         """Realiza la revisión y agenda notificación."""
@@ -60,16 +58,16 @@ class LifeReviewer:
                 config=cast(RunnableConfig, config),
             )
 
-            if isinstance(analysis, ProgressAnalysis) and \
-                    analysis.should_notify_proactively:
+            if (
+                isinstance(analysis, ProgressAnalysis)
+                and analysis.should_notify_proactively
+            ):
                 intent = (
                     f"Felicitar: {analysis.summary}. "
                     f"Recomendar: {analysis.recommendation}"
                 )
                 await outbox_manager.schedule_message(
-                    chat_id=chat_id,
-                    intent=intent,
-                    delay_seconds=3600
+                    chat_id=chat_id, intent=intent, delay_seconds=3600
                 )
                 logger.info(f"Life Review ok: {chat_id}")
 
