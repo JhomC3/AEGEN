@@ -92,10 +92,19 @@ class MemoryRepository:
         db = await self.get_db()
         blob = struct.pack(f"{len(embedding)}f", *embedding)
         try:
-            await db.execute(
-                "INSERT INTO vec_memories (rowid, embedding) VALUES (?, ?)",
-                (mid, blob),
+            # 1. Insert into virtual table memory_vectors to get the vector rowid
+            cursor = await db.execute(
+                "INSERT INTO memory_vectors (embedding) VALUES (?)",
+                (blob,),
             )
+            vec_id = cursor.lastrowid
+
+            # 2. Map the vector rowid to the memory id
+            await db.execute(
+                "INSERT INTO vector_memory_map (vector_id, memory_id) VALUES (?, ?)",
+                (vec_id, mid),
+            )
+
             await db.commit()
             return mid
         except Exception as e:

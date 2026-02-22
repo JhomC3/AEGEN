@@ -70,6 +70,40 @@ CREATE TABLE IF NOT EXISTS profiles (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- State Management: Metas del usuario a largo plazo
+CREATE TABLE IF NOT EXISTS user_goals (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id TEXT NOT NULL,
+    goal_type TEXT NOT NULL, -- 'fitness', 'finance', 'mental_health', 'general'
+    description TEXT NOT NULL,
+    target_date TIMESTAMP,
+    status TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'completed', 'abandoned')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- State Management: Hitos / Eventos vinculados al estado de vida o a metas
+CREATE TABLE IF NOT EXISTS user_milestones (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id TEXT NOT NULL,
+    goal_id INTEGER REFERENCES user_goals(id) ON DELETE SET NULL,
+    action TEXT NOT NULL,     -- Ej. 'Gimnasio', 'Estudiar', 'Ataque de pánico'
+    status TEXT NOT NULL,     -- Ej. 'Completado', 'Omitido', 'En progreso'
+    emotion TEXT,             -- Ej. 'Apatía', 'Orgullo', 'Ansiedad'
+    description TEXT,         -- Contexto extra
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Outbox Pattern: Mensajes proactivos diferidos
+CREATE TABLE IF NOT EXISTS outbox_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    chat_id TEXT NOT NULL,
+    intent TEXT NOT NULL,          -- Razón o prompt interno para generar el mensaje
+    scheduled_for TIMESTAMP NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'sent', 'cancelled', 'failed')),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Trigger de limpieza automática: borra el vector físico cuando se elimina su referencia
 -- Esto completa la cascada de limpieza: memories → vector_memory_map → memory_vectors
 CREATE TRIGGER IF NOT EXISTS cleanup_vector_on_map_delete

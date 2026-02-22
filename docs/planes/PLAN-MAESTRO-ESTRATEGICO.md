@@ -1,63 +1,53 @@
-# PLAN: Estratégico Maestro de Implementación (AEGEN)
+# PLAN MAESTRO: AEGEN - De Chatbot a Sistema de Soporte Vital (Life Support System)
 
 > **Instrucciones para Agentes:**
 > - Para **crear** o modificar este plan: Usar la skill `writing-plans`.
 > - Para **ejecutar** este plan: Usar la skill `executing-plans` para proceder tarea por tarea con verificaciones intermedias.
 
-- **Estado:** En Ejecución
-- **Fecha:** 2026-02-12
-- **Razón de Creación:** Planificación a largo plazo para la evolución del sistema AEGEN hacia la autonomía total.
-- **Objetivo General:** Transformar AEGEN en un sistema de IA autónomo, profesional, con memoria persistente y capacidades de acción externa.
+- **Estado:** En Ejecución (Pivote Estratégico)
+- **Fecha:** 2026-02-21
+- **Razón de Creación:** Cambio de paradigma. El sistema actual es reactivo (Q&A aislado) y está sobre-restringido por hardcodeos en los prompts (ej. TCC agresiva). Se requiere evolucionar hacia una arquitectura proactiva, basada en metas a largo plazo e interacciones fluidas (Soporte Vital).
+- **Objetivo General:** Transformar AEGEN en un motor asíncrono y proactivo de gestión de vida, capaz de rastrear hitos, iniciar conversaciones con propósito y aplicar estrategias de conocimiento experto sin romper la naturalidad de la interacción.
 
 ---
 
 ## Resumen Ejecutivo
-Este plan maestro define la hoja de ruta técnica para AEGEN. Se divide en tres bloques fundamentales: Saneamiento (Bloque A), Expansión de Memoria (Bloque B) y Capacidad de Acción (Bloque C). Actualmente, el sistema ha completado el saneamiento estructural y se prepara para la fase de expansión masiva de contexto.
+
+El plan anterior priorizaba la ingesta masiva de memoria (WhatsApp, ChatGPT) sobre un motor conversacional rígido. Este pivote invierte la prioridad: primero construiremos un "Motor de Propósito y Seguimiento" que permita a MAGI tener *hilos conductores* a lo largo de los días, semanas y meses.
+AEGEN dejará de ser un chatbot que responde preguntas para convertirse en un sistema que extrae hitos (milestones), planifica seguimientos proactivos (cronógrafos) y separa la "Estrategia" clínica/técnica de la "Interfaz" conversacional, eliminando las reglas negativas rígidas (alignment tax) a favor de In-Context Learning (Few-shot prompting).
 
 ---
 
-## Bloque A: Saneamiento y Autonomía
-### Objetivo
-Limpieza total de deuda técnica y automatización de la gestión de conocimientos.
+## Bloque 1: Calibración de Personalidad e In-Context Learning (Core UX)
+**Objetivo:** Eliminar el comportamiento robótico, los acentos erróneos (voseo no deseado) y los interrogatorios clínicos forzados.
+**Justificación:** Si la salida de texto falla, la UX colapsa. El agente no debe actuar como un manual de psiquiatría, sino como un compañero inteligente.
 
-### Justificación
-La base legacy de Google Cloud y la dispersión de datos impedían el escalado y la privacidad "local-first" deseada.
+- [ ] **1.1 Purga de Hardcodes y Voseo:** Modificar `SOUL.md` y el prompt builder para prohibir el voseo (a menos que se explicite) y eliminar reglas rígidas de "Tough Love" en `tcc_overlay.md`.
+- [ ] **1.2 Few-Shot Dinámico:** Implementar un sistema de anclas de estilo donde el prompt inyecta 2-3 ejemplos de "interacciones perfectas" (`gold_standards.yaml`) para guiar al modelo por imitación en lugar de por prohibición.
+- [ ] **1.3 Refactorización del Router y Prompts Base:** Ajustar el `enhanced_router.py` y los prompts de TCC para forzar "Escucha Activa Multi-turno", limitando al agente a una pregunta máxima por mensaje para evitar el "Q&A" aislado.
 
-### Tareas y Estado
-- [x] **A.1 Saneamiento de Raíz**: Unificación de almacenamiento en `/storage` y eliminación de scripts legacy. (Finalizado ✅ 2026-02-11)
-- [x] **A.2 Vigilante de Conocimiento**: Sincronización automática de archivos en `storage/knowledge/`. (Finalizado ✅ 2026-02-13)
-- [x] **A.3 Overhaul de Personalidad**: Implementación de arquitectura Soul Stack v2 y Espejo Natural. (Finalizado ✅ 2026-02-15)
+## Bloque 2: Motor de Propósito e Hilos Conductores (State Management)
+**Objetivo:** Dotar al sistema de memoria estructurada orientada a objetivos, no solo a retención de datos pasivos.
+**Justificación:** Para ser un "Soporte de Vida", el sistema debe saber qué estás intentando lograr (ej. entrenar, dormir mejor) y registrar tus avances para hilar conversaciones futuras.
 
----
+- [ ] **2.1 Schema de Hitos y Metas (ADR-0026):** Modificar `schema.sql` para introducir tablas de `user_goals` y `user_milestones`.
+- [ ] **2.2 Extractor de Hitos en Background:** Crear un worker o nodo en LangGraph que analice las conversaciones terminadas y extraiga eventos estructurados (Ej: `[Acción: Gimnasio] [Estado: Hecho] [Emoción: Apatía]`).
+- [ ] **2.3 Inyección de Hitos en Contexto:** Que el `prompt_builder.py` cargue los hitos recientes no resueltos para que MAGI tenga "temas pendientes" de los que hablar y establecer el hilo conductor.
 
-## Bloque B: Expansión de Memoria y Contexto
-### Objetivo
-Convertir historiales externos en conocimiento estructurado.
+## Bloque 3: Proactividad y Cronógrafos (Romper el Reactivismo)
+**Objetivo:** Permitir que AEGEN inicie conversaciones.
+**Justificación:** Un asistente real te pregunta "¿cómo te fue?" horas después del evento.
+- [ ] **3.1 Bandeja de Salida Diferida (ADR-0027):** Creación de un sistema de cola (`outbox_messages`) en SQLite donde un agente puede programar un mensaje para el futuro (`send_at`).
+- [ ] **3.2 Integración de Polling Proactivo:** Modificar el webhook/polling de Telegram (`src/api/adapters/telegram_adapter.py`) para que evalúe periódicamente y despache los mensajes pendientes de la bandeja de salida.
 
-### Justificación
-La IA es más potente cuanta más información histórica posee del usuario para personalizar su estilo y recomendaciones.
-
-### Tareas y Estado
-- [ ] **B.1 Herramienta de Ingesta Masiva (Bulk Ingestor)**: Parsers para exportaciones de WhatsApp, Claude y ChatGPT. (Pendiente ⏳)
-- [ ] **B.2 Agente de Revisión de Vida (Life Review)**: Análisis masivo para extraer hitos y valores del perfil. (Pendiente ⏳)
-- [ ] **B.3 Olvido Inteligente (Smart Decay)**: Algoritmo de Ranking con factor temporal. (Pendiente ⏳)
-
----
-
-## Bloque C: Ecosistema de Acción
-### Objetivo
-Dotar al asistente de capacidad real de acción mediante herramientas.
-
-### Justificación
-AEGEN debe pasar de ser un observador a ser un agente proactivo capaz de gestionar agenda y buscar información real.
-
-### Tareas y Estado
-- [ ] **C.1 Fábrica de Habilidades**: Infraestructura de registro automático de herramientas. (Pendiente ⏳)
-- [ ] **C.2 Integración de Herramientas**: Google Calendar, Búsqueda Web, Análisis de Archivos. (Pendiente ⏳)
-- [ ] **C.3 Verificador de Verdad**: Proceso de auto-crítica contra la Bóveda de Conocimiento. (Pendiente ⏳)
+## Bloque 4: Reingeniería del Experto RAG (Separación de Preocupaciones)
+**Objetivo:** Mejorar el uso del Knowledge Base (TCC, Finanzas, etc.) sin que el agente suene como si estuviera leyendo un libro.
+**Justificación:** El conocimiento experto debe dictar la *estrategia*, no el *diálogo exacto*.
+- [ ] **4.1 Agente Estratega (Invisible):** Un nodo de LangGraph que consulta el RAG y define un "Plan de Intervención Interno" (ej. "Técnica a usar: Reestructuración cognitiva suave enfocada en el esfuerzo").
+- [ ] **4.2 Agente Interfaz (MAGI):** MAGI recibe el "Plan de Intervención" en su prompt y se encarga puramente de traducirlo a una charla humana, empática y natural, ejecutando la estrategia sutilmente sobre varios mensajes.
 
 ---
 
 ## Notas y Riesgos
-- La transición a memoria local-first requiere una gestión cuidadosa de las migraciones de SQLite.
-- Los parsers externos (WhatsApp) son sensibles a cambios de formato de la plataforma.
+- **Riesgo Arquitectónico:** La proactividad (Bloque 3) requiere cuidado extremo para no generar bucles infinitos de auto-mensajes ni enviar spam al usuario. Requiere un *debounce* estricto y límites de frecuencia.
+- **Riesgo de Personalidad:** La transición de reglas negativas a ejemplos (Few-shot) requiere encontrar los "Gold Standards" correctos para cada tipo de interacción.

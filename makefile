@@ -43,10 +43,6 @@ verify: ## Validación completa: linting + tests + architecture simple
 	@echo "✅ All checks passed!"
 
 
-verify-phase: ## Ejecuta quality gates para fase específica (LEGACY)
-	@echo "🎯 Running phase quality gates: $(PHASE)"
-	$(PYTHON) scripts/quality_gates.py --phase $(PHASE)
-
 format: ## Formatea el código usando ruff
 	@echo "Formatting code..."
 	$(PYTHON) -m ruff format .

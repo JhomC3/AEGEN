@@ -54,7 +54,11 @@ async def _get_chat_rag_context(chat_id: str, user_message: str) -> str:
         )
 
         if all_results:
-            return "\n\n".join([f"- {r['content']}" for r in all_results])
+            formatted_results = []
+            for r in all_results:
+                source = r.get("metadata", {}).get("filename", "Memoria de Usuario")
+                formatted_results.append(f"- [Fuente: {source}] {r['content']}")
+            return "\n\n".join(formatted_results)
         return ""
 
     except Exception as e:

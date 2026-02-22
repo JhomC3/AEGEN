@@ -66,18 +66,22 @@ async def test_hybrid_search_excludes_inactive_memories(search_db):
     await search_db.soft_delete_memories([mid2])
 
     # Mock search components to return both IDs
-    with patch.object(
-        hybrid.vector_search,
-        "search",
-        AsyncMock(return_value=[(mid1, 0.1), (mid2, 0.2)]),
-    ), patch.object(
-        hybrid.keyword_search,
-        "search",
-        AsyncMock(return_value=[(mid1, 1.0), (mid2, 0.5)]),
-    ), patch.object(
-        hybrid.embedding_service,
-        "embed_query",
-        AsyncMock(return_value=[0.1] * 768),
+    with (
+        patch.object(
+            hybrid.vector_search,
+            "search",
+            AsyncMock(return_value=[(mid1, 0.1), (mid2, 0.2)]),
+        ),
+        patch.object(
+            hybrid.keyword_search,
+            "search",
+            AsyncMock(return_value=[(mid1, 1.0), (mid2, 0.5)]),
+        ),
+        patch.object(
+            hybrid.embedding_service,
+            "embed_query",
+            AsyncMock(return_value=[0.1] * 768),
+        ),
     ):
         results = await hybrid.search("test", chat_id="chat1")
 

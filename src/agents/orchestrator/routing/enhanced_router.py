@@ -114,7 +114,11 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
         # ADR-0024: Protección de Sesión Terapéutica
         if should_maintain_therapeutic_session(state, decision):
             decision.target_specialist = "cbt_specialist"
-            decision.next_actions = ["handle_resistance", "validate_frustration"]
+            decision.next_actions = [
+                "handle_resistance",
+                "validate_frustration",
+                "pacing_one_step",
+            ]
             return self._route_to_specialist(state, decision)
 
         # Verificar confianza mínima global
@@ -146,7 +150,11 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
                 f"Vulnerabilidad detectada con alta confianza ({confidence:.2f}). "
                 f"Routing directo a cbt_specialist."
             )
-            decision.next_actions = ["depth_empathy", "active_listening"]
+            decision.next_actions = [
+                "depth_empathy",
+                "active_listening",
+                "pacing_one_step",
+            ]
             return self._route_to_specialist(state, decision)
 
         # Nivel 2: Confianza moderada (60-85%) → Clarificar
@@ -155,7 +163,11 @@ class EnhancedFunctionCallingRouter(RoutingStrategy):
                 f"Posible vulnerabilidad ({confidence:.2f}). "
                 f"Añadiendo acción de clarificación."
             )
-            decision.next_actions = ["clarify_emotional_state", "gentle_probe"]
+            decision.next_actions = [
+                "clarify_emotional_state",
+                "gentle_probe",
+                "pacing_one_step",
+            ]
             # Aún va a CBT, pero con instrucción de clarificar primero
             return self._route_to_specialist(state, decision)
 

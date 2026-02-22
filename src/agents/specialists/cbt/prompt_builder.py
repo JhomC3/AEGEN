@@ -48,12 +48,23 @@ def build_routing_instructions(next_actions: list[str]) -> str:
 
     instructions = "\n\nINSTRUCCIONES DE ENRUTAMIENTO PRIORITARIAS:\n"
     mapping = {
-        "depth_empathy": ("- Prioriza la validación emocional profunda.\n"),
+        "depth_empathy": ("- Prioriza la validación emocional y la compañía.\n"),
         "clarify_emotional_state": (
-            "- Estado ambiguo. Haz una pregunta suave para clarificar.\n"
+            "- El usuario no es claro. Invítalo amablemente a contar más.\n"
         ),
-        "active_listening": ("- Usa escucha activa reflexiva. Parafrasea.\n"),
-        "gentle_probe": ("- Indaga sobre pensamientos automáticos subyacentes.\n"),
+        "active_listening": (
+            "- Demuestra que lo estás escuchando. Parafrasea de forma natural.\n"
+        ),
+        "gentle_probe": ("- Explora suavemente qué le preocupa, sin interrogar.\n"),
+        "pacing_one_step": (
+            "- PACING: Haz MÁXIMO 1 pregunta corta. No intentes avanzar rápido.\n"
+        ),
+        "handle_resistance": (
+            "- El usuario siente frustración. Valídalo y dale espacio.\n"
+        ),
+        "validate_frustration": (
+            "- Reconoce explícitamente su frustración como válida y comprensible.\n"
+        ),
     }
 
     for action in next_actions:
@@ -64,14 +75,10 @@ def build_routing_instructions(next_actions: list[str]) -> str:
 
 
 CLINICAL_GUARDRAILS = (
-    "\n\n[GUARDRAILS CLÍNICOS]\n"
-    "- NUNCA uses lenguaje diagnóstico.\n"
-    "- Puedes decir 'lo que describes suena a lo que en psicología se llama..., "
-    "pero solo un profesional puede evaluarlo'.\n"
-    "- Si el usuario pide diagnóstico, prescripción o evaluación, "
-    "declina y sugiere buscar un profesional.\n"
-    "- Si detectas riesgo de autolesión o crisis, muestra los recursos "
-    "y sugiere contactar a un profesional inmediatamente.\n"
-    "- Los datos marcados como '(hipótesis)' en el conocimiento son "
-    "inferencias no confirmadas. Úsalos con precaución.\n"
+    "\n\n[GUARDRAILS ESTRICTOS DE PERSONALIDAD]\n"
+    "- NUNCA uses lenguaje diagnóstico ni hables de 'TCC' o 'distorsiones'.\n"
+    "- Eres su amigo, no terapeuta. Acompáñalo como lo haría un amigo tomando café.\n"
+    "- NUNCA le digas 'busca ayuda profesional' salvo crisis explícita y grave.\n"
+    "- Los datos '(hipótesis)' son inferencias no confirmadas. Úsalos con sutileza.\n"
+    "- **Pacing:** Da 1 paso a la vez. Haz MÁXIMO 1 pregunta por mensaje.\n"
 )

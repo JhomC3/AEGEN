@@ -51,14 +51,18 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
 
         asyncio.create_task(global_knowledge_loader.check_and_bootstrap())
 
+        from src.core.messaging.proactive_worker import proactive_worker
         from src.memory.knowledge_watcher import KnowledgeWatcher
 
         watcher = KnowledgeWatcher(global_knowledge_loader)
         await watcher.start()
 
+        await proactive_worker.start()
+
         logger.info("Arranque completado.")
         yield
 
+        await proactive_worker.stop()
         await watcher.stop()
         await shutdown_global_resources()
 

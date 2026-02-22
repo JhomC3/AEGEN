@@ -50,11 +50,33 @@ class ConsolidationManager:
         try:
             cur_kb = await knowledge_base_manager.load_knowledge(chat_id)
             conv_text = "\n".join([f"{m['role']}: {m['content']}" for m in raw_buffer])
+
+            # Extract and save facts
             upd_kb = await fact_extractor.extract_facts(conv_text, cur_kb)
             await knowledge_base_manager.save_knowledge(chat_id, upd_kb)
             await self._sync_user_name_to_profile(chat_id, upd_kb)
+
+            # Extract and save milestones (State Management)
+            from src.core.dependencies import get_sqlite_store
+            from src.memory.milestone_extractor import milestone_extractor
+
+            milestones = await milestone_extractor.extract_milestones(conv_text)
+            if milestones:
+                store = get_sqlite_store()
+                for ms in milestones:
+                    await store.state_repo.add_milestone(
+                        chat_id=chat_id,
+                        action=ms.action,
+                        status=ms.status,
+                        emotion=ms.emotion,
+                        description=ms.description,
+                    )
+                    logger.info(
+                        f"Hito guardado para {chat_id}: {ms.action} ({ms.status})"
+                    )
+
         except Exception as e:
-            logger.error("Error facts consolidation %s: %s", chat_id, e)
+            logger.error("Error facts/milestones consolidation %s: %s", chat_id, e)
 
         new_data = await long_term_memory.get_summary(chat_id)
         summary = new_data["summary"]

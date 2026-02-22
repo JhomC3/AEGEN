@@ -18,6 +18,7 @@ import sqlite_vec
 
 from src.memory.repositories.memory_repo import MemoryRepository
 from src.memory.repositories.profile_repo import ProfileRepository
+from src.memory.repositories.state_repo import StateRepository
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,7 @@ class SQLiteStore:
         # Repositorios
         self._memory_repo = MemoryRepository(self)
         self._profile_repo = ProfileRepository(self)
+        self.state_repo = StateRepository(self)
 
         logger.info(f"SQLiteStore inicializado con ruta: {db_path}")
 
