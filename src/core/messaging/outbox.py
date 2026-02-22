@@ -45,10 +45,9 @@ class OutboxManager:
             ids = [m["id"] for m in messages]
             marks = ",".join(["?"] * len(ids))
             sql_update = (
-                "UPDATE outbox_messages SET status = 'processing' "\
-                f"WHERE id IN ({marks})"  # noqa: S608
+                "UPDATE outbox_messages SET status = 'processing' "  # noqa: S608
+                f"WHERE id IN ({marks})"  # noqa
             )
-            f"WHERE id IN ({marks})"  # noqa: S608
             await db.execute(sql_update, ids)
             await db.commit()
 
@@ -62,20 +61,33 @@ class OutboxManager:
         await db.execute(sql, (message_id,))
         await db.commit()
 
-    async def cancel_pending(self, chat_id: str) -> None:
-        """Cancela mensajes pendientes (ej. porque el usuario habló primero)."""
+    async def get_and_clear_pending_intents(self, chat_id: str) -> list[str]:
+        """Extrae intenciones pendientes y las cancela (Soft Intent Injection)."""
         store = get_sqlite_store()
         db = await store.get_db()
-        sql = (
-            "UPDATE outbox_messages SET status = 'cancelled' "
-            "WHERE chat_id = ? AND status IN ('pending', 'processing')"
-        )
-        async with db.execute(sql, (chat_id,)) as cursor:
+
+        # Recuperar intenciones
+        sql_select = """
+            SELECT intent FROM outbox_messages
+            WHERE chat_id = ? AND status IN ('pending', 'processing')
+        """
+        async with db.execute(sql_select, (chat_id,)) as cursor:
+            rows = await cursor.fetchall()
+            intents = [r["intent"] for r in rows]
+
+        if intents:
+            # Cancelarlas para que no se envíen solas
+            sql_update = (
+                "UPDATE outbox_messages SET status = 'cancelled' "
+                "WHERE chat_id = ? AND status IN ('pending', 'processing')"
+            )
+            await db.execute(sql_update, (chat_id,))
             await db.commit()
-            if cursor.rowcount > 0:
-                logger.info(
-                    f"Cancelados {cursor.rowcount} mensajes proactivos para {chat_id}"
-                )
+            logger.info(
+                f"Extraídas {len(intents)} intenciones pendientes en {chat_id}"
+            )
+
+        return intents
 
 
 outbox_manager = OutboxManager()

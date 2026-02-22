@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime
 from typing import Any
-
 from zoneinfo import ZoneInfo
 
 from src.core.profiling_manager import profiling_manager
