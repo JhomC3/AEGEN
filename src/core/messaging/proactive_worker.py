@@ -3,7 +3,6 @@ import contextlib
 import logging
 from uuid import uuid4
 
-from src.api.services.event_processor import event_processor
 from src.core.messaging.outbox import outbox_manager
 from src.core.schemas.graph import CanonicalEventV1
 
@@ -62,8 +61,9 @@ class ProactiveWorker:
         try:
             # Recreamos un procesador para este evento
             # En producción se podría inyectar
-            processor = event_processor
-            await processor.process_event(event)
+            from src.api.services.event_processor import process_event_task
+            await process_event_task(event)
+
             await outbox_manager.mark_as_sent(msg_id)
         except Exception as e:
             logger.error(f"Error procesando mensaje proactivo {msg_id}: {e}")
