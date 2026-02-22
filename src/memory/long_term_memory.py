@@ -1,7 +1,8 @@
+import json
 import logging
-from typing import Any
 
-from src.core.engine import llm
+from src.core.engine import llm_chat
+from src.core.schemas.memory import MemorySummaryV1
 from src.memory.redis_buffer import RedisMessageBuffer
 from src.memory.services.memory_summarizer import MemorySummarizer
 
@@ -12,10 +13,10 @@ class LongTermMemoryManager:
     """Gestiona la memoria episódica de largo plazo."""
 
     def __init__(self) -> None:
-        self.llm = llm
+        self.llm = llm_chat
         self._buffer_instance: RedisMessageBuffer | None = None
-        self._summarizer = MemorySummarizer(llm)
-        logger.info("LongTermMemoryManager initialized")
+        self._summarizer = MemorySummarizer(llm_chat)
+        logger.info("LongTermMemoryManager initialized (Dual Brain Aware)")
 
     async def get_buffer(self) -> RedisMessageBuffer:
         """Obtiene la instancia del buffer."""
@@ -27,9 +28,12 @@ class LongTermMemoryManager:
             self._buffer_instance = RedisMessageBuffer(redis_connection)
         return self._buffer_instance
 
-    async def get_summary(self, chat_id: str) -> dict[str, Any]:
-        """Obtiene el resumen actual de Redis."""
+    async def get_summary(self, chat_id: str) -> MemorySummaryV1:
+        """Obtiene el resumen actual de Redis garantizando el contrato Pydantic."""
         from src.core.dependencies import redis_connection
+
+        buffer = await self.get_buffer()
+        raw_messages = await buffer.get_messages(chat_id)
 
         if redis_connection:
             key = f"chat:summary:{chat_id}"
@@ -37,14 +41,18 @@ class LongTermMemoryManager:
             if val:
                 if isinstance(val, bytes):
                     val = val.decode("utf-8")
-                import json
 
                 try:
                     data = json.loads(val)
-                    return {"summary": data.get("summary", "Perfil activo.")}
+                    return MemorySummaryV1(
+                        summary=data.get("summary", "Perfil activo."),
+                        buffer=raw_messages,
+                        last_updated=data.get("last_updated"),
+                    )
                 except Exception:
-                    return {"summary": val}
-        return {"summary": "Perfil activo."}
+                    return MemorySummaryV1(summary=val, buffer=raw_messages)
+
+        return MemorySummaryV1(summary="Perfil activo.", buffer=raw_messages)
 
     async def store_raw_message(self, chat_id: str, role: str, content: str) -> None:
         """Guarda un mensaje en el búfer."""
@@ -85,9 +93,8 @@ class LongTermMemoryManager:
             return
 
         old_data = await self.get_summary(chat_id)
-        # La firma del summarizer es (chat_id, old_summary, raw_buffer, buffer)
         await self._summarizer.update_memory(
-            chat_id, old_data.get("summary", ""), messages, buffer
+            chat_id, old_data.summary, messages, buffer
         )
         logger.info("Memory summary update triggered for %s", chat_id)
 

@@ -34,14 +34,17 @@ class BaseAppSettings(BaseSettings):
     # === LLM Models por Tarea ===
     # Chat Principal y Razonamiento
     CHAT_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
-    CHAT_FALLBACK_MODEL: str = "gpt-oss-120"
+    CHAT_FALLBACK_MODEL: str = "gemini-2.0-flash"  # Usamos 2.0 ya que 2.5 no existe comercialmente aún, o nos referimos a la v2
     REASONING_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
+
+    # Core y Estructura (JSON)
+    CORE_MODEL: str = "gpt-oss-120"  # openai/gpt-oss-120b en Groq
 
     # Audio (Groq Whisper)
     AUDIO_MODEL: str = "whisper-large-v3-turbo"
 
     # RAG (Gemini por ventana de contexto y File API)
-    RAG_MODEL: str = "gemini-1.5-flash"
+    RAG_MODEL: str = "gemini-2.0-flash"
 
     # Routing y Default
     ROUTING_MODEL: str = "moonshotai/kimi-k2-instruct-0905"

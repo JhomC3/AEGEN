@@ -34,5 +34,9 @@ async def download_telegram_file(file_id: str, destination_folder: str) -> str:
 async def reply_to_telegram_chat(chat_id: str, text: str) -> bool:
     """
     Tool para enviar un mensaje de respuesta a un chat de Telegram.
+    Aplica protección lingüística (Escudo de Neutralidad) antes de enviar.
     """
-    return await telegram_manager.send_message(chat_id, text)
+    from src.core.lingua_guard import lingua_guard
+
+    protected_text = await lingua_guard.protect(text)
+    return await telegram_manager.send_message(chat_id, protected_text)

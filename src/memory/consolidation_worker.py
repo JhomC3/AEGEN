@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Any
 
-from src.core.engine import llm
+from src.core.engine import llm_chat
 from src.core.profile_manager import user_profile_manager
 from src.memory.evolution_applier import apply_evolution
 from src.memory.evolution_detector import EvolutionDetector
@@ -15,7 +15,7 @@ class ConsolidationManager:
     """Gestiona la consolidación de memoria."""
 
     def __init__(self) -> None:
-        self.evolution_detector = EvolutionDetector(llm)
+        self.evolution_detector = EvolutionDetector(llm_chat)
 
     async def should_consolidate(self, chat_id: str, message_count: int) -> bool:
         """Verifica si se cumplen las condiciones de consolidación."""
@@ -40,10 +40,11 @@ class ConsolidationManager:
         from src.memory.knowledge_base import knowledge_base_manager
         from src.memory.long_term_memory import long_term_memory
 
-        buffer = await long_term_memory.get_buffer()
-        raw_buffer = await buffer.get_messages(chat_id)
+        memory_obj = await long_term_memory.get_summary(chat_id)
+        raw_buffer = memory_obj.buffer
 
         if not raw_buffer:
+            logger.debug("No messages in buffer for consolidation of %s", chat_id)
             return
 
         await long_term_memory.update_memory(chat_id)
@@ -79,8 +80,9 @@ class ConsolidationManager:
         except Exception as e:
             logger.error("Error facts/milestones consolidation %s: %s", chat_id, e)
 
-        new_data = await long_term_memory.get_summary(chat_id)
-        summary = new_data["summary"]
+        # Volver a cargar el resumen actualizado para detectar evolución
+        upd_memory = await long_term_memory.get_summary(chat_id)
+        summary = upd_memory.summary
         profile = await user_profile_manager.load_profile(chat_id)
         evolution = await self.evolution_detector.detect_evolution(profile, summary)
         if evolution:

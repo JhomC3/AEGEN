@@ -6,7 +6,7 @@ from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from src.core.dependencies import get_sqlite_store
-from src.core.engine import create_observable_config, llm
+from src.core.engine import create_observable_config, llm_core
 from src.core.messaging.outbox import outbox_manager
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,10 @@ class LifeReviewer:
             ),
             ("human", "Hitos:\n{milestones_context}"),
         ])
-        self.chain = self.prompt | llm.with_structured_output(ProgressAnalysis)
+        # Usamos with_structured_output con el motor CORE (120B)
+        self.chain = self.prompt | llm_core.with_structured_output(
+            ProgressAnalysis
+        )
 
     async def review_user_progress(self, chat_id: str) -> None:
         """Realiza la revisión y agenda notificación."""

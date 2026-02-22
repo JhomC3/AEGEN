@@ -5,7 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
-from src.core.engine import create_observable_config, llm
+from src.core.engine import create_observable_config, llm_core
 from src.core.messaging.outbox import outbox_manager
 from src.core.schemas import GraphStateV2
 
@@ -37,7 +37,9 @@ class LifeReflectionNode:
             ),
             ("human", "H: {history}\n\nR: {response}"),
         ])
-        self.chain = self.prompt | llm.with_structured_output(ReflectionDecision)
+        self.chain = self.prompt | llm_core.with_structured_output(
+            ReflectionDecision
+        )
 
     async def run(self, state: GraphStateV2) -> GraphStateV2:
         """Procesa el estado para agendar seguimientos."""

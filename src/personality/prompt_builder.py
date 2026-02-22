@@ -23,18 +23,18 @@ logger = logging.getLogger(__name__)
 class SystemPromptBuilder:
     """
     Construye el system prompt de MAGI de forma modular y adaptativa.
+    Implementa aislamiento de personalidad para tareas técnicas.
     """
 
-    _gold_standards_cache: str | None = None
+    _gold_standards_cache: dict[str, str] = {}
 
-    async def _get_gold_standards(self) -> str:
-        """Carga y formatea los ejemplos de Few-Shot desde yaml."""
-        if self._gold_standards_cache is not None:
-            return self._gold_standards_cache
+    async def _get_gold_standards(self, category: str = "chat") -> str:
+        """Carga y formatea los ejemplos de Few-Shot filtrados por categoría."""
+        if category in self._gold_standards_cache:
+            return self._gold_standards_cache[category]
 
         path = Path("src/personality/base/gold_standards.yaml")
         if not path.exists():
-            self._gold_standards_cache = ""
             return ""
 
         try:
@@ -44,25 +44,50 @@ class SystemPromptBuilder:
 
             anchors = data.get("conversational_anchors", [])
             if not anchors:
-                self._gold_standards_cache = ""
                 return ""
 
             examples = ["## Interacciones Gold Standard (Ejemplos a imitar)\n"]
+            found = False
             for anchor in anchors:
-                example = (
-                    f"**Situación:** {anchor.get('situation')}\n"
-                    f'**Usuario:** "{anchor.get("user_message")}"\n'
-                    f'**Respuesta Ideal (MAGI):** "{anchor.get("ideal_response")}"\n'
-                    f"*(Nota: {anchor.get('explanation')})*\n"
-                )
-                examples.append(example)
+                if anchor.get("category") == category or category == "all":
+                    found = True
+                    example = (
+                        f"**Situación:** {anchor.get('situation')}\n"
+                        f'**Usuario:** "{anchor.get("user_message")}"\n'
+                        f'**Respuesta Ideal (MAGI):** "{anchor.get("ideal_response")}"\n'
+                        f"*(Nota: {anchor.get('explanation')})*\n"
+                    )
+                    examples.append(example)
 
-            self._gold_standards_cache = "\n".join(examples)
-            return self._gold_standards_cache
+            if not found:
+                return ""
+
+            result = "\n".join(examples)
+            self._gold_standards_cache[category] = result
+            return result
         except Exception as e:
-            logger.error(f"Error loading gold standards: {e}")
-            self._gold_standards_cache = ""
+            logger.error(f"Error loading gold standards for {category}: {e}")
             return ""
+
+    async def build_technical(self, task_name: str, instructions: str) -> str:
+        """
+        Construye un prompt puramente técnico sin personalidad.
+        Ideal para Milestone Extraction, Reflection, etc.
+        """
+        return f"""
+# MODO OPERACIONAL: {task_name.upper()}
+Componente técnico especializado en datos estructurados.
+
+## INSTRUCCIONES CRÍTICAS
+- Tu única misión es: {instructions}
+- NO uses lenguaje natural, NO saludes, NO des consejos.
+- NO inyectes personalidad, humor ni empatía.
+- Tu salida DEBE ser estrictamente JSON válido según el esquema solicitado.
+- Si no puedes realizar la tarea, devuelve el objeto JSON vacío correspondiente.
+
+# CONTEXTO DE EJECUCIÓN
+- Fecha/Hora Actual: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+""".strip()
 
     async def build(
         self,
@@ -71,10 +96,21 @@ class SystemPromptBuilder:
         skill_name: str = "chat",
         runtime_context: dict[str, Any] | None = None,
         recent_user_messages: list[str] | None = None,
+        include_personality: bool = True,
     ) -> str:
         """
-        Compone el prompt final ensamblando las 5 capas del Soul Stack.
+        Compone el prompt final ensamblando las capas del Soul Stack.
         """
+        if not include_personality:
+            return await self.build_technical(
+                task_name=skill_name,
+                instructions=runtime_context.get(
+                    "technical_instructions", "Procesar datos."
+                )
+                if runtime_context
+                else "Procesar datos.",
+            )
+
         base = await personality_manager.get_base()
         overlay = await personality_manager.get_skill_overlay(skill_name)
 
@@ -88,8 +124,8 @@ class SystemPromptBuilder:
         # 3. Capa 4: Skill Overlay (Dinámica por modo)
         skill_section = self._build_skill_section(overlay) if overlay else ""
 
-        # Inyectar Gold Standards
-        gold_standards = await self._get_gold_standards()
+        # Inyectar Gold Standards SELECTIVOS
+        gold_standards = await self._get_gold_standards(category=skill_name)
         if gold_standards:
             skill_section += f"\n{gold_standards}\n"
 
@@ -109,6 +145,12 @@ class SystemPromptBuilder:
 {skill_section}
 
 {runtime_section}
+
+# MANDATO FINAL DE IDENTIDAD
+[SISTEMA: EXTREMA PRIORIDAD]
+- Usa tuteo neutro.
+- PROHIBIDO el voseo ("vos", "tenés") y regionalismos de España ("tío", "vale").
+- Tu prioridad es ser útil y empático sin perder la coherencia lingüística.
 """
         # ESCAPADO DE SEGURIDAD PARA LANGCHAIN
         return prompt.strip().replace("{", "{{").replace("}", "}}")
@@ -130,7 +172,6 @@ class SystemPromptBuilder:
         localization = profile.get("localization", {})
         user_name = profile.get("identity", {}).get("name", "Usuario")
 
-        # 1. Construir perfil lingüístico desde datos confirmados
         linguistic = LinguisticProfile(
             dialect=localization.get("dialect", "neutro"),
             dialect_hint=localization.get("dialect_hint"),
@@ -141,28 +182,20 @@ class SystemPromptBuilder:
             preferred_style=adaptation.get("preferred_style", "casual"),
         )
 
-        # 2. Analizar estilo conversacional si hay mensajes recientes
         style = (
             style_analyzer.analyze(recent_user_messages)
             if recent_user_messages
             else None
         )
 
-        # 3. Generar sección del prompt
         section = f"# ESPEJO: CÓMO ME ADAPTO A TI ({user_name})\n"
-
-        # Dialecto e Idioma (Uso de sub-renders extraídos)
         section += render_dialect_rules(linguistic)
-
-        # Adaptación de Estilo
         section += render_style_adaptation(style)
 
-        # Profiling hint (Contexto de largo plazo)
         hint = await profiling_manager.get_profiling_hint(profile)
         if hint:
             section += f"- **Profiling:** {hint}\n"
 
-        # Preferencias aprendidas explícitamente
         if learned := adaptation.get("learned_preferences"):
             prefs = "\n".join([f"  - {p}" for p in learned])
             section += f"- **Preferencias Aprendidas:**\n{prefs}\n"
@@ -185,7 +218,6 @@ class SystemPromptBuilder:
         localization: dict[str, Any] | None = None,
         chat_id: str | None = None,
     ) -> str:
-        # Obtener timezone del usuario
         user_tz = localization.get("timezone", "UTC") if localization else "UTC"
 
         try:
@@ -196,14 +228,12 @@ class SystemPromptBuilder:
                 f"{time_str} ({user_tz})\n"
             )
         except Exception:
-            # Fallback a UTC si falla zoneinfo
             now_utc = datetime.now().strftime("%A, %d de %B de %Y, %H:%M")
             section = f"# CONTEXTO RUNTIME\n- **Fecha/Hora (UTC):** {now_utc}\n"
 
         if context.get("channel"):
             section += f"- **Canal:** {context['channel']}\n"
 
-        # Integrar Memoria de Largo Plazo si viene en el contexto
         if summary := context.get("history_summary"):
             section += f"\n## Memoria de Largo Plazo (Resumen)\n{summary}\n"
 
@@ -213,7 +243,6 @@ class SystemPromptBuilder:
         if kb := context.get("structured_knowledge"):
             section += f"\n## Bóveda de Conocimiento\n{kb}\n"
 
-        # Inyectar Hitos Activos si hay chat_id
         if chat_id:
             try:
                 store = get_sqlite_store()
@@ -236,7 +265,6 @@ class SystemPromptBuilder:
             except Exception as e:
                 logger.debug(f"Error fetching milestones: {e}")
 
-        # Inyectar intenciones pendientes (Soft Intent Injection)
         if pending := context.get("pending_intents"):
             intents_str = "\n".join([f"- {intent}" for intent in pending])
             section += "\n## Intenciones Proactivas Pendientes\n"
@@ -244,10 +272,9 @@ class SystemPromptBuilder:
             section += f"{intents_str}\n\n"
             section += "**INSTRUCCIÓN:** Si el tema permite, sácalos sutilmente.\n"
 
-        # 5. Instrucciones de Sistema Activas
         if context and context.get("is_proactive"):
             section += "\n## INSTRUCCIÓN DEL SISTEMA (MENSAJE PROACTIVO)\n"
-            section += "El usuario NO te ha hablado. Inicia tú la conversación basado en el último mensaje.\n"
+            section += "El usuario no ha hablado. Inicia tú la charla.\n"
 
         return section
 

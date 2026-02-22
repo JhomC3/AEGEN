@@ -5,7 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
-from src.core.engine import create_observable_config, llm
+from src.core.engine import create_observable_config, llm_core
 
 logger = logging.getLogger(__name__)
 
@@ -42,8 +42,10 @@ class MilestoneExtractor:
             ),
             ("human", "{conversation}"),
         ])
-        # Usamos with_structured_output para obligar al modelo a devolver el JSON
-        self.chain = self.prompt | llm.with_structured_output(MilestoneExtraction)
+        # Usamos with_structured_output con el motor CORE (120B)
+        self.chain = self.prompt | llm_core.with_structured_output(
+            MilestoneExtraction
+        )
 
     async def extract_milestones(self, conversation_text: str) -> list[MilestoneData]:
         if not conversation_text.strip():
