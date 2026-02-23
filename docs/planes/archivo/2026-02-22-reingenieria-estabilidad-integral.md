@@ -5,7 +5,7 @@
 > - Para **ejecutar** este plan: Usar la skill `executing-plans` para proceder tarea por tarea con verificaciones intermedias.
 > - **Criterio de calidad:** Evaluar trade-offs de cada cambio respecto a: puntos únicos de fallo, degradación suave, y acoplamiento entre módulos. Aceptar complejidad solo cuando el ROI lo justifique (Principio Core #2).
 
-- **Estado:** Propuesto
+- **Estado:** Completado
 - **Fecha:** 2026-02-22
 - **Razón de Creación:** Inestabilidad estructural detectada en producción: errores de formato JSON en memoria y fugas de regionalismos ("tío") debido a la saturación del prompt único.
 - **ADR Relacionado:** adr/ADR-0028-cerebro-dual-motores-especializados.md
