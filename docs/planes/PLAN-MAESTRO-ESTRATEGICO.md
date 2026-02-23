@@ -54,6 +54,13 @@ AEGEN dejará de ser un chatbot que responde preguntas para convertirse en un si
 - [ ] **5.2 Prompt de Análisis de Tendencia:** Un LLM chain que compara registros recientes e históricos y extrae conclusiones de progreso (ej. "aumento de repeticiones o peso", "mejora de estado de ánimo").
 - [ ] **5.3 Agendamiento Proactivo de Progreso:** Si el *Life Reviewer* detecta un avance significativo, agenda un `pending_intent` en el Outbox para que MAGI felicite al usuario o retome el tema de forma natural en la próxima interacción.
 
+## Bloque 6: Refinamiento de Fluidez Cognitiva (Late Context Injection)
+**Objetivo:** Erradicar definitivamente el "Role Clash" y las respuestas terapéuticas robóticas causadas por el desvanecimiento del prompt maestro en historiales largos.
+**Justificación:** Cuando el historial de conversación es extenso, el modelo "olvida" su tono base (amigable/pragmático) y recae en su comportamiento por defecto de asistente de IA genérico, generando disculpas excesivas o clichés psicológicos.
+- [ ] **6.1 Reingeniería del TCC Overlay (Anti-Robótico):** Sustituir reglas abstractas de empatía por restricciones negativas ejecutables (ej. prohibir inicios de frase específicos).
+- [ ] **6.2 Relajación del Router Terapéutico:** Modificar `therapeutic_session.py` para permitir "breaks" conversacionales si el usuario muestra resistencia o confusión ("No sé de qué hablas"), evitando forzar bucles terapéuticos.
+- [ ] **6.3 Late Context Injection (El Martillazo):** Añadir un `SystemMessage` de alta prioridad inmediatamente después de inyectar el historial en LangChain (`cbt_tool.py` y `chat_tool.py`), garantizando que la instrucción de tono natural y pragmático sea lo último que el LLM lea antes de generar.
+
 ---
 
 ## Notas y Riesgos
