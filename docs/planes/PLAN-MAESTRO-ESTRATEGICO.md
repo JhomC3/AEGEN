@@ -22,44 +22,44 @@ AEGEN dejará de ser un chatbot que responde preguntas para convertirse en un si
 **Objetivo:** Eliminar el comportamiento robótico, los acentos erróneos (voseo no deseado) y los interrogatorios clínicos forzados.
 **Justificación:** Si la salida de texto falla, la UX colapsa. El agente no debe actuar como un manual de psiquiatría, sino como un compañero inteligente.
 
-- [ ] **1.1 Purga de Hardcodes y Voseo:** Modificar `SOUL.md` y el prompt builder para prohibir el voseo (a menos que se explicite) y eliminar reglas rígidas de "Tough Love" en `tcc_overlay.md`.
-- [ ] **1.2 Few-Shot Dinámico:** Implementar un sistema de anclas de estilo donde el prompt inyecta 2-3 ejemplos de "interacciones perfectas" (`gold_standards.yaml`) para guiar al modelo por imitación en lugar de por prohibición.
-- [ ] **1.3 Refactorización del Router y Prompts Base:** Ajustar el `enhanced_router.py` y los prompts de TCC para forzar "Escucha Activa Multi-turno", limitando al agente a una pregunta máxima por mensaje para evitar el "Q&A" aislado.
+- [x] **1.1 Purga de Hardcodes y Voseo**: Modificar `SOUL.md` y el prompt builder para prohibir el voseo y regionalismos accidentales. (Finalizado ✅ 2026-02-21)
+- [x] **1.2 Few-Shot Dinámico**: Implementación de `gold_standards.yaml`. (Finalizado ✅ 2026-02-21)
+- [x] **1.3 Refactorización del Router y Prompts Base**: Pacing de 1 pregunta máx. (Finalizado ✅ 2026-02-21)
 
 ## Bloque 2: Motor de Propósito e Hilos Conductores (State Management)
 **Objetivo:** Dotar al sistema de memoria estructurada orientada a objetivos, no solo a retención de datos pasivos.
 **Justificación:** Para ser un "Soporte de Vida", el sistema debe saber qué estás intentando lograr (ej. entrenar, dormir mejor) y registrar tus avances para hilar conversaciones futuras.
 
-- [ ] **2.1 Schema de Hitos y Metas (ADR-0026):** Modificar `schema.sql` para introducir tablas de `user_goals` y `user_milestones`.
-- [ ] **2.2 Extractor de Hitos en Background:** Crear un worker o nodo en LangGraph que analice las conversaciones terminadas y extraiga eventos estructurados (Ej: `[Acción: Gimnasio] [Estado: Hecho] [Emoción: Apatía]`).
-- [ ] **2.3 Inyección de Hitos en Contexto:** Que el `prompt_builder.py` cargue los hitos recientes no resueltos para que MAGI tenga "temas pendientes" de los que hablar y establecer el hilo conductor.
+- [x] **2.1 Schema de Hitos y Metas (ADR-0026)**: Modificar `schema.sql`. (Finalizado ✅ 2026-02-21)
+- [x] **2.2 Extractor de Hitos en Background**: `MilestoneExtractor`. (Finalizado ✅ 2026-02-21)
+- [x] **2.3 Inyección de Hitos en Contexto**: MAGI ve sus hitos pendientes. (Finalizado ✅ 2026-02-21)
 
 ## Bloque 3: Proactividad y Cronógrafos (Romper el Reactivismo)
 **Objetivo:** Permitir que AEGEN inicie conversaciones o retome temas pendientes de forma natural.
 **Justificación:** Un asistente real te pregunta "¿cómo te fue?" horas después del evento, o aprovecha una nueva charla para ponerse al día.
-- [ ] **3.1 Bandeja de Salida Diferida (ADR-0027):** Creación de un sistema de cola (`outbox_messages`) en SQLite donde un agente puede programar un mensaje para el futuro (`send_at`).
-- [ ] **3.2 Integración de Polling Proactivo:** Modificar el webhook/polling de Telegram (`src/api/adapters/telegram_adapter.py`) para que evalúe periódicamente y despache los mensajes pendientes de la bandeja de salida.
-- [ ] **3.3 Inyección Suave de Intención (Soft Intent Injection):** Al recibir un mensaje, extraer intenciones pendientes del Outbox y pasarlas a MAGI en su system prompt para que decida, como LLM, si el contexto permite sacar a colación el tema programado sin forzarlo.
+- [x] **3.1 Bandeja de Salida Diferida (ADR-0027)**: Sistema de cola en SQLite. (Finalizado ✅ 2026-02-21)
+- [x] **3.2 Integración de Polling Proactivo**: Worker en lifespan de FastAPI. (Finalizado ✅ 2026-02-21)
+- [x] **3.3 Inyección Suave de Intención (Soft Intent Injection)**: MAGI recibe recados pendientes si el usuario habla primero. (Finalizado ✅ 2026-02-21)
 
 ## Bloque 4: Reingeniería del Experto RAG (Separación de Preocupaciones)
 **Objetivo:** Mejorar el uso del Knowledge Base (TCC, Finanzas, etc.) sin que el agente suene como si estuviera leyendo un libro.
 **Justificación:** El conocimiento experto debe dictar la *estrategia*, no el *diálogo exacto*.
-- [ ] **4.1 Agente Estratega (Invisible):** Un nodo de LangGraph que consulta el RAG y define un "Plan de Intervención Interno" (ej. "Técnica a usar: Reestructuración cognitiva suave enfocada en el esfuerzo").
-- [ ] **4.2 Agente Interfaz (MAGI):** MAGI recibe el "Plan de Intervención" en su prompt y se encarga puramente de traducirlo a una charla humana, empática y natural, ejecutando la estrategia sutilmente sobre varios mensajes.
+- [x] **4.1 Agente Estratega (Dual Brain - ADR-0028)**: Separación de `llm_chat` y `llm_core` (120B). (Finalizado ✅ 2026-02-22)
+- [x] **4.2 Agente Interfaz (MAGI)**: MAGI traduce la estrategia a charla humana natural. (Finalizado ✅ 2026-02-22)
 
 ## Bloque 5: Análisis Longitudinal y Life Review Agent
 **Objetivo:** Detectar progreso real a lo largo del tiempo (ej. mejora en métricas de gimnasio o cambio positivo en estado de ánimo).
 **Justificación:** La memoria de hitos aislados no sirve sin un motor que calcule la tendencia. Un "Soporte Vital" debe felicitarte por tus avances semanales o alertarte de recaídas.
-- [ ] **5.1 Life Review Worker:** Script asíncrono (Cron-Job periódico, ej. semanal) que recupera los hitos agrupados por `goal_type` o temas.
-- [ ] **5.2 Prompt de Análisis de Tendencia:** Un LLM chain que compara registros recientes e históricos y extrae conclusiones de progreso (ej. "aumento de repeticiones o peso", "mejora de estado de ánimo").
-- [ ] **5.3 Agendamiento Proactivo de Progreso:** Si el *Life Reviewer* detecta un avance significativo, agenda un `pending_intent` en el Outbox para que MAGI felicite al usuario o retome el tema de forma natural en la próxima interacción.
+- [x] **5.1 Life Review Worker**: Script asíncrono para recuperación de hitos. (Finalizado ✅ 2026-02-22)
+- [x] **5.2 Prompt de Análisis de Tendencia**: LLM chain que compara registros. (Finalizado ✅ 2026-02-22)
+- [x] **5.3 Agendamiento Proactivo de Progreso**: MAGI felicita o retoma temas de avance. (Finalizado ✅ 2026-02-22)
 
 ## Bloque 6: Refinamiento de Fluidez Cognitiva (Late Context Injection)
 **Objetivo:** Erradicar definitivamente el "Role Clash" y las respuestas terapéuticas robóticas causadas por el desvanecimiento del prompt maestro en historiales largos.
 **Justificación:** Cuando el historial de conversación es extenso, el modelo "olvida" su tono base (amigable/pragmático) y recae en su comportamiento por defecto de asistente de IA genérico, generando disculpas excesivas o clichés psicológicos.
-- [ ] **6.1 Reingeniería del TCC Overlay (Anti-Robótico):** Sustituir reglas abstractas de empatía por restricciones negativas ejecutables (ej. prohibir inicios de frase específicos).
-- [ ] **6.2 Relajación del Router Terapéutico:** Modificar `therapeutic_session.py` para permitir "breaks" conversacionales si el usuario muestra resistencia o confusión ("No sé de qué hablas"), evitando forzar bucles terapéuticos.
-- [ ] **6.3 Late Context Injection (El Martillazo):** Añadir un `SystemMessage` de alta prioridad inmediatamente después de inyectar el historial en LangChain (`cbt_tool.py` y `chat_tool.py`), garantizando que la instrucción de tono natural y pragmático sea lo último que el LLM lea antes de generar.
+- [x] **6.1 Reingeniería del TCC Overlay (Anti-Robótico)**: Restricciones negativas ejecutables. (Finalizado ✅ 2026-02-23)
+- [x] **6.2 Relajación del Router Terapéutico**: `CONFUSION` y `RESISTANCE` intents. (Finalizado ✅ 2026-02-23)
+- [x] **6.3 Late Context Injection (El Martillazo)**: Inyección de `SystemMessage` tras el historial. (Finalizado ✅ 2026-02-23)
 
 ---
 

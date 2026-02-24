@@ -2,13 +2,16 @@
 
 La personalidad de MAGI está diseñada como un **Sistema Adaptativo Multicapa** que evoluciona según la interacción con el usuario, manteniendo un núcleo ético estable.
 
-## 1. Capas de Identidad
+## 1. El Soul Stack (Estructura de 6 Capas)
 
-La identidad de MAGI se compone de tres niveles jerárquicos:
+La identidad de MAGI se ensambla dinámicamente en cada turno mediante un stack jerárquico:
 
-1.  **SOUL (Alma)**: El núcleo ético y conductual inmutable (ej: "Compasivo pero firme", "Orientado al crecimiento").
-2.  **IDENTITY (Identidad)**: La personalidad estructural (ej: "Asistente agéntico avanzado", "Compañero de salud mental").
-3.  **SKILL OVERLAYS (Capas de Habilidad)**: Patrones conductuales especializados aplicados contextualmente (ej: "TCC Amor Duro", "Chat Cálido").
+1.  **CAPA 1: IDENTITY**: Quién es (MAGI) y su rol básico.
+2.  **CAPA 2: SOUL**: El núcleo ético y conductual (Honestidad radical, Refugio).
+3.  **CAPA 3: THE MIRROR**: Adaptación al usuario (Eco léxico, estilo, formalidad).
+4.  **CAPA 4: SKILL OVERLAY**: Patrones especializados (ej: TCC - Acción y Apoyo). Inyecta Gold Standards selectivos.
+5.  **CAPA 5: RUNTIME CONTEXT**: Memoria episódica, RAG e intenciones proactivas pendientes.
+6.  **CAPA 6: SYSTEM MANDATE (Late Injection)**: El "Martillazo". Instrucciones críticas inyectadas tras el historial para garantizar el tono y la neutralidad lingüística.
 
 ## 2. Perfil de Usuario Evolutivo
 

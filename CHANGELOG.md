@@ -3,7 +3,24 @@
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 y este proyecto se adhiere a [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [No publicado]
+## [v0.8.5] - 2026-02-23
+### Añadido
+- **Arquitectura de Cerebro Dual (Dual Brain)**: Separación de motores de IA para estabilidad sistémica.
+  - `llm_chat`: Especializado en empatía y calidez (Kimi K2).
+  - `llm_core`: Especializado en precisión técnica y JSON (gpt-oss-120b).
+- **Escudo de Identidad y LinguaGuard**: Sistema de filtrado de salida que detecta y neutraliza regionalismos accidentales ("tío", "vos") en tiempo real.
+- **Mensajería Proactiva (Outbox Pattern)**: Capacidad de MAGI para iniciar conversaciones y programar seguimientos futuros de forma asíncrona.
+- **Agente Life Reviewer**: Nuevo especialista que analiza el progreso semanal del usuario (gimnasio, ánimo) y genera hitos longitudinales.
+- **Late Context Injection**: Técnica de inyección tardía de instrucciones en LangChain para combatir el desvanecimiento del tono en historiales largos.
+
+### Cambiado
+- **Evolución de TCC**: Refactorización del overlay terapéutico hacia un modelo de "Acción sobre Validación", eliminando clichés robóticos.
+- **Memoria Episódica**: Nueva estructura de datos basada en Pydantic (`MemorySummaryV1`) para mayor robustez en la consolidación.
+- **Router Inteligente**: Inclusión de los estados `CONFUSION` y `RESISTANCE` para permitir escapes naturales de sesiones terapéuticas estancadas.
+
+### Corregido
+- **Amnesia Técnica**: Solucionado el error `KeyError: 'buffer'` que impedía el guardado de la memoria en la VM de producción.
+- **Fuga de Tono**: Erradicación de regionalismos no deseados mediante el Escudo de Neutralidad en `SOUL.md`.
 
 ## [v0.8.4] - 2026-02-18
 ### Añadido
