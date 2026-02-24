@@ -24,6 +24,8 @@ async def route_user_message(
         "document_creation",
         "vulnerability",
         "topic_shift",
+        "confusion",
+        "resistance",
     ],
     confidence: float,
     target_specialist: str,

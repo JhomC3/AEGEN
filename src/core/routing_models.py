@@ -25,6 +25,8 @@ class IntentType(str, Enum):
     DOCUMENT_CREATION = "document_creation"
     VULNERABILITY = "vulnerability"
     TOPIC_SHIFT = "topic_shift"
+    CONFUSION = "confusion"
+    RESISTANCE = "resistance"
 
 
 class EntityInfo(BaseModel):

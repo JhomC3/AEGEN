@@ -16,8 +16,12 @@ logger = logging.getLogger(__name__)
 # Especialistas que activan modo terapéutico
 THERAPEUTIC_SPECIALISTS = {"cbt_specialist"}
 
-# Intents que rompen la sesión terapéutica explícitamente
-SESSION_BREAKING_INTENTS = {IntentType.TOPIC_SHIFT}
+# Intents que rompen la sesión terapéutica o requieren "bajar el tono"
+SESSION_BREAKING_INTENTS = {
+    IntentType.TOPIC_SHIFT,
+    IntentType.CONFUSION,
+    IntentType.RESISTANCE,
+}
 
 
 def is_therapeutic_session_active(state: GraphStateV2) -> bool:
@@ -44,8 +48,17 @@ def should_maintain_therapeutic_session(
     if decision.target_specialist in THERAPEUTIC_SPECIALISTS:
         return False
 
-    # Permitir salida solo con cambio de tema explícito o comando
+    # Permitir salida con cambio de tema, confusión o resistencia
     if decision.intent in SESSION_BREAKING_INTENTS:
+        return False
+
+    # Si la confianza del router es baja, permitir escape
+    if (decision.target_specialist in THERAPEUTIC_SPECIALISTS and
+            decision.confidence < 0.7):
+        logger.info(
+            f"Baja confianza ({decision.confidence}) en CBT. "
+            "Escape a modo conversacional."
+        )
         return False
 
     # Cualquier otro caso: mantener sesión terapéutica

@@ -33,12 +33,30 @@ class TelegramToolManager:
                 logger.error("Error file path: %s", e)
                 return None
 
+    async def download_file(self, file_id: str, destination_path: Path) -> Path | None:
+        """Descarga un archivo de Telegram."""
+        file_path = await self.get_file_path(file_id)
+        if not file_path:
+            return None
+
+        url = f"{self.file_base_url}/{file_path}"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                resp = await client.get(url)
+                resp.raise_for_status()
+                destination_path.write_bytes(resp.content)
+                return destination_path
+            except Exception as e:
+                logger.error("Error downloading file: %s", e)
+                return None
+
     async def send_message(self, chat_id: str, text: str) -> bool:
         async with httpx.AsyncClient(timeout=15.0) as client:
             try:
                 url = f"{self.base_url}/sendMessage"
                 payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
-                resp = await client.post(url, data=payload)
+                # Usamos json= para que los tests pasen y por consistencia
+                resp = await client.post(url, json=payload)
                 return cast(bool, resp.json().get("ok", False))
             except Exception as e:
                 logger.error("Error sending: %s", e)
@@ -49,7 +67,7 @@ class TelegramToolManager:
             try:
                 url = f"{self.base_url}/sendChatAction"
                 payload = {"chat_id": chat_id, "action": action}
-                resp = await client.post(url, data=payload)
+                resp = await client.post(url, json=payload)
                 return cast(bool, resp.json().get("ok", False))
             except Exception as e:
                 logger.error("Error action: %s", e)

@@ -143,6 +143,12 @@ async def cbt_therapeutic_guidance_tool(
         conversational_prompt = ChatPromptTemplate.from_messages([
             ("system", persona_template),
             MessagesPlaceholder(variable_name="messages"),
+            (
+                "system",
+                "FINAL_REMINDER: No uses clichés. "
+                "No nombres la emoción. Sé breve, amigable y empuja a la acción "
+                "o perspectiva real. Tuteo neutro siempre."
+            ),
             ("user", "{user_message}"),
         ])
 

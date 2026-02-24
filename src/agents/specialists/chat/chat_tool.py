@@ -134,6 +134,11 @@ async def conversational_chat_tool(
     conversational_prompt = ChatPromptTemplate.from_messages([
         ("system", persona_template),
         MessagesPlaceholder(variable_name="messages"),
+        (
+            "system",
+            "FINAL_REMINDER: Habla como un amigo real, no como una IA. "
+            "Sin validaciones robóticas. Sé muy conciso. Tuteo neutro."
+        ),
         ("user", "{user_message}"),
     ])
 
