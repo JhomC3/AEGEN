@@ -17,7 +17,7 @@ class EmbeddingService:
 
     _configured: bool = False
 
-    def __init__(self, model_name: str = "models/text-embedding-004") -> None:
+    def __init__(self, model_name: str = "models/gemini-embedding-001") -> None:
         """Inicializa el cliente de Google GenAI."""
         self.model_name = model_name
 
