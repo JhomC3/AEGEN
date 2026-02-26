@@ -63,7 +63,7 @@ class CBTSpecialist(SpecialistInterface):
         routing_decision = state.get("payload", {}).get("routing_decision", {})
         session_ctx = state.get("payload", {}).get("session_context", {})
 
-        response_text = await self.tool.ainvoke({
+        plan_json = await self.tool.ainvoke({
             "user_message": user_content,
             "chat_id": chat_id,
             "conversation_history": raw_history,
@@ -71,10 +71,10 @@ class CBTSpecialist(SpecialistInterface):
             "session_context": session_ctx,
         })
 
-        # 3. Actualizar Estado
-        state["payload"]["response"] = response_text
+        # 3. Actualizar Estado para chaining hacia chat_specialist
+        state["payload"]["cbt_plan_json"] = plan_json
         state["payload"]["last_specialist"] = "cbt_specialist"
-        state["payload"]["next_action"] = "respond_to_user"
+        state["payload"]["next_action"] = "route_to_chat"
 
         return cast(dict[str, Any], state)
 

@@ -1,3 +1,4 @@
+import json
 import logging
 from pathlib import Path
 from typing import Any, cast
@@ -8,7 +9,7 @@ from langchain_core.tools import tool
 
 from src.agents.utils.knowledge_formatter import format_knowledge_for_prompt
 from src.core.dependencies import get_vector_memory_manager
-from src.core.engine import create_observable_config, llm
+from src.core.engine import create_observable_config, llm_chat
 from src.core.message_utils import (
     dict_to_langchain_messages,
     extract_recent_user_messages,
@@ -84,16 +85,18 @@ async def conversational_chat_tool(
     image_path: str | None = None,
     routing_metadata: dict[str, Any] | None = None,
     session_context: dict[str, Any] | None = None,
+    cbt_plan_json: str | None = None,
 ) -> str:
     """
-    Genera una respuesta empática y contextual usando el perfil del usuario.
+    Genera una respuesta empática y contextual.
+    Si recibe un cbt_plan_json, actúa como el Speaker de ese plan.
     """
     if conversation_history is None:
         conversation_history = []
 
     routing_metadata = routing_metadata or {}
     session_context = session_context or {}
-    next_actions = routing_metadata.get("next_actions", [])
+
 
     # 1. Cargar perfil y Contexto (RAG + Memoria)
     profile = await user_profile_manager.load_profile(chat_id)
@@ -105,7 +108,6 @@ async def conversational_chat_tool(
     history_limit = adaptation.get("history_limit", 20)
     messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
 
-    # Extraer is_proactive y pending_intents
     is_proactive = session_context.get("is_proactive", False)
     pending_intents = session_context.get("pending_intents", [])
 
@@ -123,13 +125,21 @@ async def conversational_chat_tool(
         recent_user_messages=extract_recent_user_messages(messages),
     )
 
-    # Inyección de instrucciones de enrutamiento
-    if "monitor_emotional_cues" in next_actions:
-        persona_template += (
-            "\n\nAVISO DE ENRUTAMIENTO: Se han detectado señales sutiles de "
-            "vulnerabilidad. Mantén un tono empático y valida sus sentimientos "
-            "si parece necesario, pero sin forzar una conversación profunda.\n"
-        )
+    # Inyección de Plan Terapéutico (Think-then-Speak)
+    if cbt_plan_json:
+        try:
+            plan = json.loads(cbt_plan_json)
+            insight = plan.get("insight", "")
+            action = plan.get("action_to_propose", "")
+            persona_template += (
+                f"\n\n[PLAN TERAPÉUTICO ACTIVO]\n"
+                f"El psicólogo pide que le digas esto.\n"
+                f"Contexto clínico: {insight}\n"
+                f"TU MISIÓN: Dile de forma natural: '{action}'\n"
+            )
+            logger.info(f"Injecting CBT Plan into Chat: {action}")
+        except Exception as e:
+            logger.error(f"Error parsing CBT plan: {e}")
 
     conversational_prompt = ChatPromptTemplate.from_messages([
         ("system", persona_template),
@@ -137,7 +147,7 @@ async def conversational_chat_tool(
         (
             "system",
             "FINAL_REMINDER: Habla como un amigo real, no como una IA. "
-            "Sin validaciones robóticas. Sé muy conciso. Tuteo neutro."
+            "No uses fórmulas robóticas. Si tienes un PLAN ACTIVO, ejecútalo."
         ),
         ("user", "{user_message}"),
     ])
@@ -155,7 +165,7 @@ async def conversational_chat_tool(
                 cast(RunnableConfig, config),
             )
 
-        chain = conversational_prompt | llm
+        chain = conversational_prompt | llm_chat
         response = await chain.ainvoke(
             prompt_input, config=cast(RunnableConfig, config)
         )

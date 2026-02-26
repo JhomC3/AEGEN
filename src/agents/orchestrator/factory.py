@@ -120,6 +120,10 @@ class OrchestratorFactory:
                     "next_specialist": "chat_specialist",
                     "conditions": {"required_payload": {}},
                 },
+                "cbt_specialist": {
+                    "next_specialist": "chat_specialist",
+                    "conditions": {"required_payload": {}},
+                },
                 "chat_specialist": {"next_specialist": "__end__", "conditions": {}},
             },
             "fallback_action": "__end__",

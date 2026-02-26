@@ -32,6 +32,7 @@ async def _chat_node(state: GraphStateV2) -> Any:
     image_path = payload.get("image_file_path")
     routing_decision = payload.get("routing_decision", {})
     session_ctx = payload.get("session_context", {})
+    cbt_plan_json = payload.get("cbt_plan_json")
 
     response_text = await conversational_chat_tool.ainvoke({
         "user_message": user_content,
@@ -40,6 +41,7 @@ async def _chat_node(state: GraphStateV2) -> Any:
         "image_path": image_path,
         "routing_metadata": routing_decision,
         "session_context": session_ctx,
+        "cbt_plan_json": cbt_plan_json,
     })
 
     # Actualizar historial de sesión
