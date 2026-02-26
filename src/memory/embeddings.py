@@ -2,8 +2,8 @@ import asyncio
 import logging
 from typing import cast
 
-import google.generativeai as genai
 from google.api_core import exceptions as google_exceptions
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 
 from src.core.config import settings
 
@@ -12,49 +12,47 @@ logger = logging.getLogger(__name__)
 
 class EmbeddingService:
     """
-    Wrapper para el servicio de embeddings de Google con Rate Limiting y Batching.
+    Wrapper para el servicio de embeddings usando LangChain nativo.
+    Soporta modelos modernos (text-embedding-004) y maneja Rate Limiting/Batching.
     """
 
-    _configured: bool = False
-
-    def __init__(self, model_name: str = "models/gemini-embedding-001") -> None:
-        """Inicializa el cliente de Google GenAI."""
+    def __init__(self, model_name: str = "models/text-embedding-004") -> None:
+        """Inicializa el cliente de Google Embeddings vía LangChain."""
         self.model_name = model_name
 
-        if not EmbeddingService._configured:
-            api_key = (
-                settings.GOOGLE_API_KEY.get_secret_value()
-                if settings.GOOGLE_API_KEY
-                else None
-            )
+        api_key = (
+            settings.GOOGLE_API_KEY.get_secret_value()
+            if settings.GOOGLE_API_KEY
+            else None
+        )
 
-            if not api_key:
-                logger.error("GOOGLE_API_KEY not found in settings")
-                raise ValueError("GOOGLE_API_KEY is required")
+        if not api_key:
+            logger.error("GOOGLE_API_KEY not found in settings")
+            raise ValueError("GOOGLE_API_KEY is required")
 
-            genai.configure(api_key=api_key)
-            EmbeddingService._configured = True
-            logger.info("EmbeddingService configured: %s", model_name)
-        else:
-            logger.debug("Reusing EmbeddingService for %s", model_name)
+        # Usamos la clase de LangChain que soporta internamente las nuevas APIs
+        # task_type se define dinámicamente por defecto en la librería según el contexto
+        self._embedder = GoogleGenerativeAIEmbeddings(
+            model=model_name,
+            google_api_key=api_key,
+        )
+        logger.info("EmbeddingService configured with LangChain: %s", model_name)
 
     async def embed_texts(
         self, texts: list[str], task_type: str = "RETRIEVAL_DOCUMENT"
     ) -> list[list[float]]:
-        """Genera embeddings procesando en lotes pequeños para evitar 429 Rate Limits."""
+        """Genera embeddings procesando en lotes pequeños."""
         if not texts:
             return []
 
         all_embeddings = []
-        batch_size = (
-            100  # Límite seguro por debajo del límite de cuota (3000 rpm / 100 rp-req)
-        )
+        batch_size = 100
 
         # Procesar en lotes
         for i in range(0, len(texts), batch_size):
             batch_texts = texts[i : i + batch_size]
             logger.info(
-                f"Procesando lote de embeddings: {i} a {i + len(batch_texts)} de {len(texts)}"
+                f"Procesando lote: {i} a {i + len(batch_texts)} de {len(texts)}"
             )
 
             # Sistema de reintentos exponencial interno para cada lote
@@ -63,15 +61,10 @@ class EmbeddingService:
 
             for attempt in range(max_retries):
                 try:
-                    # SDK sincrónico envuelto en async implicito por la arquitectura
-                    response = genai.embed_content(
-                        model=self.model_name,
-                        content=batch_texts,
-                        task_type=task_type,
-                        output_dimensionality=768,
+                    # En LangChain se usa aembed_documents para lista de textos
+                    batch_embeddings = await self._embedder.aembed_documents(
+                        batch_texts
                     )
-
-                    batch_embeddings = response.get("embedding", [])
                     all_embeddings.extend(batch_embeddings)
                     break  # Éxito, salir del bucle de reintentos
 
@@ -83,14 +76,14 @@ class EmbeddingService:
                         raise
                     delay = base_delay * (2**attempt)  # 10s, 20s, 40s
                     logger.warning(
-                        f"Rate Limit 429. Esperando {delay}s antes de reintentar (intento {attempt + 1}/{max_retries})..."
+                        f"Reintento {attempt + 1}/{max_retries} en {delay}s..."
                     )
                     await asyncio.sleep(delay)
                 except Exception as e:
                     logger.error(f"Error fatal generando embeddings en lote: {e}")
                     raise
 
-            # Breve pausa entre lotes exitosos para no saturar la cuota por minuto de Google
+            # Pausa entre lotes para no saturar cuota
             if i + batch_size < len(texts):
                 await asyncio.sleep(2)
 
@@ -99,5 +92,9 @@ class EmbeddingService:
 
     async def embed_query(self, query: str) -> list[float]:
         """Genera embedding para una búsqueda."""
-        embeddings = await self.embed_texts([query], task_type="RETRIEVAL_QUERY")
-        return embeddings[0] if embeddings else []
+        # Usa aembed_query para queries individuales
+        try:
+            return await self._embedder.aembed_query(query)
+        except Exception as e:
+            logger.error(f"Error generating query embedding: {e}")
+            return []
