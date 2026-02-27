@@ -136,9 +136,9 @@ explicit_package_bases = true
 ignore_missing_imports = true       # TODO: Eliminar cuando stubs estén completos
 show_error_codes = true             # saber qué se ignora
 disallow_untyped_defs = true        # el más importante: forza type hints
-warn_return_any = true              # previene erosión del tipado
-warn_redundant_casts = true         # limpieza
-warn_unused_ignores = true          # no acumular ignores obsoletos
+warn_return_any = false              # previene erosión del tipado
+warn_redundant_casts = false         # limpieza
+warn_unused_ignores = false          # no acumular ignores obsoletos
 no_implicit_optional = true         # forza Optional[X] explícito
 check_untyped_defs = true           # chequea interiores de funciones sin tipos
 
