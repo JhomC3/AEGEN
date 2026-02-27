@@ -44,7 +44,7 @@ async def test_telegram_webhook_success_flow(
 
     # Mockear la herramienta de descarga de Telegram
     mock_download_tool = MagicMock()
-    mock_download_tool.ainvoke = AsyncMock(return_value="/tmp/fake_audio.ogg")
+    mock_download_tool.ainvoke = AsyncMock(return_value="/tmp/fake_audio.ogg")  # noqa: S108
     monkeypatch.setattr(
         "src.tools.telegram_interface.download_telegram_file",
         mock_download_tool,
@@ -56,6 +56,32 @@ async def test_telegram_webhook_success_flow(
     monkeypatch.setattr(
         "src.tools.telegram_interface.reply_to_telegram_chat",
         mock_reply_tool,
+    )
+
+    # Mockear dependencias de persistencia que requieren SQLiteStore
+    monkeypatch.setattr(
+        "src.api.services.event_processor.outbox_manager.get_and_clear_pending_intents",
+        AsyncMock(return_value=[]),
+    )
+    monkeypatch.setattr(
+        "src.api.services.event_processor.session_manager.get_session",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        "src.api.services.event_processor.session_manager.save_session",
+        AsyncMock(return_value=True),
+    )
+    monkeypatch.setattr(
+        "src.api.services.event_processor.user_profile_manager.seed_identity_from_platform",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        "src.api.services.event_processor.user_profile_manager.update_localization",
+        AsyncMock(return_value=None),
+    )
+    monkeypatch.setattr(
+        "src.api.services.event_processor.long_term_memory.store_raw_message",
+        AsyncMock(return_value=None),
     )
 
     # 2. Preparar la Petición
@@ -119,7 +145,7 @@ async def test_telegram_webhook_success_flow(
     mock_orchestrator_run.assert_awaited_once()
     call_args = mock_orchestrator_run.call_args[0][0]
     assert isinstance(call_args, dict)  # El estado es un dict
-    assert call_args.get("payload", {}).get("audio_file_path") == "/tmp/fake_audio.ogg"
+    assert call_args.get("payload", {}).get("audio_file_path") == "/tmp/fake_audio.ogg"  # noqa: S108
 
     # Verificar que la herramienta de respuesta fue llamada con el texto correcto
     expected_message = "Este es un texto de prueba."
