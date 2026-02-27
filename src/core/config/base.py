@@ -34,7 +34,7 @@ class BaseAppSettings(BaseSettings):
     # === LLM Models por Tarea ===
     # Chat Principal y Razonamiento
     CHAT_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
-    CHAT_FALLBACK_MODEL: str = "gemini-2.0-flash"  # Usamos 2.0 ya que 2.5 no existe comercialmente aún, o nos referimos a la v2
+    CHAT_FALLBACK_MODEL: str = "gemini-2.0-flash"  # Fallback a v2.0
     REASONING_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
 
     # Core y Estructura (JSON)
@@ -85,7 +85,7 @@ class BaseAppSettings(BaseSettings):
     DEFAULT_WHISPER_MODEL: str = "small"
     DEBUG_MODE: bool = False
     ALLOWED_HOSTS: list[str] = ["*"]
-    MESSAGE_DEBOUNCE_SECONDS: float = 1.2
+    MESSAGE_DEBOUNCE_SECONDS: float = 0.5
 
     # Umbrales para el MigrationDecisionEngine
     CPU_THRESHOLD_PERCENT: float = 80.0

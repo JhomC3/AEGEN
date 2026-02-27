@@ -94,7 +94,8 @@ class EmbeddingService:
         """Genera embedding para una búsqueda."""
         # Usa aembed_query para queries individuales
         try:
-            return await self._embedder.aembed_query(query)
+            result = await self._embedder.aembed_query(query)
+            return cast(list[float], result)
         except Exception as e:
             logger.error(f"Error generating query embedding: {e}")
             return []

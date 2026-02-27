@@ -47,7 +47,7 @@ class StateRepository:
         sql = "UPDATE user_goals SET status = ? WHERE id = ?"
         async with db.execute(sql, (status, goal_id)) as cursor:
             await db.commit()
-            return cursor.rowcount > 0
+            return bool(cursor.rowcount > 0)
 
     async def add_milestone(
         self,

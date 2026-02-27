@@ -19,14 +19,14 @@ from src.memory.long_term_memory import long_term_memory
 
 logger = logging.getLogger(__name__)
 
+
 class TherapeuticPlan(BaseModel):
-    insight: str = Field(
-        description="Análisis del usuario, identificando distorsiones"
-    )
+    insight: str = Field(description="Análisis del usuario, identificando distorsiones")
     action_to_propose: str = Field(
         description="Instrucción estricta de lo que MAGI debe decir "
         "(ej. 'Proponle cambiar el tema')"
     )
+
 
 async def _get_cbt_rag_context(chat_id: str, user_message: str) -> str:
     """Recupera contexto TCC relevante usando Smart RAG."""
@@ -52,6 +52,7 @@ async def _get_cbt_rag_context(chat_id: str, user_message: str) -> str:
         logger.warning(f"Error en RAG TCC: {e}")
         return "No hay contexto documental disponible."
 
+
 async def _get_cbt_memories(chat_id: str) -> tuple[str, str]:
     """Recupera resumen de memoria y hechos para CBT."""
     memory_data = await long_term_memory.get_summary(chat_id)
@@ -59,6 +60,7 @@ async def _get_cbt_memories(chat_id: str) -> tuple[str, str]:
     knowledge_data = await knowledge_base_manager.load_knowledge(chat_id)
     structured_knowledge = format_knowledge_for_prompt(knowledge_data)
     return history_summary, structured_knowledge
+
 
 @tool
 async def cbt_therapeutic_guidance_tool(
@@ -87,16 +89,17 @@ async def cbt_therapeutic_guidance_tool(
     messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
 
     prompt = ChatPromptTemplate.from_messages([
-        ("system",
-         "Eres el Estratega Psicológico Interno de AEGEN. No hablas con el usuario.\n"
-         "Tu trabajo es analizar la conversación y crear un plan para MAGI.\n\n"
-         f"Memoria: {history_summary}\n\n"
-         f"Teoría (RAG): {knowledge_context}\n\n"
-         "INSTRUCCIÓN DE PLANIFICACIÓN:\n"
-         "1. Identifica el bloqueo del usuario.\n"
-         "2. Diseña una instrucción de acción para que MAGI se la diga al usuario.\n"
-         "3. Si el usuario está muy deprimido, la acción debe ser MUY pequeña.\n"
-         "4. Responde estrictamente usando la función JSON."
+        (
+            "system",
+            "Eres el Estratega Psicológico de AEGEN. No hablas con el usuario.\n"
+            "Tu trabajo es analizar la conversación y crear un plan para MAGI.\n\n"
+            f"Memoria: {history_summary}\n\n"
+            f"Teoría (RAG): {knowledge_context}\n\n"
+            "INSTRUCCIÓN DE PLANIFICACIÓN:\n"
+            "1. Identifica el bloqueo del usuario.\n"
+            "2. Diseña una instrucción de acción para que MAGI se la diga al usuario.\n"
+            "3. Si el usuario está muy deprimido, la acción debe ser MUY pequeña.\n"
+            "4. Responde estrictamente usando la función JSON.",
         ),
         MessagesPlaceholder(variable_name="messages"),
         ("user", "{user_message}"),
@@ -115,5 +118,5 @@ async def cbt_therapeutic_guidance_tool(
         logger.error(f"Error en CBT tool: {e}")
         return json.dumps({
             "insight": "Error en el análisis",
-            "action_to_propose": "Dile al usuario que respire profundo."
+            "action_to_propose": "Dile al usuario que respire profundo.",
         })

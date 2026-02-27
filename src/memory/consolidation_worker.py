@@ -19,7 +19,7 @@ class ConsolidationManager:
 
     async def should_consolidate(self, chat_id: str, message_count: int) -> bool:
         """Verifica si se cumplen las condiciones de consolidación."""
-        if message_count >= 20:
+        if message_count >= 10:
             return True
 
         from src.memory.long_term_memory import long_term_memory
