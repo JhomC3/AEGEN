@@ -14,9 +14,9 @@ venv: ## Crea el entorno virtual si no existe usando uv
 		exit 1; \
 	fi
 	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "Creating virtual environment in $(VENV_DIR)...\"; \
+		echo "Creating virtual environment in $(VENV_DIR)..."; \
 		$(UV) venv $(VENV_DIR); \
-		echo "Virtual environment created. Activate with: source $(VENV_DIR)/bin/activate\"; \
+		echo "Virtual environment created. Activate with: source $(VENV_DIR)/bin/activate"; \
 	else \
 		echo "Virtual environment $(VENV_DIR) already exists."; \
 	fi
