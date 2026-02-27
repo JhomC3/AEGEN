@@ -22,4 +22,11 @@ jobs:
         run: make install
 
       - name: Run Verification Suite
+        env:
+          GROQ_API_KEY: "test-dummy-key"
+          GOOGLE_API_KEY: "test-dummy-key"
+          OPENROUTER_API_KEY: "test-dummy-key"
+          TELEGRAM_BOT_TOKEN: "0000000000:AAFakeTokenForCI"
+          REDIS_URL: "redis://localhost:6379"
+          ENVIRONMENT: "testing"
         run: make verify
