@@ -123,7 +123,7 @@ max-complexity = 10  # enforcement real de complejidad
 "tests/**" = ["S101", "T201", "S105", "S106", "S108", "E501", "PTH", "F841", "F821", "N806", "SIM117"]  # asserts, print, hardcoded tokens, insecure temp files OK en tests
 "scripts/**" = ["T20", "S310", "S602", "S603"]  # print, urlopen, subprocess OK en scripts CLI
 "src/main.py" = ["S104"]  # Binding to 0.0.0.0 is standard for Docker containers
-"src/personality/prompt_builder.py" = ["C901"]
+"src/personality/prompt_builder.py" = ["C901", "I001"]  # I001: zoneinfo import sorting differs across ruff versions
 
 [tool.ruff.format]
 quote-style = "double"
