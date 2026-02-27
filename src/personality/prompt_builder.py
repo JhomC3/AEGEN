@@ -2,10 +2,10 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import aiofiles
 import yaml
-from zoneinfo import ZoneInfo
 
 from src.core.dependencies import get_sqlite_store
 from src.core.profiling_manager import profiling_manager
