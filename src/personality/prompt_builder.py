@@ -1,8 +1,8 @@
 import logging
+import zoneinfo
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
 
 import aiofiles
 import yaml
@@ -221,7 +221,7 @@ Componente técnico especializado en datos estructurados.
         user_tz = localization.get("timezone", "UTC") if localization else "UTC"
 
         try:
-            user_time = datetime.now(ZoneInfo(user_tz))
+            user_time = datetime.now(zoneinfo.ZoneInfo(user_tz))
             time_str = user_time.strftime("%A, %d de %B de %Y, %H:%M")
             section = (
                 f"# CONTEXTO RUNTIME\n- **Hora Local del Usuario:** "
