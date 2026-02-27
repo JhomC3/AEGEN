@@ -43,9 +43,7 @@ class MilestoneExtractor:
             ("human", "{conversation}"),
         ])
         # Usamos with_structured_output con el motor CORE (120B)
-        self.chain = self.prompt | llm_core.with_structured_output(
-            MilestoneExtraction
-        )
+        self.chain = self.prompt | llm_core.with_structured_output(MilestoneExtraction)
 
     async def extract_milestones(self, conversation_text: str) -> list[MilestoneData]:
         if not conversation_text.strip():

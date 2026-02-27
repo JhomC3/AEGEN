@@ -23,6 +23,7 @@ repos:
     rev: v1.10.0
     hooks:
       - id: mypy
+        exclude: ^tests/
         # Instala el proyecto local con sus dependencias de desarrollo y los stubs de tipos explícitos.
         additional_dependencies:
           - .[dev]

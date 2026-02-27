@@ -1,5 +1,5 @@
 import logging
-from typing import Any
+from typing import Any, cast
 
 import aiosqlite
 
@@ -15,7 +15,8 @@ class StateRepository:
         self.store = store
 
     async def get_db(self) -> aiosqlite.Connection:
-        return await self.store.get_db()
+        db = await self.store.get_db()
+        return cast(aiosqlite.Connection, db)
 
     async def add_goal(
         self,

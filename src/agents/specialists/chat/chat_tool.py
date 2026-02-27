@@ -97,7 +97,6 @@ async def conversational_chat_tool(
     routing_metadata = routing_metadata or {}
     session_context = session_context or {}
 
-
     # 1. Cargar perfil y Contexto (RAG + Memoria)
     profile = await user_profile_manager.load_profile(chat_id)
     knowledge_context = await _get_chat_rag_context(chat_id, user_message)
@@ -147,7 +146,7 @@ async def conversational_chat_tool(
         (
             "system",
             "FINAL_REMINDER: Habla como un amigo real, no como una IA. "
-            "No uses fórmulas robóticas. Si tienes un PLAN ACTIVO, ejecútalo."
+            "No uses fórmulas robóticas. Si tienes un PLAN ACTIVO, ejecútalo.",
         ),
         ("user", "{user_message}"),
     ])

@@ -1,4 +1,4 @@
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -10,7 +10,9 @@ async def test_embed_texts():
     with patch("src.memory.embeddings.GoogleGenerativeAIEmbeddings") as MockEmbedder:
         # Configurar mock asíncrono
         mock_instance = MockEmbedder.return_value
-        mock_instance.aembed_documents = AsyncMock(return_value=[[0.1] * 768, [0.2] * 768])
+        mock_instance.aembed_documents = AsyncMock(
+            return_value=[[0.1] * 768, [0.2] * 768]
+        )
 
         # Necesitamos simular la configuración de API Key
         with patch("src.core.config.settings.GOOGLE_API_KEY") as mock_key:

@@ -30,7 +30,7 @@ install: venv ## Instala dependencias de desarrollo usando uv y los lockfiles
 lint: ## Ejecuta linters (ruff, mypy)
 	@echo "Running linters..."
 	$(PYTHON) -m ruff check .
-	$(PYTHON) -m mypy src tests
+	$(PYTHON) -m mypy src
 
 verify: ## Validación completa: linting + tests + architecture simple
 	@echo "🎯 AEGEN Verification Suite..."

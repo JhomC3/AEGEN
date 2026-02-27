@@ -46,9 +46,7 @@ class LinguaGuard:
         if not has_issue:
             return text
 
-        logger.info(
-            "Detectado regionalismo. Iniciando neutralización..."
-        )
+        logger.info("Detectado regionalismo. Iniciando neutralización...")
 
         # 2. Corrección por LLM Core (más segura que regex para mantener fluidez)
         try:

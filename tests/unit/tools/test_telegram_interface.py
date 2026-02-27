@@ -99,7 +99,9 @@ async def test_download_file_success(
         return_value=Response(200, content=file_content)
     )
 
-    destination_path = await telegram_tool.download_file(file_id, tmp_path / "test_document.pdf")
+    destination_path = await telegram_tool.download_file(
+        file_id, tmp_path / "test_document.pdf"
+    )
 
     assert destination_path is not None
     assert destination_path.name == "test_document.pdf"

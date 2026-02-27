@@ -48,6 +48,8 @@ class ProactiveWorker:
 
         logger.info(f"Despachando mensaje proactivo a {chat_id}: {intent}")
 
+        from datetime import datetime
+
         event = CanonicalEventV1(
             event_id=uuid4(),
             event_type="text",
@@ -55,6 +57,10 @@ class ProactiveWorker:
             chat_id=chat_id,
             user_id=chat_id,
             content=f"[SYSTEM_PROACTIVE_PROMPT] {intent}",
+            timestamp=datetime.now().isoformat(),
+            file_id=None,
+            first_name=None,
+            language_code=None,
             metadata={"is_proactive": True},
         )
 
@@ -62,6 +68,7 @@ class ProactiveWorker:
             # Recreamos un procesador para este evento
             # En producción se podría inyectar
             from src.api.services.event_processor import process_event_task
+
             await process_event_task(event)
 
             await outbox_manager.mark_as_sent(msg_id)

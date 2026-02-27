@@ -2,7 +2,7 @@
 import pytest
 
 from src.core.profile_manager import UserProfileManager
-from src.core.profile_seeder import get_default_profile, ensure_profile_complete
+from src.core.profile_seeder import ensure_profile_complete, get_default_profile
 
 
 @pytest.fixture

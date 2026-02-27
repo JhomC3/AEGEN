@@ -53,8 +53,10 @@ def should_maintain_therapeutic_session(
         return False
 
     # Si la confianza del router es baja, permitir escape
-    if (decision.target_specialist in THERAPEUTIC_SPECIALISTS and
-            decision.confidence < 0.7):
+    if (
+        decision.target_specialist in THERAPEUTIC_SPECIALISTS
+        and decision.confidence < 0.7
+    ):
         logger.info(
             f"Baja confianza ({decision.confidence}) en CBT. "
             "Escape a modo conversacional."

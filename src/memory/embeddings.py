@@ -30,8 +30,6 @@ class EmbeddingService:
             logger.error("GOOGLE_API_KEY not found in settings")
             raise ValueError("GOOGLE_API_KEY is required")
 
-        # Usamos la clase de LangChain que soporta internamente las nuevas APIs
-        # task_type se define dinámicamente por defecto en la librería según el contexto
         self._embedder = GoogleGenerativeAIEmbeddings(
             model=model_name,
             google_api_key=api_key,
@@ -88,14 +86,14 @@ class EmbeddingService:
                 await asyncio.sleep(2)
 
         logger.debug("Generated %d embeddings successfully", len(all_embeddings))
-        return cast(list[list[float]], all_embeddings)
+        return all_embeddings
 
     async def embed_query(self, query: str) -> list[float]:
         """Genera embedding para una búsqueda."""
         # Usa aembed_query para queries individuales
         try:
-            result = await self._embedder.aembed_query(query)
-            return cast(list[float], result)
+            res = await self._embedder.aembed_query(query)
+            return cast(list[float], res)
         except Exception as e:
             logger.error(f"Error generating query embedding: {e}")
             return []

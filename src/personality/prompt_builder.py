@@ -2,10 +2,10 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Any
-from zoneinfo import ZoneInfo
 
 import aiofiles
 import yaml
+from zoneinfo import ZoneInfo
 
 from src.core.dependencies import get_sqlite_store
 from src.core.profiling_manager import profiling_manager
@@ -54,7 +54,7 @@ class SystemPromptBuilder:
                     example = (
                         f"**Situación:** {anchor.get('situation')}\n"
                         f'**Usuario:** "{anchor.get("user_message")}"\n'
-                        f'**Respuesta Ideal (MAGI):** "{anchor.get("ideal_response")}"\n'
+                        f'**Ideal:** "{anchor.get("ideal_response")}"\n'
                         f"*(Nota: {anchor.get('explanation')})*\n"
                     )
                     examples.append(example)

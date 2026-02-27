@@ -82,6 +82,7 @@ class OrchestratorGraphBuilder(GraphBuilder):
 
         # 4. Nodo de reflexión final (Life Reflection)
         from .nodes.reflection import life_reflection_node
+
         graph_builder.add_node("life_reflection", life_reflection_node.run)
 
         # 4. Configuración de routing points
@@ -100,6 +101,7 @@ class OrchestratorGraphBuilder(GraphBuilder):
 
         # 6. El nodo de reflexión es el punto final absoluto
         from langgraph.graph import END
+
         graph_builder.add_edge("life_reflection", END)
 
         compiled_graph = graph_builder.compile()
