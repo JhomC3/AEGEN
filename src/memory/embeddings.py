@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from typing import cast
 
 from google.api_core import exceptions as google_exceptions
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
@@ -32,7 +31,7 @@ class EmbeddingService:
 
         self._embedder = GoogleGenerativeAIEmbeddings(
             model=model_name,
-            google_api_key=api_key,
+            google_api_key=api_key,  # type: ignore
         )
         logger.info("EmbeddingService configured with LangChain: %s", model_name)
 
@@ -92,8 +91,7 @@ class EmbeddingService:
         """Genera embedding para una búsqueda."""
         # Usa aembed_query para queries individuales
         try:
-            res = await self._embedder.aembed_query(query)
-            return cast(list[float], res)
+            return await self._embedder.aembed_query(query)
         except Exception as e:
             logger.error(f"Error generating query embedding: {e}")
             return []

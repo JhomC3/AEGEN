@@ -46,7 +46,7 @@ def _create_groq_llm(
         api_key=api_key,
         max_retries=2,
         timeout=timeout,
-        **kwargs,
+        **kwargs,  # type: ignore
     )
 
 
