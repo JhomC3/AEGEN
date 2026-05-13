@@ -73,6 +73,8 @@ class AgentCapability(str, Enum):
 class AgentResultStatus(str, Enum):
     """Estados posibles del resultado de ejecución de un agente."""
 
+    PENDING = "pending"
+    PROCESSING = "processing"
     SUCCESS = "success"
     PARTIAL_SUCCESS = "partial_success"
     FAILURE = "failure"

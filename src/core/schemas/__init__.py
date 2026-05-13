@@ -56,6 +56,12 @@ from src.core.schemas.profile import (
     ValuesAndGoals,
 )
 from src.core.schemas.session import ConversationSession
+from src.core.schemas.skills import (
+    SkillContent,
+    SkillManifest,
+    SkillRequirements,
+    SkillSchedule,
+)
 from src.core.schemas.telegram import (
     TelegramChat,
     TelegramMessage,
@@ -103,6 +109,11 @@ __all__ = [
     # Agents
     "AgentContext",
     "AgentResult",
+    # Skills
+    "SkillManifest",
+    "SkillRequirements",
+    "SkillContent",
+    "SkillSchedule",
     # Profile
     "ClinicalSafety",
     "CopingMechanisms",
