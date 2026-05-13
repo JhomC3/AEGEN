@@ -124,11 +124,20 @@ class SkillLoader:
             return None
 
         try:
-            spec = importlib.util.spec_from_file_location(module_name, file_path)
+            # Usar ruta absoluta para evitar problemas de resolución
+            absolute_path = file_path.absolute()
+            spec = importlib.util.spec_from_file_location(
+                module_name, str(absolute_path)
+            )
             if spec is None or spec.loader is None:
                 return None
 
             module = importlib.util.module_from_spec(spec)
+            # Añadir a sys.modules para que las sub-importaciones funcionen
+            import sys
+
+            sys.modules[module_name] = module
+
             spec.loader.exec_module(module)
             return module
         except Exception:
