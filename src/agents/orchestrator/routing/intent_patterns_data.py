@@ -140,4 +140,17 @@ INTENT_PATTERNS = {
         "no quiero hablar de",
         "suficiente de",
     ],
+    IntentType.PSICOTRADING: [
+        "trade",
+        "trading",
+        "mercado",
+        "bolsa",
+        "operación",
+        "pérdida en trading",
+        "stop loss emocional",
+        "FOMO",
+        "revenge trading",
+        "tilt",
+        "drawdown emocional",
+    ],
 }
