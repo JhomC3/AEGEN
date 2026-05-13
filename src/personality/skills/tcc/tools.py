@@ -103,7 +103,6 @@ async def cbt_therapeutic_guidance_tool(
     messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
 
     persona_template = await system_prompt_builder.build(
-        chat_id=chat_id,
         profile=profile,
         skill_name="tcc",
         runtime_context={
@@ -147,3 +146,7 @@ async def cbt_therapeutic_guidance_tool(
             "Respiro hondo. Mantén la calma, el mercado es solo ruido. "
             "Cuéntame más sobre lo que sientes."
         )
+
+
+# Exportar para SkillLoader
+SKILL_TOOL = cbt_therapeutic_guidance_tool

@@ -100,7 +100,6 @@ async def conversational_chat_tool(
     messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
 
     persona_template = await system_prompt_builder.build(
-        chat_id=chat_id,
         profile=profile,
         skill_name="chat",
         runtime_context={
@@ -146,3 +145,7 @@ async def conversational_chat_tool(
     except Exception as e:
         logger.error(f"Error en MAGI chat: {e}")
         return "Lo siento, tuve un problema interno. ¿Reintentamos?"
+
+
+# Exportar para SkillLoader
+SKILL_TOOL = conversational_chat_tool

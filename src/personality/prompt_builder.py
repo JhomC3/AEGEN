@@ -11,7 +11,7 @@ from src.personality.prompt_renders import (
     render_style_adaptation,
 )
 from src.personality.style_analyzer import style_analyzer
-from src.personality.types import LinguisticProfile
+from src.personality.types import LinguisticProfile, SkillOverlay
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,6 @@ class SystemPromptBuilder:
 
     async def build(
         self,
-        chat_id: str,
         profile: dict[str, Any],
         skill_name: str = "chat",
         runtime_context: dict[str, Any] | None = None,
@@ -121,7 +120,7 @@ class SystemPromptBuilder:
 
         return section
 
-    def _build_skill_section(self, overlay: Any) -> str:
+    def _build_skill_section(self, overlay: SkillOverlay) -> str:
         section = f"# MODO ACTIVO: {overlay.name.upper()}\n"
         if overlay.tone_modifiers:
             section += f"## Modificadores de Tono\n{overlay.tone_modifiers}\n"
@@ -129,6 +128,8 @@ class SystemPromptBuilder:
             section += f"## Instrucciones Específicas\n{overlay.instructions}\n"
         if overlay.anti_patterns:
             section += f"## Anti-Patterns del Skill\n{overlay.anti_patterns}\n"
+        if overlay.linguistic_rules:
+            section += f"## Reglas Lingüísticas del Skill\n{overlay.linguistic_rules}\n"
         return section
 
     def _build_runtime_section(

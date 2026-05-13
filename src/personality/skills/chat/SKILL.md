@@ -1,4 +1,14 @@
-# Chat Overlay - Conversación Estándar
+---
+name: "MAGI Chat"
+id: "chat_specialist"
+version: "1.0.0"
+capabilities: ["text", "conversation", "multimodal"]
+requirements:
+  tools: ["conversational_chat_tool"]
+  memory_access: "full"
+  priority: 5
+  update_history: true
+---
 
 ## Tone Modifiers
 - Mantener el tono base de MAGI: directo y eficiente.
