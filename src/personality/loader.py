@@ -4,6 +4,7 @@ from pathlib import Path
 
 import aiofiles
 
+from src.personality.skill_parser import parse_skill_md
 from src.personality.types import PersonalityBase, SkillOverlay
 
 logger = logging.getLogger(__name__)
@@ -25,21 +26,45 @@ class PersonalityLoader:
 
         return PersonalityBase(identity=identity, soul=soul)
 
-    async def load_skill_overlay(self, skill_name: str) -> SkillOverlay | None:
-        """Carga un overlay de skill específico."""
-        overlay_path = self.base_path / "skills" / f"{skill_name}_overlay.md"
-        if not overlay_path.exists():
-            # Fallback a chat si no existe
-            overlay_path = self.base_path / "skills" / "chat_overlay.md"
-            if not overlay_path.exists():
-                return None
+    async def load_skill(self, skill_name: str) -> SkillOverlay | None:
+        """
+        Carga un skill buscando primero en el nuevo formato de directorio
+        y luego en el legacy overlay file.
+        """
+        # 1. Intentar nuevo formato: skills/{name}/SKILL.md
+        new_path = self.base_path / "skills" / skill_name / "SKILL.md"
+        if new_path.exists():
+            content = await self._read_file(new_path)
+            parsed = parse_skill_md(content)
+            # Adaptamos SkillContent a SkillOverlay para retrocompatibilidad
+            return SkillOverlay(
+                name=parsed.manifest.name,
+                tone_modifiers=parsed.tone_modifiers,
+                instructions=parsed.instructions,
+                anti_patterns=parsed.anti_patterns,
+                linguistic_rules=parsed.linguistic_rules,
+            )
 
-        content = await self._read_file(overlay_path)
-        return self._parse_overlay(skill_name, content)
+        # 2. Intentar formato legacy: skills/{name}_overlay.md
+        legacy_path = self.base_path / "skills" / f"{skill_name}_overlay.md"
+        if legacy_path.exists():
+            logger.info("Cargando skill '%s' desde formato legacy overlay", skill_name)
+            content = await self._read_file(legacy_path)
+            return self._parse_overlay(skill_name, content)
+
+        # 3. Fallback a chat si es un skill desconocido
+        if skill_name != "chat":
+            return await self.load_skill("chat")
+
+        return None
+
+    async def load_skill_overlay(self, skill_name: str) -> SkillOverlay | None:
+        """Método legacy para mantener compatibilidad."""
+        return await self.load_skill(skill_name)
 
     async def _read_file(self, path: Path) -> str:
         if not path.exists():
-            logger.warning(f"Archivo de personalidad no encontrado: {path}")
+            logger.warning("Archivo de personalidad no encontrado: %s", path)
             return ""
         async with aiofiles.open(path, encoding="utf-8") as f:
             return await f.read()
@@ -55,7 +80,7 @@ class PersonalityLoader:
         return identity
 
     def _parse_overlay(self, name: str, content: str) -> SkillOverlay:
-        """Parsea secciones del overlay."""
+        """Parsea secciones del overlay legacy."""
         tone_modifiers = self._extract_section(content, "Tone Modifiers")
         instructions = self._extract_section(content, "Instructions")
         anti_patterns = self._extract_section(content, "Anti-Patterns Específicos")

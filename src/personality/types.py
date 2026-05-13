@@ -44,6 +44,7 @@ class SkillOverlay:
     tone_modifiers: str
     instructions: str
     anti_patterns: str | None = None
+    linguistic_rules: str | None = None
 
 
 @dataclass
