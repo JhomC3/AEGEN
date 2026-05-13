@@ -62,13 +62,14 @@ GET session:chat:123456789
 LRANGE chat:buffer:123456789 0 -1
 ```
 
-## 🏗️ Flujo para Nuevos Especialistas
+## 🏗️ Flujo para Nuevos Skills (Habilidades/Agentes)
 
-Para añadir una nueva habilidad al bot:
-1. Define la interfaz en `src.core.interfaces`.
-2. Implementa la lógica en `src.agents.specialists`.
-3. Registra el agente en el `MasterOrchestrator`.
-4. Añade el detalle técnico en `docs/arquitectura/agentes/especialistas.md`.
+AEGEN usa un sistema modular basado en directorios (ADR-0026):
+1. Crea una carpeta en `src/personality/skills/<id_del_skill>/`.
+2. Escribe el manifiesto `SKILL.md` con el frontmatter YAML (metadatos) y cuerpo Markdown (instrucciones).
+3. (Opcional) Implementa el tool en `tools.py` exportando `SKILL_TOOL`.
+4. El `SkillLoader` registrará automáticamente el agente al iniciar la app.
+5. Registra los patrones de ruteo en `src/agents/orchestrator/routing/intent_patterns_data.py`.
 
 ---
 *El incumplimiento de los estándares en `AGENTS.md` detendrá el pipeline de despliegue.*

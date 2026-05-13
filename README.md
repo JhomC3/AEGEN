@@ -24,7 +24,7 @@ Este documento es de **lectura obligatoria** para cualquier contribuidor (humano
 - **Desacoplamiento por Eventos:** Orquestación de flujos de trabajo a través de un bus de eventos asíncrono.
 - **Personalidad Adaptativa y Localización:** MAGI posee una identidad base que se adapta al estilo del usuario y a su localización regional (jerga, zona horaria) de forma automática.
 - **Observabilidad LLM Completa:** Sistema híbrido LangSmith + Prometheus con seguimiento (tracking) de llamadas, latencia, tokens y costos. IDs de correlación (Correlation IDs) de extremo a extremo y panel de control (dashboard) en tiempo real.
-- **Agentes Modulares Multi-usuario (Multi-tenant):** Sistema de agentes componibles con aislamiento por usuario y memoria híbrida (Redis + SQLite-vec).
+- **Agentes Modulares y Skills Dinámicos:** Arquitectura de "Habilidad como Directorio" (ADR-0026) que permite añadir nuevas capacidades (trading, investigación, terapia) simplemente soltando una carpeta con su manifiesto.
 - **Memoria Local-First (Primero Local):** Búsqueda semántica de baja latencia (<10ms) mediante `sqlite-vec` y búsqueda por palabras clave con `FTS5`.
 - **Rendimiento Optimizado:** Enrutamiento (Routing) inteligente <2s, delegación híbrida, invocación de funciones (function calling) optimizada (ADR-0009).
 - **Resiliencia Integrada:** Mecanismos de reintentos e idempotencia para un procesamiento de tareas robusto.

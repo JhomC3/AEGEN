@@ -33,10 +33,10 @@ src/
 ├── agents/
 │   ├── orchestrator/          # MasterOrchestrator, factory, graph builder
 │   │   └── routing/           # EnhancedRouter, intent patterns, routing analysis
-│   ├── specialists/           # CBT specialist, Chat agent, Transcription agent
-│   │   ├── cbt/               # CBT tools y prompt builder
-│   │   └── chat/              # Chat tools y multimodal
-│   └── utils/                 # Knowledge formatter, state utils
+│   ├── specialists/           # Infraestructura de agentes dinámicos
+│   │   └── skill_based_specialist.py # Agente genérico configurado por SKILL.md
+│   ├── workers/               # Gestión de tareas asíncronas en background
+│   └── scheduler/             # Automatización y tareas programadas (Cron)
 ├── api/
 │   ├── adapters/              # Telegram adapter
 │   ├── middleware/             # API middleware
@@ -70,7 +70,9 @@ src/
 ├── personality/
 │   ├── base/                  # IDENTITY.md + SOUL.md (capas 1-2)
 │   ├── skills/                # Overlays: chat_overlay.md, tcc_overlay.md (capa 4)
-│   ├── loader.py              # Carga de archivos de personalidad
+│   ├── loader.py              # Carga de archivos de personalidad base
+│   ├── skill_loader.py        # Descubrimiento dinámico de skills en filesystem
+│   ├── skill_parser.py        # Parser de SKILL.md (YAML + Markdown)
 │   ├── manager.py             # Lifecycle de personalidad
 │   ├── prompt_builder.py      # Composición multi-capa del system prompt
 │   └── style_analyzer.py      # "The Mirror" — detección de estilo lingüístico
@@ -158,14 +160,14 @@ Telegram → Webhook (src/api/routers/webhooks.py)
   → Respuesta → Telegram
 ```
 
-### Para Añadir un Nuevo Especialista
+### Para Añadir un Nuevo Skill (Habilidad/Agente)
 
-1. Definir la interfaz en `src/core/interfaces/specialist.py`.
-2. Implementar en `src/agents/specialists/<nombre>_agent.py`.
-3. Registrar en `src/core/registry.py` para autodescubrimiento.
-4. Añadir prompt overlay en `src/personality/skills/<nombre>_overlay.md`.
-5. Documentar en `docs/arquitectura/agentes/`.
-6. Escribir tests en `tests/unit/` antes de la implementación.
+1. Crear un directorio en `src/personality/skills/<nombre>/`.
+2. Crear un archivo `SKILL.md` con el manifest YAML y las instrucciones Markdown.
+3. (Opcional) Crear `tools.py` y exportar `SKILL_TOOL`.
+4. (Opcional) Registrar patrones de intención en `src/agents/orchestrator/routing/intent_patterns_data.py`.
+5. El sistema lo descubrirá y registrará automáticamente al arrancar.
+6. Documentar en `docs/arquitectura/agentes/` y escribir tests en `tests/unit/`.
 
 ### Patrones con Ejemplos de Referencia
 

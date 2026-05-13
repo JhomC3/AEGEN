@@ -52,8 +52,8 @@ Dotar al asistente de capacidad real de acción mediante herramientas.
 AEGEN debe pasar de ser un observador a ser un agente proactivo capaz de gestionar agenda y buscar información real.
 
 ### Tareas y Estado
-- [ ] **C.1 Fábrica de Habilidades**: Infraestructura de registro automático de herramientas. (Pendiente ⏳)
-- [ ] **C.2 Integración de Herramientas**: Google Calendar, Búsqueda Web, Análisis de Archivos. (Pendiente ⏳)
+- [x] **C.1 Fábrica de Habilidades**: Infraestructura de registro automático de herramientas y skills dinámicos. (Finalizado ✅ 2026-05-12)
+- [ ] **C.2 Integración de Herramientas**: Google Calendar, Búsqueda Web, Análisis de Archivos. (En Curso 🔄)
 - [ ] **C.3 Verificador de Verdad**: Proceso de auto-crítica contra la Bóveda de Conocimiento. (Pendiente ⏳)
 
 ---
