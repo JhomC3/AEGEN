@@ -19,7 +19,7 @@ jobs:
         run: uv python install 3.13
 
       - name: Install dependencies
-        run: make install
+        run: uv sync --frozen
 
       - name: Run Verification Suite
         run: |

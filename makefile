@@ -21,11 +21,9 @@ venv: ## Crea el entorno virtual si no existe usando uv
 		echo "Virtual environment $(VENV_DIR) already exists."; \
 	fi
 
-install: venv ## Instala dependencias de desarrollo usando uv y los lockfiles
-	@echo "Installing/syncing development dependencies from lockfile..."
-	$(UV) pip sync requirements-dev.lock
-	@echo "Installing project in editable mode..."
-	$(UV) pip install -e .
+install: ## Instala dependencias de desarrollo usando uv
+	@echo "Installing/syncing dependencies using uv..."
+	$(UV) sync --frozen
 
 lint: ## Ejecuta linters (ruff, mypy)
 	@echo "Running linters..."
