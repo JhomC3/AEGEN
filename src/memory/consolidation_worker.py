@@ -62,6 +62,10 @@ class ConsolidationManager:
         evolution = await self.evolution_detector.detect_evolution(profile, summary)
         if evolution:
             await apply_evolution(chat_id, profile, evolution)
+
+        # 4. Learning Loop: Generación de Skills (ADR-0026)
+        await self._check_for_new_skills(chat_id, summary)
+
         await log_session_to_memory(chat_id, summary, len(raw_buffer))
 
     async def _sync_user_name_to_profile(
@@ -80,6 +84,12 @@ class ConsolidationManager:
                 await user_profile_manager.save_profile(chat_id, profile)
         except Exception as e:
             logger.error("Error syncing name %s: %s", chat_id, e)
+
+    async def _check_for_new_skills(self, chat_id: str, summary: str) -> None:
+        """Analiza si el resumen de la sesión amerita generar un nuevo skill."""
+        # TODO: Implementar lógica de detección de dominios (heurística o LLM)
+        # Por ahora es un stub que habilita la infraestructura de la Fase 7
+        pass
 
 
 consolidation_manager = ConsolidationManager()

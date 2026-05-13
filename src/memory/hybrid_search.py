@@ -28,15 +28,18 @@ class HybridSearch:
         limit: int = 10,
         chat_id: str | None = None,
         namespace: str = "user",
+        source_skill: str | None = None,
         rrf_k: int = 60,
         vw: float = 0.7,
         kw: float = 0.3,
     ) -> list[dict[str, Any]]:
-        """Búsqueda principal."""
+        """Búsqueda principal híbrida (Vectorial + Keyword)."""
         emb = await self.embedding_service.embed_query(query)
         v_res, k_res = await asyncio.gather(
             self.vector_search.search(emb, limit * 2, chat_id, namespace),
-            self.keyword_search.search(query, limit * 2, chat_id, namespace),
+            self.keyword_search.search(
+                query, limit * 2, chat_id, namespace, source_skill
+            ),
         )
         rrf = self._merge_rrf(v_res, k_res, rrf_k, vw, kw)
         sorted_ids = sorted(rrf.items(), key=lambda x: x[1], reverse=True)[:limit]

@@ -21,6 +21,7 @@ _PROVENANCE_COLUMNS: list[tuple[str, str]] = [
     ("confidence", "REAL NOT NULL DEFAULT 1.0"),
     ("sensitivity", "TEXT NOT NULL DEFAULT 'low'"),
     ("evidence", "TEXT"),
+    ("source_skill", "TEXT"),
     ("confirmed_at", "TEXT"),
     ("is_active", "INTEGER NOT NULL DEFAULT 1"),
 ]

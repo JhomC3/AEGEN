@@ -54,9 +54,10 @@ class KeywordSearch:
         limit: int = 10,
         chat_id: str | None = None,
         namespace: str = "user",
+        source_skill: str | None = None,
     ) -> list[tuple[int, float]]:
         """
-        Realiza una búsqueda FTS5.
+        Realiza una búsqueda FTS5 con filtrado opcional por chat, namespace y skill.
         """
         if not query_text or not query_text.strip():
             return []
@@ -100,6 +101,10 @@ class KeywordSearch:
         if namespace:
             query += " AND m.namespace = ?"
             params.append(namespace)
+
+        if source_skill:
+            query += " AND m.source_skill = ?"
+            params.append(source_skill)
 
         query += " ORDER BY rank LIMIT ?"
         params.append(limit)

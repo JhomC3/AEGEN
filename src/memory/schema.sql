@@ -18,6 +18,7 @@ CREATE TABLE IF NOT EXISTS memories (
     sensitivity TEXT NOT NULL DEFAULT 'low'
         CHECK(sensitivity IN ('low', 'medium', 'high')),
     evidence TEXT,
+    source_skill TEXT,                       -- Skill que generó o ruteó esta memoria
     confirmed_at TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
