@@ -57,11 +57,15 @@ class OptimizedSpecialistCache(SpecialistCache):
         self._routable_specialists = specialist_registry.get_all_specialists()
 
         # Cache de herramientas
-        self._routable_tools = [s.tool for s in self._routable_specialists]
+        self._routable_tools = [
+            s.tool for s in self._routable_specialists if s.tool is not None
+        ]
 
         # Mapeo directo tool_name → specialist_name para O(1) lookup
         self._tool_to_specialist_map = {
-            s.tool.name: s.name for s in self._routable_specialists
+            s.tool.name: s.name
+            for s in self._routable_specialists
+            if s.tool is not None
         }
 
         # LLM con herramientas pre-vinculadas

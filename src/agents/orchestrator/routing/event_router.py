@@ -7,7 +7,6 @@ Extraído del MasterOrchestrator para cumplir SRP.
 """
 
 import logging
-from typing import cast
 
 from src.agents.orchestrator.strategies import RoutingStrategy
 from src.core.interfaces.specialist import SpecialistInterface
@@ -77,9 +76,9 @@ class EventRouter(RoutingStrategy):
     def _find_capable_specialists(self, event_type: str) -> list[SpecialistInterface]:
         """Encuentra especialistas que manejen el event_type."""
         return [
-            cast(SpecialistInterface, s)
+            s
             for s in self._specialist_registry.get_all_specialists()
-            if event_type in cast(SpecialistInterface, s).get_capabilities()
+            if event_type in s.get_capabilities()
         ]
 
     def _select_specialist(

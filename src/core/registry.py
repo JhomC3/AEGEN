@@ -1,55 +1,30 @@
 # src/core/registry.py
 import logging
-from typing import Protocol
+from typing import Any, cast
 
 from langchain_core.tools import BaseTool
-from langgraph.graph import StateGraph
+
+from src.core.interfaces.specialist import SpecialistInterface
 
 logger = logging.getLogger(__name__)
-
-
-class Specialist(Protocol):
-    """
-    Una interfaz que define la estructura de un agente especialista.
-    """
-
-    @property
-    def name(self) -> str:
-        """El nombre único del especialista."""
-        ...
-
-    @property
-    def graph(self) -> StateGraph:
-        """El grafo de LangGraph que define la lógica del especialista."""
-        ...
-
-    @property
-    def tool(self) -> BaseTool:
-        """La herramienta del especialista."""
-        ...
-
-    def get_capabilities(self) -> list[str]:
-        """
-        Devuelve una lista de los tipos de eventos que este especialista puede manejar.
-        """
-        ...
 
 
 class SpecialistRegistry:
     """
     Un registro singleton para descubrir y gestionar agentes especialistas.
+    Soporta registro individual o masivo desde Skills cargados.
     """
 
-    _instance = None
-    _specialists: dict[str, Specialist] = {}
+    _instance: Any = None
+    _specialists: dict[str, SpecialistInterface] = {}
 
     def __new__(cls) -> "SpecialistRegistry":
         if cls._instance is None:
             cls._instance = super().__new__(cls)
-            cls._specialists = {}
-        return cls._instance
+            cls._instance._specialists = {}
+        return cast("SpecialistRegistry", cls._instance)
 
-    def register(self, specialist: Specialist) -> None:
+    def register(self, specialist: SpecialistInterface) -> None:
         """Registra un nuevo especialista."""
         if specialist.name in self._specialists:
             logger.warning(
@@ -58,17 +33,35 @@ class SpecialistRegistry:
         logger.info("Registrando especialista: '%s'", specialist.name)
         self._specialists[specialist.name] = specialist
 
-    def get_specialist(self, name: str) -> Specialist | None:
+    def register_from_loaded_skills(self, skills: list[Any]) -> None:
+        """
+        Registra especialistas generados a partir de una lista de LoadedSkill.
+        Evita circular imports importando SkillBasedSpecialist aquí.
+        """
+        from src.agents.specialists.skill_based_specialist import SkillBasedSpecialist
+
+        for loaded_skill in skills:
+            try:
+                specialist = SkillBasedSpecialist(loaded_skill)
+                self.register(specialist)
+            except Exception:
+                logger.exception(
+                    "Error registrando skill como especialista: %s",
+                    loaded_skill.content.manifest.id,
+                )
+
+    def get_specialist(self, name: str) -> SpecialistInterface | None:
         """Obtiene un especialista por su nombre."""
         return self._specialists.get(name)
 
-    def get_all_specialists(self) -> list[Specialist]:
+    def get_all_specialists(self) -> list[SpecialistInterface]:
         """Devuelve una lista de todos los especialistas registrados."""
         return list(self._specialists.values())
 
     def get_tools(self) -> list[BaseTool]:
         """Devuelve una lista de todas las herramientas de los especialistas."""
-        return [s.tool for s in self._specialists.values()]
+        # Filtrar solo aquellos que tienen tool (algunos skills podrían no tenerlo)
+        return [s.tool for s in self._specialists.values() if s.tool is not None]
 
 
 # Instancia única del registro para ser usada en toda la aplicación

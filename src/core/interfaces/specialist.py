@@ -26,7 +26,7 @@ class SpecialistInterface(ABC):
 
     @property
     @abstractmethod
-    def tool(self) -> BaseTool:
+    def tool(self) -> BaseTool | None:
         """La herramienta que expone la capacidad al orquestador."""
         pass
 
