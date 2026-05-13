@@ -17,8 +17,7 @@ from src.core.profile_manager import user_profile_manager
 from src.memory.knowledge_base import knowledge_base_manager
 from src.memory.long_term_memory import long_term_memory
 from src.personality.prompt_builder import system_prompt_builder
-
-from .multimodal import process_image_input
+from src.personality.skills.chat.multimodal import process_image_input
 
 logger = logging.getLogger(__name__)
 

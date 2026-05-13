@@ -16,8 +16,7 @@ from src.core.profile_manager import user_profile_manager
 from src.memory.knowledge_base import knowledge_base_manager
 from src.memory.long_term_memory import long_term_memory
 from src.personality.prompt_builder import system_prompt_builder
-
-from .prompt_builder import (
+from src.personality.skills.tcc.prompt_builder import (
     CLINICAL_GUARDRAILS,
     build_enriched_profile_context,
     build_routing_instructions,

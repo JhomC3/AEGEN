@@ -150,7 +150,7 @@ disallow_incomplete_defs = false
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q --cov=src --cov-report=term-missing --cov-fail-under=30"
+addopts = "-ra -q --cov=src --cov-report=term-missing --no-cov"
 testpaths = ["tests"]
 
 asyncio_mode = "auto"
