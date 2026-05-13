@@ -1,6 +1,6 @@
 # tests/memory/test_knowledge_watcher.py
 import asyncio
-import os
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -62,7 +62,9 @@ async def test_knowledge_watcher_detection(tmp_path):
     loader.ingest_file.reset_mock()
     loader.manager.delete_file_knowledge.reset_mock()
 
-    os.remove(test_file)
+    test_file_path = Path(test_file)
+    if test_file_path.exists():
+        test_file_path.unlink()
     await watcher._check_for_changes()
 
     loader.manager.delete_file_knowledge.assert_awaited_once_with(

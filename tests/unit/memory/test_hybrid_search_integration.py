@@ -1,5 +1,5 @@
 # tests/unit/memory/test_hybrid_search_integration.py
-import os
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -10,12 +10,16 @@ from src.memory.sqlite_store import SQLiteStore
 
 
 @pytest.fixture
-async def search_db():
-    """Fixture para crear una DB temporal y limpiarla después."""
-    db_path = "storage/test_search_filter.db"
-
-    if os.path.exists(db_path):
-        os.remove(db_path)
+async def store():
+    db_path = Path("storage/test_search_filter.db")
+    if db_path.exists():
+        db_path.unlink()
+    store = SQLiteStore(str(db_path))
+    await store.connect()
+    yield store
+    await store.disconnect()
+    if db_path.exists():
+        db_path.unlink()
 
     store = SQLiteStore(db_path)
     await store.init_db(settings.SQLITE_SCHEMA_PATH)
@@ -26,8 +30,8 @@ async def search_db():
     yield store
 
     await store.disconnect()
-    if os.path.exists(db_path):
-        os.remove(db_path)
+    if db_path.exists():
+        db_path.unlink()
 
 
 @pytest.mark.asyncio
@@ -66,18 +70,22 @@ async def test_hybrid_search_excludes_inactive_memories(search_db):
     await search_db.soft_delete_memories([mid2])
 
     # Mock search components to return both IDs
-    with patch.object(
-        hybrid.vector_search,
-        "search",
-        AsyncMock(return_value=[(mid1, 0.1), (mid2, 0.2)]),
-    ), patch.object(
-        hybrid.keyword_search,
-        "search",
-        AsyncMock(return_value=[(mid1, 1.0), (mid2, 0.5)]),
-    ), patch.object(
-        hybrid.embedding_service,
-        "embed_query",
-        AsyncMock(return_value=[0.1] * 768),
+    with (
+        patch.object(
+            hybrid.vector_search,
+            "search",
+            AsyncMock(return_value=[(mid1, 0.1), (mid2, 0.2)]),
+        ),
+        patch.object(
+            hybrid.keyword_search,
+            "search",
+            AsyncMock(return_value=[(mid1, 1.0), (mid2, 0.5)]),
+        ),
+        patch.object(
+            hybrid.embedding_service,
+            "embed_query",
+            AsyncMock(return_value=[0.1] * 768),
+        ),
     ):
         results = await hybrid.search("test", chat_id="chat1")
 

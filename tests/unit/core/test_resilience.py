@@ -65,7 +65,7 @@ async def test_retry_fails_after_all_attempts():
     with pytest.raises(TypeError, match="Fallo final"):
         await decorated_func()
 
-    # Verificar que la función fue llamada exactamente el número de veces de los reintentos
+    # Verificar que la función fue llamada exactamente el número de veces de los reintentos  # noqa: E501
     assert mock_func.await_count == retries
 
 

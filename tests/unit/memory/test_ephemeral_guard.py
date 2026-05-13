@@ -44,15 +44,15 @@ async def test_store_raw_message_persists_when_ephemeral_false():
         mock_buffer.push_message = AsyncMock()
         mock_buffer.get_message_count = AsyncMock(return_value=1)
 
-        with patch.object(manager, "get_buffer", AsyncMock(return_value=mock_buffer)):
-            with patch(
-                "src.memory.consolidation_worker.consolidation_manager"
-            ) as mock_cm:
-                mock_cm.should_consolidate = AsyncMock(return_value=False)
+        with (
+            patch.object(manager, "get_buffer", AsyncMock(return_value=mock_buffer)),
+            patch("src.memory.consolidation_worker.consolidation_manager") as mock_cm,
+        ):
+            mock_cm.should_consolidate = AsyncMock(return_value=False)
 
-                await manager.store_raw_message("chat123", "user", "Hello world")
+            await manager.store_raw_message("chat123", "user", "Hello world")
 
-                # Buffer SHOULD be called
-                mock_buffer.push_message.assert_called_once_with(
-                    "chat123", "user", "Hello world"
-                )
+            # Buffer SHOULD be called
+            mock_buffer.push_message.assert_called_once_with(
+                "chat123", "user", "Hello world"
+            )

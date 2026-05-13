@@ -1,5 +1,4 @@
 # tests/integration/test_memory_e2e.py
-import os
 from pathlib import Path
 from unittest.mock import patch
 
@@ -11,15 +10,19 @@ from src.memory.vector_memory_manager import MemoryType, VectorMemoryManager
 
 
 @pytest.fixture
-async def memory_system():
-    """Setup del sistema de memoria completo con DB temporal."""
-    db_path = "storage/test_integration_memory.db"
+async def store():
+    db_path = Path("storage/test_memory_e2e.db")
     Path("storage").mkdir(exist_ok=True)
+    if db_path.exists():
+        db_path.unlink()
+    store = SQLiteStore(str(db_path))
+    await store.connect()
+    yield store
+    await store.disconnect()
+    if db_path.exists():
+        db_path.unlink()
 
-    if os.path.exists(db_path):
-        os.remove(db_path)
-
-    store = SQLiteStore(db_path)
+    store = SQLiteStore(str(db_path))
     await store.init_db(settings.SQLITE_SCHEMA_PATH)
 
     # Mock de Embeddings para evitar llamadas a API real
@@ -37,8 +40,8 @@ async def memory_system():
             yield manager, store
 
     await store.disconnect()
-    if os.path.exists(db_path):
-        os.remove(db_path)
+    if db_path.exists():
+        db_path.unlink()
 
 
 @pytest.mark.asyncio
@@ -50,7 +53,7 @@ async def test_full_memory_cycle(memory_system):
     long_text = (
         "El sistema AEGEN utiliza una arquitectura de agentes especialistas. "
         "La memoria local-first se basa en SQLite y sqlite-vec para eficiencia. "
-        "Esto permite que los datos del usuario permanezcan privados y accesibles sin latencia de red. "
+        "Esto permite que los datos del usuario permanezcan privados y accesibles sin latencia de red. "  # noqa: E501
         "Los perfiles psicológicos evolucionan con cada interacción."
     )
 

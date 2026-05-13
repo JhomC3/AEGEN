@@ -6,7 +6,7 @@ from src.memory.fact_extractor import FactExtractor
 
 class TestFactExtractorOutputFormat:
     def test_extract_json_with_provenance_fields(self):
-        """Extracted JSON must include source_type, confidence, evidence, sensitivity per item."""
+        """Extracted JSON must include source_type, confidence, evidence, sensitivity per item."""  # noqa: E501
         extractor = FactExtractor()
         # Simulate what the LLM would return with the new prompt
         llm_output = json.dumps({

@@ -2,6 +2,7 @@
 from pathlib import Path
 from typing import cast
 
+import pytest
 import yaml
 
 
@@ -15,12 +16,11 @@ def load_prompt(prompt_name: str, version: str = "v1") -> str:
         / f"{version}.yaml"
     )
     if not prompt_path.exists():
-        raise FileNotFoundError(
-            f"El archivo de prompt no se encontró en: {prompt_path}"
-        )
-    with open(prompt_path, encoding="utf-8") as f:
+        pytest.fail(f"El archivo de prompt no se encontró en: {prompt_path}")
+    with prompt_path.open(encoding="utf-8") as f:
         # Hacemos un cast explícito porque yaml.safe_load devuelve Any
         prompt_data = cast(dict[str, str], yaml.safe_load(f))
+
     return prompt_data["system_message"]
 
 

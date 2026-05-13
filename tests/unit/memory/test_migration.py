@@ -1,5 +1,5 @@
 # tests/unit/memory/test_migration.py
-import os
+from pathlib import Path
 
 import pytest
 
@@ -9,16 +9,25 @@ from src.memory.sqlite_store import SQLiteStore
 
 @pytest.fixture
 async def migration_db():
-    db_path = "storage/test_migration.db"
-    if os.path.exists(db_path):
-        os.remove(db_path)
-    store = SQLiteStore(db_path)
+    db_path = Path("storage/test_migration.db")
+    if db_path.exists():
+        db_path.unlink()
+    store = SQLiteStore(str(db_path))
+    # Note: init_db uses settings.SQLITE_SCHEMA_PATH which we will update in Step 3
+    await store.init_db(settings.SQLITE_SCHEMA_PATH)
+    await store.connect()
+    yield store
+    await store.disconnect()
+    if db_path.exists():
+        db_path.unlink()
+
+    store = SQLiteStore(str(db_path))
     # Note: init_db uses settings.SQLITE_SCHEMA_PATH which we will update in Step 3
     await store.init_db(settings.SQLITE_SCHEMA_PATH)
     yield store
     await store.disconnect()
-    if os.path.exists(db_path):
-        os.remove(db_path)
+    if db_path.exists():
+        db_path.unlink()
 
 
 @pytest.mark.asyncio
@@ -85,7 +94,7 @@ async def test_migration_defaults_existing_rows(migration_db):
     await apply_migrations(migration_db)
 
     async with db.execute(
-        "SELECT source_type, confidence, is_active FROM memories WHERE content_hash = 'hash_test_1'"
+        "SELECT source_type, confidence, is_active FROM memories WHERE content_hash = 'hash_test_1'"  # noqa: E501
     ) as cursor:
         row = await cursor.fetchone()
         assert row[0] == "explicit"  # source_type default

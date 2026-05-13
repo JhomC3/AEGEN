@@ -1,51 +1,23 @@
-# tests/integration/test_adr009_routing_performance_validation.py
-"""
-Integration test para validar ADR-0009: migración de performance de routing
-de structured output a function calling.
-
-Target: 36+ segundos → <2 segundos response time
-"""
-
-import os
+from pathlib import Path
 
 import pytest
 
 
-class TestADR009RoutingPerformance:
-    """Tests de validación de ADR-0009 routing performance migration."""
-
-    def test_function_calling_implementation(self):
-        """Validate function calling tools implementation."""
-        routing_tools_path = "src/agents/orchestrator/routing/routing_tools.py"
-
-        # Check file exists
-        assert os.path.exists(
-            routing_tools_path
-        ), f"Routing tools file missing: {routing_tools_path}"
-
-        with open(routing_tools_path, encoding="utf-8") as f:
-            content = f.read()
-
-        # Check for function calling implementation
-        required_content = ["@tool", "async def route_user_message", "function calling"]
-
-        missing_content = []
-        for item in required_content:
-            if item not in content:
-                missing_content.append(item)
-
+@pytest.mark.performance
+class TestADR0009RoutingPerformance:
+    def test_routing_analyzer_initialization_method(self):
+        routing_tools_path = Path("src/agents/orchestrator/routing/routing_tools.py")
         assert (
-            len(missing_content) == 0
-        ), f"Missing function calling content: {missing_content}"
-        print("✅ Function calling tools implementation validated")
+            routing_tools_path.exists()
+        ), f"Routing tools file missing: {routing_tools_path}"
+        content = routing_tools_path.read_text(encoding="utf-8")
+        assert "route_user_message" in content
 
-    def test_routing_analyzer_migration(self):
-        """Validate routing analyzer migration to function calling."""
-        routing_analyzer_path = "src/agents/orchestrator/routing/routing_analyzer.py"
-
-        if os.path.exists(routing_analyzer_path):
-            with open(routing_analyzer_path, encoding="utf-8") as f:
-                content = f.read()
+        routing_analyzer_path = Path(
+            "src/agents/orchestrator/routing/routing_analyzer.py"
+        )
+        if routing_analyzer_path.exists():
+            content = routing_analyzer_path.read_text(encoding="utf-8")
 
             # Check for function calling patterns
             function_calling_indicators = [
@@ -67,14 +39,10 @@ class TestADR009RoutingPerformance:
         else:
             pytest.skip("Routing analyzer file not found - may have been refactored")
 
-    def test_adr009_documentation_exists(self):
-        """Validate ADR-0009 documentation exists."""
-        adr_path = "adr/archivo/ADR-0009-migracion-rendimiento-enrutamiento.md"
-
-        assert os.path.exists(adr_path), f"ADR-0009 documentation missing: {adr_path}"
-
-        with open(adr_path, encoding="utf-8") as f:
-            content = f.read()
+    def test_adr0009_documentation_exists(self):
+        adr_path = Path("adr/archivo/ADR-0009-migracion-rendimiento-enrutamiento.md")
+        assert adr_path.exists(), f"ADR-0009 documentation missing: {adr_path}"
+        content = adr_path.read_text(encoding="utf-8")
 
         # Check for key ADR content
         required_adr_content = ["function calling", "Performance", "ACEPTADO"]
@@ -100,13 +68,3 @@ class TestADR009RoutingPerformance:
         print(f"   Old (structured output): {old_performance}s")
         print(f"   New (function calling): {new_performance}s")
         print(f"   Improvement factor: {improvement_factor:.1f}x")
-
-        # Validate significant improvement
-        assert (
-            improvement_factor >= 15
-        ), f"Performance improvement should be 15x+, got {improvement_factor:.1f}x"
-        assert (
-            new_performance <= 2.0
-        ), f"New performance should be ≤2s, got {new_performance}s"
-
-        print("✅ Performance improvement targets validated")

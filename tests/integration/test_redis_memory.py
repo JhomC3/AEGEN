@@ -65,7 +65,7 @@ async def test_redis_session():
         session_info = await session_manager.get_session_info(test_chat_id)
         if session_info:
             print(
-                f"✅ Info de sesión: {session_info['message_count']} mensajes, TTL: {session_info['ttl_seconds']}s"
+                f"✅ Info de sesión: {session_info['message_count']} mensajes, TTL: {session_info['ttl_seconds']}s"  # noqa: E501
             )
 
         # Test 6: Limpiar sesión de prueba

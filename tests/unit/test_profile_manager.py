@@ -11,7 +11,7 @@ def manager():
 
 class TestProfileManagerDefaults:
     def test_default_profile_has_new_sections(self, manager):
-        """Default profile must include support_preferences, coping, memory, clinical."""
+        """Default profile must include support_preferences, coping, memory, clinical."""  # noqa: E501
         profile = manager._get_default_profile()
         assert "support_preferences" in profile
         assert "coping_mechanisms" in profile

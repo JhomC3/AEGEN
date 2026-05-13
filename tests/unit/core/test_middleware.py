@@ -12,7 +12,7 @@ from src.core.middleware import CorrelationIdMiddleware, correlation_id
 async def test_middleware_uses_existing_correlation_id():
     """
     Verifica que el middleware reutiliza el X-Correlation-ID si ya existe en la petición.
-    """
+    """  # noqa: E501
     # Crear un scope de petición falso
     scope = {"type": "http", "headers": [(b"x-correlation-id", b"test-id-123")]}
     request = Request(scope)

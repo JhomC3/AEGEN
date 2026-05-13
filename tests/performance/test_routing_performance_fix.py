@@ -77,7 +77,7 @@ class TestRoutingPerformanceFix:
     ):
         """
         Test that RoutingAnalyzer initializes with function calling instead of structured output.
-        """
+        """  # noqa: E501
         # Mock the initialization process
 
         # Simulate the old vs new approach
@@ -156,7 +156,7 @@ class TestRoutingPerformanceFix:
         assert len(restored_features) >= 6
 
         print(
-            f"✅ ChatAgent restored: {actual_line_count} lines (target: {expected_line_count}+)"
+            f"✅ ChatAgent restored: {actual_line_count} lines (target: {expected_line_count}+)"  # noqa: E501
         )
         print(f"✅ Restored features: {len(restored_features)} components")
 
@@ -166,7 +166,7 @@ class TestRoutingPerformanceFix:
         End-to-end performance test simulating user message processing.
 
         Simulates: User Message → Enhanced Router → Function Calling → ChatAgent Response
-        """
+        """  # noqa: E501
 
         # Phase 1: Routing Analysis (should be fast now)
         routing_start = time.time()

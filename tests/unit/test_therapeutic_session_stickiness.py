@@ -1,4 +1,5 @@
 # tests/unit/test_therapeutic_session_stickiness.py
+from typing import cast
 from unittest.mock import MagicMock
 
 from src.agents.orchestrator.routing.therapeutic_session import (
@@ -6,6 +7,7 @@ from src.agents.orchestrator.routing.therapeutic_session import (
     should_maintain_therapeutic_session,
 )
 from src.core.routing_models import IntentType, RoutingDecision
+from src.core.schemas.graph import GraphStateV2
 
 
 class TestTherapeuticStickiness:
@@ -17,16 +19,20 @@ class TestTherapeuticStickiness:
             "event": MagicMock(event_type="text", content="no sirves"),
             "payload": {"last_specialist": "cbt_specialist"},
             "conversation_history": [],
+            "session_id": "test",
+            "error_message": None,
         }
-        assert is_therapeutic_session_active(state) is True
+        assert is_therapeutic_session_active(cast(GraphStateV2, state)) is True
 
     def test_no_therapeutic_session_from_chat(self):
         state = {
             "event": MagicMock(event_type="text", content="hola"),
             "payload": {"last_specialist": "chat_specialist"},
             "conversation_history": [],
+            "session_id": "test",
+            "error_message": None,
         }
-        assert is_therapeutic_session_active(state) is False
+        assert is_therapeutic_session_active(cast(GraphStateV2, state)) is False
 
     def test_complaint_during_cbt_stays_in_cbt(self):
         """Queja del usuario durante CBT = resistencia, no cambio de tema."""
@@ -35,11 +41,18 @@ class TestTherapeuticStickiness:
             confidence=0.7,
             target_specialist="chat_specialist",
             requires_tools=False,
+            subintent="complaint",
         )
         state = {
             "payload": {"last_specialist": "cbt_specialist"},
+            "conversation_history": [],
+            "session_id": "test",
+            "error_message": None,
+            "event": MagicMock(),
         }
-        result = should_maintain_therapeutic_session(state, decision)
+        result = should_maintain_therapeutic_session(
+            cast(GraphStateV2, state), decision
+        )
         assert result is True
 
     def test_explicit_topic_change_allowed(self):
@@ -49,9 +62,16 @@ class TestTherapeuticStickiness:
             confidence=0.9,
             target_specialist="chat_specialist",
             requires_tools=False,
+            subintent="topic_change",
         )
         state = {
             "payload": {"last_specialist": "cbt_specialist"},
+            "conversation_history": [],
+            "session_id": "test",
+            "error_message": None,
+            "event": MagicMock(),
         }
-        result = should_maintain_therapeutic_session(state, decision)
+        result = should_maintain_therapeutic_session(
+            cast(GraphStateV2, state), decision
+        )
         assert result is False

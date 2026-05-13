@@ -1,5 +1,5 @@
 # tests/unit/memory/test_ingestion_provenance.py
-import os
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -11,18 +11,26 @@ from src.memory.sqlite_store import SQLiteStore
 
 @pytest.fixture
 async def pipeline_db():
-    db_path = "storage/test_ingestion_prov.db"
-    if os.path.exists(db_path):
-        os.remove(db_path)
-    store = SQLiteStore(db_path)
+    db_path = Path("storage/test_ingestion_prov.db")
+    if db_path.exists():
+        db_path.unlink()
+    store = SQLiteStore(str(db_path))
+    await store.init_db(settings.SQLITE_SCHEMA_PATH)
+    await store.connect()
+    yield store
+    await store.disconnect()
+    if db_path.exists():
+        db_path.unlink()
+
+    store = SQLiteStore(str(db_path))
     await store.init_db(settings.SQLITE_SCHEMA_PATH)
     from src.memory.migration import apply_migrations
 
     await apply_migrations(store)
     yield store
     await store.disconnect()
-    if os.path.exists(db_path):
-        os.remove(db_path)
+    if db_path.exists():
+        db_path.unlink()
 
 
 @pytest.mark.asyncio
@@ -49,7 +57,7 @@ async def test_pipeline_passes_provenance_to_store(pipeline_db):
 
     db = await pipeline_db.get_db()
     async with db.execute(
-        "SELECT source_type, confidence, sensitivity, evidence FROM memories WHERE chat_id = 'test_chat'"
+        "SELECT source_type, confidence, sensitivity, evidence FROM memories WHERE chat_id = 'test_chat'"  # noqa: E501
     ) as cursor:
         row = await cursor.fetchone()
         assert row[0] == "inferred"

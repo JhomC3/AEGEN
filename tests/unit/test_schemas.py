@@ -1,14 +1,15 @@
 # tests/unit/test_schemas.py
 # VERSIÓN DE PRODUCCIÓN: FUSIÓN DE COBERTURA EXHAUSTIVA Y ARQUITECTURA ROBUSTA
-import os
 import sys
 from datetime import datetime
+from pathlib import Path
 from uuid import UUID, uuid4
 
 import pytest
 from pydantic import ValidationError
 
-sys.path.append(os.path.join(os.path.dirname(__file__), "..", ".."))
+# Añadir raíz al path
+sys.path.append(str(Path(__file__).parent.parent.parent))
 
 from src.core.schemas import (
     AnalysisDetails,
@@ -82,10 +83,12 @@ class TestAnalyzeQuery:
 
     def test_creation_valid_minimal(self):
         """Prueba la creación con solo el campo 'query' requerido."""
-        query_obj = AnalyzeQuery(query="Analyse this valid query please.")
+        query_obj = AnalyzeQuery(
+            query="Analyse this valid query please.",
+            user_id="test",
+            session_id=uuid4(),
+        )
         assert query_obj.query == "Analyse this valid query please."
-        assert query_obj.user_id is None
-        assert query_obj.session_id is None
 
     def test_creation_valid_with_all_fields(self, valid_uuid: UUID):
         """Prueba la creación proporcionando todos los campos opcionales."""
@@ -99,8 +102,12 @@ class TestAnalyzeQuery:
 
     def test_edge_case_lengths(self):
         """Prueba los valores límite para la longitud de la consulta."""
-        assert AnalyzeQuery(query="a" * 5).query == "a" * 5
-        assert AnalyzeQuery(query="a" * 1000).query == "a" * 1000
+        uid, sid = "u", uuid4()
+        assert AnalyzeQuery(query="a" * 5, user_id=uid, session_id=sid).query == "a" * 5
+        assert (
+            AnalyzeQuery(query="a" * 1000, user_id=uid, session_id=sid).query
+            == "a" * 1000
+        )
 
     @pytest.mark.parametrize(
         "invalid_data, error_type, loc",
@@ -148,7 +155,7 @@ class TestStatusAndHealth:
             name="db", status=ServiceStatus.OK, details="Connected"
         )
         service_without_details = ServiceHealth(
-            name="api", status=ServiceStatus.DEGRADED
+            name="api", status=ServiceStatus.DEGRADED, details=None
         )
         assert service_with_details.details == "Connected"
         assert service_without_details.details is None
@@ -176,7 +183,9 @@ class TestAnalysisFindingAndDetails:
 
     def test_analysis_finding_creation_valid(self):
         """Prueba la creación de AnalysisFinding con y sin campos opcionales."""
-        minimal_finding = AnalysisFinding(description="A finding.")
+        minimal_finding = AnalysisFinding(
+            description="A finding.", severity=None, confidence=None, metadata={}
+        )
         assert minimal_finding.severity is None
         assert minimal_finding.confidence is None
 
@@ -213,7 +222,9 @@ class TestAnalysisFindingAndDetails:
         assert default_details.summary == "No summary available."
         assert default_details.key_findings == []
 
-        finding = AnalysisFinding(description="A finding.")
+        finding = AnalysisFinding(
+            description="A finding.", severity="low", confidence=0.5, metadata={}
+        )
         full_details = AnalysisDetails(
             summary="Custom summary",
             key_findings=[finding],
@@ -275,14 +286,24 @@ class TestAnalysisPlan:
         assert step_with_tools.tool_to_use == "api_tool"
 
         step_without_tools = PlanStep(
-            step_id=2, action="Summarize", expected_output_description="Text summary"
+            step_id=2,
+            action="Summarize",
+            expected_output_description="Text summary",
+            tool_to_use=None,
+            tool_parameters={},
         )
         assert step_without_tools.tool_to_use is None
 
     def test_analysis_plan_creation(self):
         """Prueba la creación de AnalysisPlan con una lista de pasos."""
         steps = [
-            PlanStep(step_id=1, action="Step 1", expected_output_description="Out 1")
+            PlanStep(
+                step_id=1,
+                action="Step 1",
+                expected_output_description="Out 1",
+                tool_to_use=None,
+                tool_parameters={},
+            )
         ]
         plan = AnalysisPlan(original_query="Test plan", steps=steps)
         assert isinstance(plan.plan_id, UUID)

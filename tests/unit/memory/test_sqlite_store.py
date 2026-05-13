@@ -1,5 +1,5 @@
 # tests/unit/memory/test_sqlite_store.py
-import os
+from pathlib import Path
 
 import pytest
 
@@ -8,14 +8,20 @@ from src.memory.sqlite_store import SQLiteStore
 
 
 @pytest.fixture
-async def temp_db():
-    """Fixture para crear una DB temporal y limpiarla después."""
-    db_path = "storage/test_memory.db"
+async def store():
+    db_path = Path("storage/test_memory.db")
 
-    if os.path.exists(db_path):
-        os.remove(db_path)
+    if db_path.exists():
+        db_path.unlink()
 
-    store = SQLiteStore(db_path)
+    store = SQLiteStore(str(db_path))
+    await store.connect()
+    yield store
+    await store.disconnect()
+    if db_path.exists():
+        db_path.unlink()
+
+    store = SQLiteStore(str(db_path))
     await store.init_db(settings.SQLITE_SCHEMA_PATH)
     # Task 1 ensures migrations are applied on init_db if we use the real dependency,
     # but here we are using SQLiteStore directly, so we apply migrations manually
@@ -26,8 +32,8 @@ async def temp_db():
     yield store
 
     await store.disconnect()
-    if os.path.exists(db_path):
-        os.remove(db_path)
+    if db_path.exists():
+        db_path.unlink()
 
 
 @pytest.mark.asyncio
@@ -42,7 +48,7 @@ async def test_init_db(temp_db):
         assert "vector_memory_map" in tables
         assert "embedding_cache" in tables
         assert "profiles" in tables
-        # memories_fts es una tabla virtual, puede no aparecer en sqlite_master normal o si
+        # memories_fts es una tabla virtual, puede no aparecer en sqlite_master normal o si  # noqa: E501
 
     async with db.execute(
         "SELECT name FROM sqlite_master WHERE type='table' AND name='memories_fts'"

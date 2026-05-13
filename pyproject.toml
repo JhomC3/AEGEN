@@ -142,6 +142,12 @@ no_implicit_optional = true         # forza Optional[X] explícito
 check_untyped_defs = true           # chequea interiores de funciones sin tipos
 
 
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+
+
 [tool.pytest.ini_options]
 minversion = "6.0"
 addopts = "-ra -q --cov=src --cov-report=term-missing --cov-fail-under=50"
