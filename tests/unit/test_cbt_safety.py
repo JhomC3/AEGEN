@@ -1,7 +1,7 @@
 # tests/unit/test_cbt_safety.py
 
-from src.agents.specialists.cbt.prompt_builder import build_enriched_profile_context
 from src.agents.utils.knowledge_formatter import format_knowledge_for_prompt
+from src.personality.skills.tcc.prompt_builder import build_enriched_profile_context
 
 
 class TestFormatKnowledge:
@@ -55,6 +55,6 @@ class TestEnrichedProfileContext:
 
     def test_handles_empty_profile(self):
         """Must not crash on minimal/empty profile."""
-        profile = {}
+        profile: dict = {}
         context = build_enriched_profile_context(profile)
         assert isinstance(context, str)

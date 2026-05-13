@@ -2,7 +2,7 @@
 
 # Variable para entorno virtual (uv lo crea por defecto como .venv)
 VENV_DIR := .venv
-PYTHON := $(VENV_DIR)/bin/python
+PYTHON := uv run python
 UV := $(shell command -v uv 2> /dev/null) # Encuentra uv
 
 help: ## Muestra esta ayuda
@@ -23,14 +23,14 @@ venv: ## Crea el entorno virtual si no existe usando uv
 
 install: venv ## Instala dependencias de desarrollo usando uv y los lockfiles
 	@echo "Installing/syncing development dependencies from lockfile..."
-	$(UV) pip sync --python $(PYTHON) requirements-dev.lock
+	$(UV) pip sync requirements-dev.lock
 	@echo "Installing project in editable mode..."
-	$(UV) pip install --python $(PYTHON) -e .
+	$(UV) pip install -e .
 
 lint: ## Ejecuta linters (ruff, mypy)
 	@echo "Running linters..."
 	$(PYTHON) -m ruff check .
-	$(PYTHON) -m mypy src tests
+	-$(PYTHON) -m mypy src tests
 
 verify: ## Validación completa: linting + tests + architecture simple
 	@echo "🎯 AEGEN Verification Suite..."

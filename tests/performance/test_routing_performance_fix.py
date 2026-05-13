@@ -205,7 +205,8 @@ class TestRoutingPerformanceFix:
         ]
 
         # Validate that no breaking changes occurred
-        breaking_changes = []  # Should be empty
+        breaking_changes: list = []
+        # Should be empty
 
         assert (
             len(breaking_changes) == 0
@@ -261,7 +262,8 @@ class TestPerformanceRegression:
         Validates that llm.with_structured_output() has been eliminated.
         """
         # In real environment, this would scan code for structured output usage
-        structured_output_usage = []  # Should be empty in critical path
+        structured_output_usage: list = []
+        # Should be empty in critical path
 
         assert (
             len(structured_output_usage) == 0
