@@ -51,7 +51,12 @@ def _create_google_llm(model_name: str | None = None) -> Any:
     """Crea instancia de Google Gemini."""
     from langchain_google_genai import ChatGoogleGenerativeAI
 
-    target_model = model_name or settings.RAG_MODEL
+    # Asegurar formato correcto del modelo para evitar 404
+    raw_model = model_name or settings.RAG_MODEL
+    target_model = (
+        raw_model if raw_model.startswith("models/") else f"models/{raw_model}"
+    )
+
     logger.info(f"Initializing Google Provider with model: {target_model}")
 
     return ChatGoogleGenerativeAI(

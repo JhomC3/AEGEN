@@ -41,7 +41,7 @@ class BaseAppSettings(BaseSettings):
     AUDIO_MODEL: str = "whisper-large-v3-turbo"
 
     # RAG (Gemini por ventana de contexto y File API)
-    RAG_MODEL: str = "gemini-1.5-flash"
+    RAG_MODEL: str = "gemini-1.5-flash-latest"
 
     # Routing y Default
     ROUTING_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
