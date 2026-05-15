@@ -4,6 +4,7 @@ Callback handler para observabilidad LLM.
 Responsabilidad única: Interceptar y trackear llamadas LLM.
 """
 
+import asyncio
 import logging
 from typing import Any
 from uuid import UUID
@@ -28,6 +29,7 @@ logger = logging.getLogger(__name__)
 class LLMObservabilityHandler(BaseCallbackHandler):
     """
     Callback handler híbrido para observabilidad LLM.
+    Emite alertas al Event Bus cuando ocurren fallos críticos.
     """
 
     def __init__(self, call_type: str = "general") -> None:
@@ -89,6 +91,10 @@ class LLMObservabilityHandler(BaseCallbackHandler):
     ) -> None:
         """Callback ejecutado cuando falla llamada LLM."""
         kwargs.pop("response", None)
+
+        # Emitir alerta técnica al sistema (asincrónicamente)
+        self._emit_failure_alert(run_id, error)
+
         self._finalize_call(run_id, response=None, success=False, error=error, **kwargs)
 
     def _finalize_call(
@@ -102,7 +108,7 @@ class LLMObservabilityHandler(BaseCallbackHandler):
         """Finaliza y registra métricas de llamada LLM."""
         call_id = str(run_id)
         if call_id not in self.active_calls:
-            logger.warning(f"Call ID {call_id} not found in active calls to finalize.")
+            logger.warning("Call ID %s not found in active calls to finalize.", call_id)
             return
 
         metrics = self.active_calls[call_id]
@@ -116,3 +122,35 @@ class LLMObservabilityHandler(BaseCallbackHandler):
 
         del self.active_calls[call_id]
         log_call_completion(call_id, metrics, success)
+
+    def _emit_failure_alert(self, run_id: UUID, error: BaseException) -> None:
+        """Publica un evento de fallo en el bus de forma segura."""
+        call_id = str(run_id)
+        if call_id not in self.active_calls:
+            return
+
+        metrics = self.active_calls[call_id]
+
+        # Datos de la alerta
+        alert_data = {
+            "event_type": "llm_failure",
+            "provider": metrics.provider,
+            "model": metrics.model,
+            "error": str(error),
+            "call_type": self.call_type,
+            "correlation_id": metrics.correlation_id,
+        }
+
+        # Lanzar tarea fire-and-forget para no bloquear el hilo de callbacks
+        asyncio.create_task(self._publish_alert(alert_data))
+
+    async def _publish_alert(self, data: dict[str, Any]) -> None:
+        """Publicación asíncrona en el bus."""
+        try:
+            from src.core.dependencies import get_event_bus
+
+            bus = get_event_bus()
+            await bus.publish("system.llm_failure", data)
+        except Exception as e:
+            # Fallback silencioso si el bus no está listo
+            logger.debug("Could not publish failure alert to bus: %s", e)

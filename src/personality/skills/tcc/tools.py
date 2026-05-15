@@ -7,7 +7,7 @@ from langchain_core.tools import tool
 
 from src.agents.utils.knowledge_formatter import format_knowledge_for_prompt
 from src.core.dependencies import get_vector_memory_manager
-from src.core.engine import create_observable_config, llm
+from src.core.engine import create_observable_config
 from src.core.message_utils import (
     dict_to_langchain_messages,
     extract_recent_user_messages,
@@ -125,6 +125,10 @@ async def cbt_therapeutic_guidance_tool(
 
     # 4. Ejecución
     try:
+        from src.core.engine import get_analytical_llm
+
+        analytical_llm = get_analytical_llm()
+
         config = create_observable_config(call_type="cbt_therapeutic_response")
         conversational_prompt = ChatPromptTemplate.from_messages([
             ("system", persona_template),
@@ -132,7 +136,7 @@ async def cbt_therapeutic_guidance_tool(
             ("user", "{user_message}"),
         ])
 
-        chain = conversational_prompt | llm
+        chain = conversational_prompt | analytical_llm
         response = await chain.ainvoke(
             {"user_message": user_message, "messages": messages},
             config=cast(RunnableConfig, config),

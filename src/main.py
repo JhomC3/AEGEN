@@ -45,14 +45,17 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         # Registro diferido de especialistas para romper la cadena de imports eager
         from src.agents.specialists import register_all_specialists
         from src.agents.workers.worker_manager import WorkerManager
+        from src.api.services.admin_notificator import AdminNotificator
         from src.api.services.worker_notificator import WorkerNotificator
         from src.core.dependencies import get_event_bus
 
         bus = get_event_bus()
         _ = WorkerManager(event_bus=bus)
         notificator = WorkerNotificator(event_bus=bus)
-
         await notificator.start()
+
+        admin_notificator = AdminNotificator(event_bus=bus)
+        await admin_notificator.start()
 
         await register_all_specialists()
 

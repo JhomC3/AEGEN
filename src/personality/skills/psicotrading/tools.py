@@ -22,7 +22,6 @@ async def psicotrading_guidance_tool(
 ) -> str:
     """Coaching psicológico para traders (sesgos, gestión emocional)."""
     # Importar aquí para evitar circular imports
-    from src.core.engine import llm
     from src.core.message_utils import dict_to_langchain_messages
     from src.core.profile_manager import user_profile_manager
 
@@ -46,7 +45,11 @@ async def psicotrading_guidance_tool(
         # Formatear historial
         messages = dict_to_langchain_messages(conversation_history or [], limit=20)
 
-        chain = conversational_prompt | llm
+        from src.core.engine import get_analytical_llm
+
+        analytical_llm = get_analytical_llm()
+
+        chain = conversational_prompt | analytical_llm
         response = await chain.ainvoke({
             "user_message": user_message,
             "messages": messages,

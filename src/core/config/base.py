@@ -24,28 +24,32 @@ class BaseAppSettings(BaseSettings):
     OPENROUTER_API_KEY: SecretStr | None = None  # New for OpenRouter
     GROQ_API_KEY: SecretStr | None = None
 
-    # LLM Provider Configuration
-    LLM_PROVIDER: str = "groq"  # Options: "groq", "google", "openrouter"
-    OPENROUTER_MODEL_NAME: str = "openai/gpt-oss-120b:free"
-    GROQ_MODEL_NAME: str = "moonshotai/kimi-k2-instruct-0905"
-    GROQ_BACKUP_MODEL_NAME: str = "gpt-oss-120"
-    ALCHEMY_API_KEY: SecretStr | None = None
+    # Configuración de Modelos (Mayo 2026)
+    LLM_PROVIDER: str = "groq"
+    OPENROUTER_MODEL_NAME: str = "minimax/minimax-m2.5:free"
+    GROQ_MODEL_NAME: str = "openai/gpt-oss-120b"
+    GROQ_BACKUP_MODEL_NAME: str = "llama3-70b-8192"  # Fallback adicional en groq
+
+    # Administrador del sistema
+    ADMIN_CHAT_ID: str | None = None
 
     # === LLM Models por Tarea ===
-    # Chat Principal y Razonamiento
-    CHAT_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
-    CHAT_FALLBACK_MODEL: str = "gpt-oss-120"
-    REASONING_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
+    # Chat Principal y Ruteo (Latencia ultra-baja)
+    CHAT_MODEL: str = "openai/gpt-oss-120b"
+    CHAT_FALLBACK_MODEL: str = "minimax/minimax-m2.5:free"
+
+    # Razonamiento Analítico (Alta calidad)
+    REASONING_MODEL: str = "minimax/minimax-m2.5:free"
 
     # Audio (Groq Whisper)
     AUDIO_MODEL: str = "whisper-large-v3-turbo"
 
     # RAG (Gemini por ventana de contexto y File API)
-    RAG_MODEL: str = "gemini-1.5-flash-latest"
+    RAG_MODEL: str = "gemini-2.5-flash"
 
     # Routing y Default
-    ROUTING_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
-    DEFAULT_LLM_MODEL: str = "moonshotai/kimi-k2-instruct-0905"
+    ROUTING_MODEL: str = "openai/gpt-oss-120b"
+    DEFAULT_LLM_MODEL: str = "openai/gpt-oss-120b"
 
     ETHERSCAN_API_KEY: SecretStr | None = None
     TAVILY_API_KEY: SecretStr | None = None

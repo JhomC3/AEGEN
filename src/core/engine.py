@@ -1,7 +1,9 @@
 # src/core/engine.py
 import logging
+import time
 from typing import Any
 
+from langchain_core.language_models import BaseLanguageModel
 from langchain_openai import ChatOpenAI
 
 from src.core.config import settings
@@ -9,14 +11,13 @@ from src.core.config import settings
 logger = logging.getLogger(__name__)
 
 
-def _create_openrouter_llm() -> Any:
+def _create_openrouter_llm(model_name: str | None = None) -> Any:
     """Crea instancia de OpenRouter con reintentos."""
-    logger.info(
-        "Initializing OpenRouter with model: %s", settings.OPENROUTER_MODEL_NAME
-    )
+    target_model = model_name or settings.OPENROUTER_MODEL_NAME
+    logger.info("Initializing OpenRouter with model: %s", target_model)
 
     return ChatOpenAI(
-        model=settings.OPENROUTER_MODEL_NAME,
+        model=target_model,
         temperature=0.7,
         api_key=settings.OPENROUTER_API_KEY,
         base_url="https://openrouter.ai/api/v1",
@@ -35,8 +36,10 @@ def _create_groq_llm(model_name: str | None = None) -> Any:
         ) from e
 
     target_model = model_name or settings.GROQ_MODEL_NAME
-    logger.info(f"Initializing Groq with model: {target_model}")
-    api_key = settings.GROQ_API_KEY if settings.GROQ_API_KEY else None
+    logger.info("Initializing Groq with model: %s", target_model)
+    api_key = (
+        settings.GROQ_API_KEY.get_secret_value() if settings.GROQ_API_KEY else None
+    )
 
     return ChatGroq(
         model=target_model,
@@ -51,13 +54,12 @@ def _create_google_llm(model_name: str | None = None) -> Any:
     """Crea instancia de Google Gemini."""
     from langchain_google_genai import ChatGoogleGenerativeAI
 
-    # Asegurar formato correcto del modelo para evitar 404
     raw_model = model_name or settings.RAG_MODEL
     target_model = (
         raw_model if raw_model.startswith("models/") else f"models/{raw_model}"
     )
 
-    logger.info(f"Initializing Google Provider with model: {target_model}")
+    logger.info("Initializing Google Provider with model: %s", target_model)
 
     return ChatGoogleGenerativeAI(
         model=target_model,
@@ -65,59 +67,42 @@ def _create_google_llm(model_name: str | None = None) -> Any:
         top_p=0.9,
         top_k=40,
         convert_system_message_to_human=True,
-        api_key=settings.GOOGLE_API_KEY,
+        api_key=settings.GOOGLE_API_KEY.get_secret_value()
+        if settings.GOOGLE_API_KEY
+        else None,
     )
 
 
-def _initialize_llm() -> Any:
+def get_fast_llm() -> BaseLanguageModel:
     """
-    Inicializa el LLM con una estrategia robusta de reintentos y fallbacks multinivel.
-    Jerarquía:
-    1. Groq Principal (Moonshot)
-    2. Groq Backup (gpt-oss-120)
-    3. Google Gemini
-    4. OpenRouter (Último recurso)
+    Motor optimizado para velocidad (Ruteo y Chat General).
+    Primario: Groq (gpt-oss-120b)
     """
-    logger.info("[LLM] Building Resilient Engine with Multi-Level Fallback")
+    primary = _create_groq_llm(settings.CHAT_MODEL)
+    fallback_1 = _create_openrouter_llm(settings.CHAT_FALLBACK_MODEL)
+    fallback_2 = _create_groq_llm(settings.GROQ_BACKUP_MODEL_NAME)
 
-    try:
-        # Nivel 1: Chat Principal (e.g. Kimi K2 via Groq)
-        primary_chat = _create_groq_llm(settings.CHAT_MODEL)
-
-        # Nivel 2: Groq Backup
-        groq_backup = _create_groq_llm(settings.CHAT_FALLBACK_MODEL)
-
-        # Nivel 3: Google (Mantenemos gemini-2.5-flash-lite via RAG_MODEL o DEFAULT)
-        google_backup = _create_google_llm()
-
-        # Nivel 4: OpenRouter
-        openrouter_last_resort = _create_openrouter_llm()
-
-        # Construir la cadena de fallbacks en orden estricto
-        resilient_llm = primary_chat.with_fallbacks([
-            groq_backup,
-            google_backup,
-            openrouter_last_resort,
-        ])
-
-        logger.info(
-            "[LLM] Resilient chain created: Groq(Primary) -> "
-            "Groq(Backup) -> Google -> OpenRouter"
-        )
-        return resilient_llm
-
-    except Exception as e:
-        logger.critical(f"[LLM] Error building resilient engine: {e}")
-        try:
-            return _create_google_llm()
-        except Exception:
-            raise RuntimeError(
-                f"Total failure in LLM engine initialization: {e}"
-            ) from e
+    return primary.with_fallbacks([fallback_1, fallback_2])
 
 
-# Instancia singleton del LLM
-llm = _initialize_llm()
+def get_analytical_llm() -> BaseLanguageModel:
+    """
+    Motor optimizado para razonamiento (TCC, Psicotrading).
+    Primario: OpenRouter (Minimax)
+    """
+    primary = _create_openrouter_llm(settings.REASONING_MODEL)
+    fallback = _create_groq_llm(settings.CHAT_MODEL)
+
+    return primary.with_fallbacks([fallback])
+
+
+def get_rag_llm() -> BaseLanguageModel:
+    """Motor optimizado para contexto largo (Gemini)."""
+    return _create_google_llm()
+
+
+# Mantener 'llm' global por compatibilidad legacy, apuntando al rápido por defecto
+llm = get_fast_llm()
 
 
 def create_observable_config(
@@ -139,13 +124,10 @@ def create_observable_config(
 
 
 async def check_llm_health() -> dict[str, Any]:
-    """
-    Realiza una prueba de salud del LLM actual con medición de latencia.
-    """
-    import time
-
+    """Realiza una prueba de salud de los motores LLM."""
     start_time = time.time()
     try:
+        # Probar el motor rápido (Groq)
         response = await llm.ainvoke("ping")
         latency_ms = (time.time() - start_time) * 1000
         return {
@@ -155,7 +137,7 @@ async def check_llm_health() -> dict[str, Any]:
         }
     except Exception as e:
         latency_ms = (time.time() - start_time) * 1000
-        logger.error(f"LLM Health Check failed: {e}")
+        logger.error("LLM Health Check failed: %s", e)
         return {
             "status": "unhealthy",
             "error": str(e),
@@ -163,4 +145,4 @@ async def check_llm_health() -> dict[str, Any]:
         }
 
 
-logger.info("[LLM] Engine ready with Multi-Level Fallback configured.")
+logger.info("[LLM] Asymmetric Intelligence Engine ready (ADR-0027)")
