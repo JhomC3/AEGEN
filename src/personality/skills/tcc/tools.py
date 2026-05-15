@@ -98,7 +98,8 @@ async def cbt_therapeutic_guidance_tool(
 
     # 2. Configurar Persona y Prompts
     adaptation = user_profile_manager.get_personality_adaptation(profile)
-    history_limit = adaptation.get("history_limit", 20)
+    # Reducido de 20 a 10 para ahorrar tokens
+    history_limit = adaptation.get("history_limit", 10)
     messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
 
     persona_template = await system_prompt_builder.build(

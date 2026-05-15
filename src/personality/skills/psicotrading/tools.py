@@ -42,8 +42,8 @@ async def psicotrading_guidance_tool(
             ("user", "{user_message}"),
         ])
 
-        # Formatear historial
-        messages = dict_to_langchain_messages(conversation_history or [], limit=20)
+        # Formatear historial (Limitado a 10 para ahorrar tokens)
+        messages = dict_to_langchain_messages(conversation_history or [], limit=10)
 
         from src.core.engine import get_analytical_llm
 

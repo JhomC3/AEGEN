@@ -45,7 +45,7 @@ class BaseAppSettings(BaseSettings):
     AUDIO_MODEL: str = "whisper-large-v3-turbo"
 
     # RAG (Gemini por ventana de contexto y File API)
-    RAG_MODEL: str = "gemini-2.5-flash"
+    RAG_MODEL: str = "gemini-2.5-flash-lite"
 
     # Routing y Default
     ROUTING_MODEL: str = "openai/gpt-oss-120b"
