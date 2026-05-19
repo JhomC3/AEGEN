@@ -3,7 +3,6 @@ import logging
 import time
 from typing import Any
 
-from langchain_core.language_models import BaseLanguageModel
 from langchain_openai import ChatOpenAI
 
 from src.core.config import settings
@@ -37,9 +36,7 @@ def _create_groq_llm(model_name: str | None = None) -> Any:
 
     target_model = model_name or settings.GROQ_MODEL_NAME
     logger.info("Initializing Groq with model: %s", target_model)
-    api_key = (
-        settings.GROQ_API_KEY.get_secret_value() if settings.GROQ_API_KEY else None
-    )
+    api_key = settings.GROQ_API_KEY
 
     return ChatGroq(
         model=target_model,
@@ -67,13 +64,11 @@ def _create_google_llm(model_name: str | None = None) -> Any:
         top_p=0.9,
         top_k=40,
         convert_system_message_to_human=True,
-        api_key=settings.GOOGLE_API_KEY.get_secret_value()
-        if settings.GOOGLE_API_KEY
-        else None,
+        api_key=settings.GOOGLE_API_KEY,
     )
 
 
-def get_fast_llm() -> BaseLanguageModel:
+def get_fast_llm() -> Any:
     """
     Motor optimizado para velocidad (Ruteo y Chat General).
     Primario: Groq (gpt-oss-120b)
@@ -85,7 +80,7 @@ def get_fast_llm() -> BaseLanguageModel:
     return primary.with_fallbacks([fallback_1, fallback_2])
 
 
-def get_analytical_llm() -> BaseLanguageModel:
+def get_analytical_llm() -> Any:
     """
     Motor optimizado para razonamiento (TCC, Psicotrading).
     Primario: OpenRouter (Minimax)
@@ -96,7 +91,7 @@ def get_analytical_llm() -> BaseLanguageModel:
     return primary.with_fallbacks([fallback])
 
 
-def get_rag_llm() -> BaseLanguageModel:
+def get_rag_llm() -> Any:
     """Motor optimizado para contexto largo (Gemini)."""
     return _create_google_llm()
 

@@ -62,7 +62,7 @@ class SkillBasedSpecialist(SpecialistInterface):
 
         return workflow.compile()
 
-    async def _execute_skill(self, state: GraphStateV2) -> GraphStateV2:
+    async def _execute_skill(self, state: GraphStateV2) -> dict[str, Any]:
         """
         Nodo de ejecución genérico. Extrae contenido e invoca el tool o worker.
         """
@@ -72,7 +72,7 @@ class SkillBasedSpecialist(SpecialistInterface):
         if not user_message:
             logger.warning("No user content found for skill %s", self._name)
             payload["response"] = "Lo siento, no pude procesar tu mensaje."
-            return state
+            return {"payload": payload}
 
         # 1. Ejecutar lógica del skill (Síncrona o Asíncrona)
         response = await self._run_tool_logic(state, user_message)
@@ -86,10 +86,15 @@ class SkillBasedSpecialist(SpecialistInterface):
 
         # 3. Determinar siguiente acción y actualizar historial
         self._update_next_action(payload)
+
+        # Obtenemos el historial (sea modificado o el existente)
+        history = state.get("conversation_history", [])
         if self._manifest.requirements.update_history:
             self._update_history(state, user_message, response)
+            history = state["conversation_history"]
 
-        return state
+        # Retornamos el diccionario de actualización de estado para LangGraph
+        return {"payload": payload, "conversation_history": history}
 
     async def _run_tool_logic(self, state: GraphStateV2, user_message: str) -> str:
         """Decide y ejecuta la herramienta del skill."""
