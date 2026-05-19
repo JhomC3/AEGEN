@@ -62,7 +62,7 @@ class SkillBasedSpecialist(SpecialistInterface):
 
         return workflow.compile()
 
-    async def _execute_skill(self, state: GraphStateV2) -> dict[str, Any]:
+    async def _execute_skill(self, state: GraphStateV2) -> GraphStateV2:
         """
         Nodo de ejecución genérico. Extrae contenido e invoca el tool o worker.
         """
@@ -72,7 +72,7 @@ class SkillBasedSpecialist(SpecialistInterface):
         if not user_message:
             logger.warning("No user content found for skill %s", self._name)
             payload["response"] = "Lo siento, no pude procesar tu mensaje."
-            return {"payload": payload}
+            return state
 
         # 1. Ejecutar lógica del skill (Síncrona o Asíncrona)
         response = await self._run_tool_logic(state, user_message)
@@ -84,17 +84,17 @@ class SkillBasedSpecialist(SpecialistInterface):
         if self._name == "transcription_agent":
             payload["transcript"] = response
 
-        # 3. Determinar siguiente acción y actualizar historial
+        # Determinar siguiente acción y actualizar historial
         self._update_next_action(payload)
-
-        # Obtenemos el historial (sea modificado o el existente)
-        history = state.get("conversation_history", [])
         if self._manifest.requirements.update_history:
-            self._update_history(state, user_message, response)
-            history = state["conversation_history"]
+            # Creamos una lista nueva para forzar a LangGraph a detectar el cambio
+            current_history = list(state.get("conversation_history", []))
+            current_history.append({"role": "user", "content": user_message})
+            current_history.append({"role": "assistant", "content": response})
+            # Mantener solo los últimos 20 por ahora (configuración estándar)
+            state["conversation_history"] = current_history[-20:]
 
-        # Retornamos el diccionario de actualización de estado para LangGraph
-        return {"payload": payload, "conversation_history": history}
+        return state
 
     async def _run_tool_logic(self, state: GraphStateV2, user_message: str) -> str:
         """Decide y ejecuta la herramienta del skill."""
@@ -124,7 +124,6 @@ class SkillBasedSpecialist(SpecialistInterface):
             if self._manifest.async_capable:
                 return await self._delegate_to_worker(chat_id, tool_args)
             return str(await tool.ainvoke(tool_args))
-
         except Exception:
             logger.exception("Error executing skill tool %s", self._name)
             return "Tuve un problema técnico al procesar tu solicitud."
@@ -156,12 +155,3 @@ class SkillBasedSpecialist(SpecialistInterface):
         payload["next_action"] = (
             f"chain_to_{chain_to}" if chain_to else "respond_to_user"
         )
-
-    def _update_history(
-        self, state: GraphStateV2, user_msg: str, response: str
-    ) -> None:
-        """Actualiza el historial de conversación en el estado."""
-        history = state.get("conversation_history", [])
-        history.append({"role": "user", "content": user_msg})
-        history.append({"role": "assistant", "content": response})
-        state["conversation_history"] = history[-20:]
