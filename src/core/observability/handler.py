@@ -4,12 +4,11 @@ Callback handler para observabilidad LLM.
 Responsabilidad única: Interceptar y trackear llamadas LLM.
 """
 
-import asyncio
 import logging
 from typing import Any
 from uuid import UUID
 
-from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.callbacks import AsyncCallbackHandler
 from langchain_core.outputs import LLMResult
 
 from .correlation import get_correlation_id
@@ -26,10 +25,10 @@ from .prometheus_exporter import PrometheusLLMExporter
 logger = logging.getLogger(__name__)
 
 
-class LLMObservabilityHandler(BaseCallbackHandler):
+class LLMObservabilityHandler(AsyncCallbackHandler):
     """
-    Callback handler híbrido para observabilidad LLM.
-    Emite alertas al Event Bus cuando ocurren fallos críticos.
+    Callback handler asíncrono para observabilidad LLM.
+    Emite alertas al Event Bus de forma segura en flujos asíncronos.
     """
 
     def __init__(self, call_type: str = "general") -> None:
@@ -38,7 +37,7 @@ class LLMObservabilityHandler(BaseCallbackHandler):
         self.active_calls: dict[str, LLMCallMetrics] = {}
         self.exporter = PrometheusLLMExporter()
 
-    def on_llm_start(
+    async def on_llm_start(
         self,
         serialized: dict[str, Any],
         prompts: list[str],
@@ -69,7 +68,7 @@ class LLMObservabilityHandler(BaseCallbackHandler):
 
         log_call_start(call_id, correlation_id, provider, model, self.call_type)
 
-    def on_llm_end(
+    async def on_llm_end(
         self,
         response: LLMResult,
         *,
@@ -81,7 +80,7 @@ class LLMObservabilityHandler(BaseCallbackHandler):
         kwargs.pop("response", None)
         self._finalize_call(run_id, response=response, success=True, **kwargs)
 
-    def on_llm_error(
+    async def on_llm_error(
         self,
         error: Exception | KeyboardInterrupt | BaseException,
         *,
@@ -92,8 +91,8 @@ class LLMObservabilityHandler(BaseCallbackHandler):
         """Callback ejecutado cuando falla llamada LLM."""
         kwargs.pop("response", None)
 
-        # Emitir alerta técnica al sistema (asincrónicamente)
-        self._emit_failure_alert(run_id, error)
+        # Emitir alerta técnica al bus usando await asincrónico nativo
+        await self._emit_failure_alert(run_id, error)
 
         self._finalize_call(run_id, response=None, success=False, error=error, **kwargs)
 
@@ -123,15 +122,14 @@ class LLMObservabilityHandler(BaseCallbackHandler):
         del self.active_calls[call_id]
         log_call_completion(call_id, metrics, success)
 
-    def _emit_failure_alert(self, run_id: UUID, error: BaseException) -> None:
-        """Publica un evento de fallo en el bus de forma segura."""
+    async def _emit_failure_alert(self, run_id: UUID, error: BaseException) -> None:
+        """Publica un evento de fallo en el bus de forma asíncrona y segura."""
         call_id = str(run_id)
         if call_id not in self.active_calls:
             return
 
         metrics = self.active_calls[call_id]
 
-        # Datos de la alerta
         alert_data = {
             "event_type": "llm_failure",
             "provider": metrics.provider,
@@ -141,16 +139,10 @@ class LLMObservabilityHandler(BaseCallbackHandler):
             "correlation_id": metrics.correlation_id,
         }
 
-        # Lanzar tarea fire-and-forget para no bloquear el hilo de callbacks
-        asyncio.create_task(self._publish_alert(alert_data))
-
-    async def _publish_alert(self, data: dict[str, Any]) -> None:
-        """Publicación asíncrona en el bus."""
         try:
             from src.core.dependencies import get_event_bus
 
             bus = get_event_bus()
-            await bus.publish("system.llm_failure", data)
+            await bus.publish("system.llm_failure", alert_data)
         except Exception as e:
-            # Fallback silencioso si el bus no está listo
             logger.debug("Could not publish failure alert to bus: %s", e)

@@ -7,7 +7,7 @@ requirements:
   tools: ["cbt_therapeutic_guidance_tool"]
   memory_access: "full"
   priority: 10
-  update_history: false
+  update_history: true
 ---
 
 ## Tone Modifiers
