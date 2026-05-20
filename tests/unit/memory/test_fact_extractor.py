@@ -1,5 +1,6 @@
 # tests/unit/memory/test_fact_extractor.py
 import json
+from typing import Any
 
 from src.memory.fact_extractor import FactExtractor
 
@@ -37,8 +38,9 @@ class TestFactExtractorOutputFormat:
 
 class TestMergeKnowledge:
     def test_merge_preserves_provenance(self):
-        extractor = FactExtractor()
-        old = {
+        from src.memory.fact_utils import merge_fact_knowledge
+
+        old: dict[str, Any] = {
             "entities": [],
             "preferences": [],
             "medical": [],
@@ -62,13 +64,14 @@ class TestMergeKnowledge:
             "relationships": [],
             "milestones": [],
         }
-        merged = extractor._merge_knowledge(old, new)
+        merged = merge_fact_knowledge(old, new)
         assert len(merged["entities"]) == 1
         assert merged["entities"][0]["source_type"] == "explicit"
 
     def test_merge_deduplicates_by_name_and_type(self):
         """If an entity with same name+type exists, update rather than duplicate."""
-        extractor = FactExtractor()
+        from src.memory.fact_utils import merge_fact_knowledge
+
         old = {
             "entities": [
                 {
@@ -103,7 +106,7 @@ class TestMergeKnowledge:
             "relationships": [],
             "milestones": [],
         }
-        merged = extractor._merge_knowledge(old, new)
+        merged = merge_fact_knowledge(old, new)
         # With new merge logic, it should update existing item
         assert len(merged["entities"]) == 1
         assert merged["entities"][0]["attributes"]["edad"] == "3"
@@ -114,8 +117,9 @@ class TestFactExtractorNoInference:
 
     def test_merge_rejects_inferred_facts(self):
         """Hechos 'inferred' deben ser descartados en merge."""
-        extractor = FactExtractor()
-        old = {
+        from src.memory.fact_utils import merge_fact_knowledge
+
+        old: dict[str, Any] = {
             "entities": [],
             "preferences": [],
             "medical": [],
@@ -149,15 +153,16 @@ class TestFactExtractorNoInference:
             "medical": [],
             "milestones": [],
         }
-        merged = extractor._merge_knowledge(old, new)
+        merged = merge_fact_knowledge(old, new)
         # Solo debe quedar el hecho explícito
         assert len(merged["relationships"]) == 1
         assert merged["relationships"][0]["person"] == "María"
 
     def test_merge_rejects_low_confidence(self):
         """Hechos con confianza < 0.8 deben ser descartados."""
-        extractor = FactExtractor()
-        old = {
+        from src.memory.fact_utils import merge_fact_knowledge
+
+        old: dict[str, Any] = {
             "entities": [],
             "preferences": [],
             "medical": [],
@@ -182,5 +187,5 @@ class TestFactExtractorNoInference:
             "relationships": [],
             "milestones": [],
         }
-        merged = extractor._merge_knowledge(old, new)
+        merged = merge_fact_knowledge(old, new)
         assert len(merged["entities"]) == 0

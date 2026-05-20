@@ -6,7 +6,7 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from src.core.engine import llm
+from src.core.engine import get_rag_llm
 from src.memory.fact_utils import merge_fact_knowledge
 
 logger = logging.getLogger(__name__)
@@ -18,7 +18,7 @@ class FactExtractor:
     """
 
     def __init__(self) -> None:
-        self.llm = llm
+        self.llm = get_rag_llm()
         self.extraction_prompt = ChatPromptTemplate.from_messages([
             (
                 "system",
@@ -102,10 +102,6 @@ class FactExtractor:
         except Exception as e:
             logger.error(f"Error en FactExtractor: {e}", exc_info=True)
             return current_knowledge
-
-
-# Singleton
-fact_extractor = FactExtractor()
 
 
 # Singleton
