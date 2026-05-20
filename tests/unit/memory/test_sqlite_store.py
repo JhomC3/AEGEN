@@ -8,23 +8,14 @@ from src.memory.sqlite_store import SQLiteStore
 
 
 @pytest.fixture
-async def store():
+async def temp_db():
     db_path = Path("storage/test_memory.db")
 
     if db_path.exists():
         db_path.unlink()
 
     store = SQLiteStore(str(db_path))
-    await store.connect()
-    yield store
-    await store.disconnect()
-    if db_path.exists():
-        db_path.unlink()
-
-    store = SQLiteStore(str(db_path))
     await store.init_db(settings.SQLITE_SCHEMA_PATH)
-    # Task 1 ensures migrations are applied on init_db if we use the real dependency,
-    # but here we are using SQLiteStore directly, so we apply migrations manually
     from src.memory.migration import apply_migrations
 
     await apply_migrations(store)

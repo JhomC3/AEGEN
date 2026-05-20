@@ -92,9 +92,15 @@ class MemoryRepository:
         db = await self.get_db()
         blob = struct.pack(f"{len(embedding)}f", *embedding)
         try:
+            # 1. Insertar en la tabla virtual de sqlite-vec usando el nombre correcto
             await db.execute(
-                "INSERT INTO vec_memories (rowid, embedding) VALUES (?, ?)",
+                "INSERT INTO memory_vectors (rowid, embedding) VALUES (?, ?)",
                 (mid, blob),
+            )
+            # 2. Insertar mapeo en la tabla de relaciones de persistencia
+            await db.execute(
+                "INSERT INTO vector_memory_map (vector_id, memory_id) VALUES (?, ?)",
+                (mid, mid),
             )
             await db.commit()
             return mid
