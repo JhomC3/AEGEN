@@ -42,11 +42,14 @@ async def test_consolidate_session_empty_buffer():
     mock_buffer = MagicMock()
     mock_buffer.get_messages = AsyncMock(return_value=[])
 
-    with patch(
-        "src.memory.long_term_memory.long_term_memory.get_buffer",
-        AsyncMock(return_value=mock_buffer),
-    ), patch(
-        "src.memory.long_term_memory.long_term_memory.update_memory", AsyncMock()
-    ) as mock_update:
+    with (
+        patch(
+            "src.memory.long_term_memory.long_term_memory.get_buffer",
+            AsyncMock(return_value=mock_buffer),
+        ),
+        patch(
+            "src.memory.long_term_memory.long_term_memory.update_memory", AsyncMock()
+        ) as mock_update,
+    ):
         await manager.consolidate_session("chat123")
         mock_update.assert_not_called()
