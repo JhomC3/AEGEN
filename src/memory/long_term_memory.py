@@ -68,14 +68,30 @@ class LongTermMemoryManager:
                 incremental_fact_extraction,
             )
 
-            asyncio.create_task(incremental_fact_extraction(chat_id, buffer))
+            task = asyncio.create_task(incremental_fact_extraction(chat_id, buffer))
+            task.add_done_callback(
+                lambda t: logger.error(
+                    "Error in background incremental_fact_extraction: %s", t.exception()
+                )
+                if not t.cancelled() and t.exception()
+                else None
+            )
 
         from src.memory.consolidation_worker import consolidation_manager
 
         if await consolidation_manager.should_consolidate(chat_id, count):
             import asyncio
 
-            asyncio.create_task(consolidation_manager.consolidate_session(chat_id))
+            task = asyncio.create_task(
+                consolidation_manager.consolidate_session(chat_id)
+            )
+            task.add_done_callback(
+                lambda t: logger.error(
+                    "Error in background consolidate_session: %s", t.exception()
+                )
+                if not t.cancelled() and t.exception()
+                else None
+            )
 
     async def update_memory(self, chat_id: str) -> None:
         """Actualiza el resumen analizando el buffer."""
