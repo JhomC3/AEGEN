@@ -83,10 +83,10 @@ def get_fast_llm() -> Any:
 def get_analytical_llm() -> Any:
     """
     Motor optimizado para razonamiento (TCC, Psicotrading).
-    Primario: OpenRouter (Minimax)
+    Primario: Groq (gpt-oss-120b) → Fallback: OpenRouter
     """
-    primary = _create_openrouter_llm(settings.REASONING_MODEL)
-    fallback = _create_groq_llm(settings.CHAT_MODEL)
+    primary = _create_groq_llm(settings.CHAT_MODEL)
+    fallback = _create_openrouter_llm(settings.REASONING_MODEL)
 
     return primary.with_fallbacks([fallback])
 
