@@ -19,7 +19,7 @@ class ConsolidationManager:
 
     async def should_consolidate(self, chat_id: str, message_count: int) -> bool:
         """Verifica si se cumplen las condiciones de consolidación."""
-        if message_count >= 20:
+        if message_count >= 10:
             return True
 
         from src.memory.long_term_memory import long_term_memory
@@ -29,44 +29,66 @@ class ConsolidationManager:
 
         if last_activity > 0:
             elapsed = time.time() - last_activity
-            if elapsed > 21600:  # 6 horas
+            if elapsed > 1800:  # 30 minutos
                 return True
         return False
 
     async def consolidate_session(self, chat_id: str) -> None:
-        """Proceso completo de consolidación."""
-        logger.info("Consolidating session for %s", chat_id)
-        from src.memory.fact_extractor import fact_extractor
-        from src.memory.knowledge_base import knowledge_base_manager
-        from src.memory.long_term_memory import long_term_memory
+        """Proceso completo de consolidación con Redis Lock anti-carreras."""
+        from src.core import dependencies
 
-        buffer = await long_term_memory.get_buffer()
-        raw_buffer = await buffer.get_messages(chat_id)
-        if not raw_buffer:
+        if dependencies.redis_connection is None:
+            logger.warning("Redis no disponible. Saltando consolidación.")
             return
 
-        await long_term_memory.update_memory(chat_id)
+        lock_key = f"lock:consolidate:{chat_id}"
+        # Intentar adquirir lock de inmediato
+        lock = dependencies.redis_connection.lock(lock_key, timeout=60, blocking=False)
+        acquired = await lock.acquire()
+        if not acquired:
+            logger.info(
+                "Consolidación en curso para %s. Ignorando doble disparo.", chat_id
+            )
+            return
 
         try:
-            cur_kb = await knowledge_base_manager.load_knowledge(chat_id)
-            conv_text = "\n".join([f"{m['role']}: {m['content']}" for m in raw_buffer])
-            upd_kb = await fact_extractor.extract_facts(conv_text, cur_kb)
-            await knowledge_base_manager.save_knowledge(chat_id, upd_kb)
-            await self._sync_user_name_to_profile(chat_id, upd_kb)
-        except Exception as e:
-            logger.error("Error facts consolidation %s: %s", chat_id, e)
+            logger.info("Consolidating session for %s", chat_id)
+            from src.memory.fact_extractor import fact_extractor
+            from src.memory.knowledge_base import knowledge_base_manager
+            from src.memory.long_term_memory import long_term_memory
 
-        new_data = await long_term_memory.get_summary(chat_id)
-        summary = new_data["summary"]
-        profile = await user_profile_manager.load_profile(chat_id)
-        evolution = await self.evolution_detector.detect_evolution(profile, summary)
-        if evolution:
-            await apply_evolution(chat_id, profile, evolution)
+            buffer = await long_term_memory.get_buffer()
+            raw_buffer = await buffer.get_messages(chat_id)
+            if not raw_buffer:
+                return
 
-        # 4. Learning Loop: Generación de Skills (ADR-0026)
-        await self._check_for_new_skills(chat_id, summary)
+            await long_term_memory.update_memory(chat_id)
 
-        await log_session_to_memory(chat_id, summary, len(raw_buffer))
+            try:
+                cur_kb = await knowledge_base_manager.load_knowledge(chat_id)
+                conv_text = "\n".join([
+                    f"{m['role']}: {m['content']}" for m in raw_buffer
+                ])
+                upd_kb = await fact_extractor.extract_facts(conv_text, cur_kb)
+                await knowledge_base_manager.save_knowledge(chat_id, upd_kb)
+                await self._sync_user_name_to_profile(chat_id, upd_kb)
+            except Exception as e:
+                logger.error("Error facts consolidation %s: %s", chat_id, e)
+
+            new_data = await long_term_memory.get_summary(chat_id)
+            summary = new_data["summary"]
+            profile = await user_profile_manager.load_profile(chat_id)
+            evolution = await self.evolution_detector.detect_evolution(profile, summary)
+            if evolution:
+                await apply_evolution(chat_id, profile, evolution)
+
+            # 4. Learning Loop: Generación de Skills (ADR-0026)
+            await self._check_for_new_skills(chat_id, summary)
+
+            await log_session_to_memory(chat_id, summary, len(raw_buffer))
+
+        finally:
+            await lock.release()
 
     async def _sync_user_name_to_profile(
         self, chat_id: str, knowledge: dict[str, Any]

@@ -98,8 +98,8 @@ async def cbt_therapeutic_guidance_tool(
 
     # 2. Configurar Persona y Prompts
     adaptation = user_profile_manager.get_personality_adaptation(profile)
-    # Reducido de 20 a 10 para ahorrar tokens
-    history_limit = adaptation.get("history_limit", 10)
+    # Reducido a 5 interacciones (10 mensajes) para no superar límite TPM de Groq
+    history_limit = adaptation.get("history_limit", 5)
     messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
 
     persona_template = await system_prompt_builder.build(
@@ -147,8 +147,8 @@ async def cbt_therapeutic_guidance_tool(
     except Exception as e:
         logger.error(f"Error en CBT tool: {e}")
         return (
-            "Respiro hondo. Mantén la calma, el mercado es solo ruido. "
-            "Cuéntame más sobre lo que sientes."
+            "Siento que hay mucha información de golpe y me cuesta procesarla. "
+            "¿Podemos ir más despacio? Cuéntame, ¿qué es lo que más te preocupa hoy?"
         )
 
 

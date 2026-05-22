@@ -50,11 +50,13 @@ class MemorySummarizer:
         buffer: RedisMessageBuffer,
     ) -> None:
         """
-        Analiza el búfer, actualiza el resumen en Redis y sincroniza con SQLite.
+        Analiza el búfer (limitando a 10 mensajes seguros para Groq),
+        actualiza el resumen y sincroniza.
         """
-        # Convertir búfer a texto para el resumen
+        # Limitar a 10 mensajes para no exceder los 8k tokens de Groq
+        safe_buffer = raw_buffer[-10:]
         new_messages_text = "\n".join([
-            f"{m['role']}: {m['content']}" for m in raw_buffer
+            f"{m['role']}: {m['content']}" for m in safe_buffer
         ])
 
         try:
@@ -79,7 +81,7 @@ class MemorySummarizer:
                 ),
             )
 
-            # 2. Limpiar el búfer
+            # 2. Limpiar el búfer (independientemente del historial viejo)
             await buffer.clear_buffer(chat_id)
 
             # 3. Sincronizar con SQLite (Nueva Memoria Local-First)
@@ -103,3 +105,10 @@ class MemorySummarizer:
             logger.error(
                 f"Error consolidando memoria para {chat_id}: {e}", exc_info=True
             )
+            # Circuit Breaker: Si falla, vaciamos Redis para evitar bucles
+            if len(raw_buffer) > 15:
+                logger.warning(
+                    "Búfer envenenado con %s mensajes. Purgando.",
+                    len(raw_buffer),
+                )
+                await buffer.clear_buffer(chat_id)
