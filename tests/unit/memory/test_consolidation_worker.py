@@ -8,23 +8,23 @@ from src.memory.consolidation_worker import ConsolidationManager
 
 @pytest.mark.asyncio
 async def test_should_consolidate_count_threshold():
-    """should_consolidate returns True if count >= 30."""
+    """should_consolidate returns True if count >= 20."""
     manager = ConsolidationManager()
-    result = await manager.should_consolidate("chat123", 30)
+    result = await manager.should_consolidate("chat123", 20)
     assert result is True
 
 
 @pytest.mark.asyncio
 async def test_should_consolidate_inactivity_threshold():
-    """should_consolidate returns True if elapsed activity > 30 minutes."""
+    """should_consolidate returns True if elapsed activity > 6 hours."""
     manager = ConsolidationManager()
 
     # Mock RedisMessageBuffer
     mock_buffer = MagicMock()
-    # 1801 seconds ago (30 min + 1 s)
+    # 21601 seconds ago
     import time
 
-    mock_buffer.get_last_activity = AsyncMock(return_value=time.time() - 1801)
+    mock_buffer.get_last_activity = AsyncMock(return_value=time.time() - 21601)
 
     with patch(
         "src.memory.long_term_memory.long_term_memory.get_buffer",

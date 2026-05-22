@@ -2,7 +2,7 @@ import logging
 import time
 from typing import Any
 
-from src.core.engine import get_rag_llm
+from src.core.engine import llm
 from src.core.profile_manager import user_profile_manager
 from src.memory.evolution_applier import apply_evolution
 from src.memory.evolution_detector import EvolutionDetector
@@ -15,11 +15,11 @@ class ConsolidationManager:
     """Gestiona la consolidación de memoria."""
 
     def __init__(self) -> None:
-        self.evolution_detector = EvolutionDetector(get_rag_llm())
+        self.evolution_detector = EvolutionDetector(llm)
 
     async def should_consolidate(self, chat_id: str, message_count: int) -> bool:
         """Verifica si se cumplen las condiciones de consolidación."""
-        if message_count >= 30:
+        if message_count >= 20:
             return True
 
         from src.memory.long_term_memory import long_term_memory
@@ -29,7 +29,7 @@ class ConsolidationManager:
 
         if last_activity > 0:
             elapsed = time.time() - last_activity
-            if elapsed > 1800:  # 30 minutos
+            if elapsed > 21600:  # 6 horas
                 return True
         return False
 

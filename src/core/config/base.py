@@ -21,10 +21,12 @@ class BaseAppSettings(BaseSettings):
 
     # Secretos
     GOOGLE_API_KEY: SecretStr | None = None
+    OPENROUTER_API_KEY: SecretStr | None = None  # New for OpenRouter
     GROQ_API_KEY: SecretStr | None = None
 
     # Configuración de Modelos (Mayo 2026)
     LLM_PROVIDER: str = "groq"
+    OPENROUTER_MODEL_NAME: str = "minimax/minimax-m2.5:free"
     GROQ_MODEL_NAME: str = "openai/gpt-oss-120b"
     GROQ_BACKUP_MODEL_NAME: str = "llama3-70b-8192"  # Fallback adicional en groq
 
@@ -34,9 +36,10 @@ class BaseAppSettings(BaseSettings):
     # === LLM Models por Tarea ===
     # Chat Principal y Ruteo (Latencia ultra-baja)
     CHAT_MODEL: str = "openai/gpt-oss-120b"
+    CHAT_FALLBACK_MODEL: str = "minimax/minimax-m2.5:free"
 
-    # Razonamiento Analítico (Alta calidad) — Groq primary, Gemini fallback
-    REASONING_MODEL: str = "openai/gpt-oss-120b"
+    # Razonamiento Analítico (Alta calidad)
+    REASONING_MODEL: str = "minimax/minimax-m2.5:free"
 
     # Audio (Groq Whisper)
     AUDIO_MODEL: str = "whisper-large-v3-turbo"
