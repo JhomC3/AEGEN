@@ -29,12 +29,21 @@ async def _get_cbt_rag_context(chat_id: str, user_message: str) -> str:
     """Recupera contexto TCC relevante usando Smart RAG."""
     try:
         manager = get_vector_memory_manager()
-        # Buscar en conocimiento global (TCC) y del usuario
+        # Buscar en conocimiento global (TCC) y del usuario filtrando por tipos válidos
+        allowed_types = ["fact", "document"]
         global_results = await manager.retrieve_context(
-            user_id="system", query=user_message, limit=3, namespace="global"
+            user_id="system",
+            query=user_message,
+            limit=3,
+            namespace="global",
+            context_type=allowed_types,
         )
         user_results = await manager.retrieve_context(
-            user_id=chat_id, query=user_message, limit=2, namespace="user"
+            user_id=chat_id,
+            query=user_message,
+            limit=2,
+            namespace=f"user_{chat_id}",
+            context_type=allowed_types,
         )
 
         all_results = global_results + user_results
@@ -81,6 +90,7 @@ async def cbt_therapeutic_guidance_tool(
     chat_id: str,
     conversation_history: list[dict[str, Any]] | None = None,
     routing_metadata: dict[str, Any] | None = None,
+    rag_context: dict[str, Any] | None = None,
 ) -> str:
     """
     Ejecuta la guía terapéutica TCC inyectando el perfil completo del usuario.
@@ -93,8 +103,36 @@ async def cbt_therapeutic_guidance_tool(
 
     # 1. Cargar perfil y Contexto (RAG + Memoria)
     profile = await user_profile_manager.load_profile(chat_id)
-    knowledge_context = await _get_cbt_rag_context(chat_id, user_message)
-    history_summary, structured_knowledge = await _get_cbt_memories(chat_id)
+
+    # Si viene precargado en rag_context del orquestador, lo usamos.
+    if rag_context:
+        logger.info("[CBT-RAG] Reusing RAG context snapshot from graphstate")
+        semantic_fragments = rag_context.get("semantic_fragments", [])
+        evolution_note = rag_context.get("evolution_note", "Sin historial previo.")
+
+        # Formatear structured_facts de forma robusta
+        facts_list = rag_context.get("structured_facts", [])
+        facts_dict = {f["key"]: f["value"] for f in facts_list}
+        structured_knowledge = format_knowledge_for_prompt(facts_dict)
+    else:
+        # Fallback por compatibilidad directa o testing aislado
+        semantic_fragments = await get_vector_memory_manager().retrieve_context(
+            user_id=chat_id,
+            query=user_message,
+            limit=3,
+            namespace=f"user_{chat_id}",
+            context_type=["fact", "document"],
+        )
+        evolution_note_data = await long_term_memory.get_summary(chat_id)
+        evolution_note = evolution_note_data.get("summary", "Sin historial previo.")
+        knowledge_data = await knowledge_base_manager.load_knowledge(chat_id)
+        structured_knowledge = format_knowledge_for_prompt(knowledge_data)
+
+    knowledge_context = (
+        "\n\n".join([f"- {r['content']}" for r in semantic_fragments])
+        if semantic_fragments
+        else "No hay contexto documental disponible."
+    )
 
     # 2. Configurar Persona y Prompts
     adaptation = user_profile_manager.get_personality_adaptation(profile)
@@ -106,7 +144,7 @@ async def cbt_therapeutic_guidance_tool(
         profile=profile,
         skill_name="tcc",
         runtime_context={
-            "history_summary": history_summary,
+            "history_summary": evolution_note,
             "knowledge_context": knowledge_context,
             "structured_knowledge": structured_knowledge,
         },

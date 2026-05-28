@@ -108,6 +108,8 @@ class SQLiteStore:
         confidence: float = 1.0,
         sensitivity: str = "low",
         evidence: str | None = None,
+        source_skill: str | None = None,
+        parent_id: int | None = None,
     ) -> int:
         return await self._memory_repo.insert_memory(
             chat_id,
@@ -120,6 +122,8 @@ class SQLiteStore:
             confidence,
             sensitivity,
             evidence,
+            source_skill,
+            parent_id,
         )
 
     async def insert_vector(self, memory_id: int, embedding: list[float]) -> int:

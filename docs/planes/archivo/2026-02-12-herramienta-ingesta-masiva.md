@@ -4,7 +4,7 @@
 > - Para **crear** o modificar este plan: Usar la skill `writing-plans`.
 > - Para **ejecutar** este plan: Usar la skill `executing-plans` para proceder tarea por tarea con verificaciones intermedias.
 
-- **Estado:** Propuesto
+- **Estado:** Archivado
 - **Fecha:** 2026-02-12
 - **Razón de Creación:** Nueva Funcionalidad
 - **Objetivo General:** Permitir la importación de historiales de conversación externos (ChatGPT, Claude, WhatsApp) para acelerar la personalización de la memoria de la IA.

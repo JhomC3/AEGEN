@@ -41,6 +41,18 @@ class V2ChatMessage(TypedDict, total=False):
     processing_type: str | None
 
 
+class RagContextSnapshot(TypedDict, total=False):
+    """Snapshot de contexto recuperado por RAG para inyección al grafo."""
+
+    semantic_fragments: list[dict[str, Any]]
+    graph_fragments: list[dict[str, Any]]
+    evolution_note: str | None
+    structured_facts: list[dict[str, Any]]
+    total_tokens_estimated: int
+    retrieved_at: float
+    cache_hit: bool
+
+
 class GraphStateV2(TypedDict):
     """Versión 2 del estado del grafo."""
 
@@ -49,6 +61,7 @@ class GraphStateV2(TypedDict):
     error_message: str | None
     session_id: str
     conversation_history: list[V2ChatMessage]
+    rag_context: RagContextSnapshot | None
 
 
 class GenericMessageEvent(BaseModel):

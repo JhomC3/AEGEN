@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+from datetime import UTC
 from typing import Any
 
 from src.memory.embeddings import EmbeddingService
@@ -33,19 +34,76 @@ class HybridSearch:
         vw: float = 0.7,
         kw: float = 0.3,
     ) -> list[dict[str, Any]]:
-        """Búsqueda principal híbrida (Vectorial + Keyword)."""
+        """Búsqueda principal híbrida (Vectorial + Keyword) con Two-Stage y Time Decay."""
+        from src.core.config import settings
+
+        pool_limit = getattr(settings, "MEMORY_RETRIEVAL_POOL", 100)
+        top_k = getattr(settings, "MEMORY_RETRIEVAL_TOP_K", limit)
+
         emb = await self.embedding_service.embed_query(query)
         v_res, k_res = await asyncio.gather(
-            self.vector_search.search(emb, limit * 2, chat_id, namespace),
+            self.vector_search.search(emb, pool_limit, chat_id, namespace),
             self.keyword_search.search(
-                query, limit * 2, chat_id, namespace, source_skill
+                query, pool_limit, chat_id, namespace, source_skill
             ),
         )
         rrf = self._merge_rrf(v_res, k_res, rrf_k, vw, kw)
-        sorted_ids = sorted(rrf.items(), key=lambda x: x[1], reverse=True)[:limit]
+        sorted_ids = sorted(rrf.items(), key=lambda x: x[1], reverse=True)[:pool_limit]
         if not sorted_ids:
             return []
-        return await self._hydrate([it[0] for it in sorted_ids], sorted_ids)
+
+        hydrated = await self._hydrate([it[0] for it in sorted_ids], sorted_ids)
+        decayed = self._apply_time_decay(hydrated)
+        return decayed[:top_k]
+
+    def _apply_time_decay(self, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Aplica la fórmula Score = Similitud * e^(-lambda * delta_t_dias)."""
+        import math
+        from datetime import datetime
+
+        from src.core.config import settings
+
+        now = datetime.now(UTC)
+        lambda_ = getattr(settings, "MEMORY_DECAY_LAMBDA", 0.01)
+
+        for r in results:
+            created_at = r.get("created_at")
+            if created_at is None:
+                continue
+
+            # Si created_at viene como string de SQLite, parsear a datetime
+            if isinstance(created_at, str):
+                try:
+                    # SQLite suele guardar como YYYY-MM-DD HH:MM:SS o formato ISO
+                    # Reemplazamos espacio por T para simplificar el parseo ISO si es necesario
+                    dt_str = created_at
+                    if " " in dt_str and "T" not in dt_str:
+                        dt_str = dt_str.replace(" ", "T")
+                    # SQLite no suele incluir zona horaria; asumimos UTC
+                    if (
+                        not dt_str.endswith("Z")
+                        and "+" not in dt_str
+                        and "-" not in dt_str[10:]
+                    ):
+                        dt_str += "Z"
+                    if dt_str.endswith("Z"):
+                        dt_str = dt_str[:-1] + "+00:00"
+                    created_at_dt = datetime.fromisoformat(dt_str)
+                except Exception as e:
+                    logger.warning(
+                        f"Error parsing created_at timestamp '{created_at}': {e}"
+                    )
+                    continue
+            elif isinstance(created_at, datetime):
+                created_at_dt = created_at
+            else:
+                continue
+
+            delta_seconds = (now - created_at_dt).total_seconds()
+            delta_days = max(0.0, delta_seconds / 86400.0)
+            r["score"] = r["score"] * math.exp(-lambda_ * delta_days)
+
+        return sorted(results, key=lambda x: x["score"], reverse=True)
 
     async def search_by_type(
         self,
@@ -101,7 +159,7 @@ class HybridSearch:
         db = await self.store.get_db()
         m = ",".join(["?"] * len(ids))
         sql = (
-            "SELECT id, chat_id, content, memory_type, metadata "
+            "SELECT id, chat_id, content, memory_type, metadata, created_at "
             f"FROM memories WHERE id IN ({m}) AND is_active = 1"
         )  # noqa: S608
         res = []
@@ -117,5 +175,6 @@ class HybridSearch:
                         "metadata": json.loads(r["metadata"]),
                         "score": score,
                         "chat_id": r["chat_id"],
+                        "created_at": r["created_at"],
                     })
         return res

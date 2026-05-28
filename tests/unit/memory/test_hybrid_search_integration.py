@@ -16,12 +16,6 @@ async def store():
         db_path.unlink()
     store = SQLiteStore(str(db_path))
     await store.connect()
-    yield store
-    await store.disconnect()
-    if db_path.exists():
-        db_path.unlink()
-
-    store = SQLiteStore(db_path)
     await store.init_db(settings.SQLITE_SCHEMA_PATH)
     from src.memory.migration import apply_migrations
 
@@ -35,20 +29,20 @@ async def store():
 
 
 @pytest.mark.asyncio
-async def test_search_excludes_inactive_memories(search_db):
+async def test_search_excludes_inactive_memories(store):
     """Soft-deleted memories must not appear in search results."""
-    hybrid = HybridSearch(search_db)
+    hybrid = HybridSearch(store)
 
     # Insert an active and an inactive memory
-    mid1 = await search_db.insert_memory(
+    mid1 = await store.insert_memory(
         "chat1", "active memory about dogs", "hash_active_1", "fact"
     )
-    mid2 = await search_db.insert_memory(
+    mid2 = await store.insert_memory(
         "chat1", "inactive memory about dogs", "hash_inactive_1", "fact"
     )
 
     # Soft-delete mid2
-    await search_db.soft_delete_memories([mid2])
+    await store.soft_delete_memories([mid2])
 
     # search_by_type should only return active
     results = await hybrid.search_by_type("fact", chat_id="chat1")
@@ -58,16 +52,16 @@ async def test_search_excludes_inactive_memories(search_db):
 
 
 @pytest.mark.asyncio
-async def test_hybrid_search_excludes_inactive_memories(search_db):
+async def test_hybrid_search_excludes_inactive_memories(store):
     """Hybrid search must exclude soft-deleted memories during hydration."""
-    hybrid = HybridSearch(search_db)
+    hybrid = HybridSearch(store)
 
     # Insert memories
-    mid1 = await search_db.insert_memory("chat1", "active content", "hash_h1", "fact")
-    mid2 = await search_db.insert_memory("chat1", "deleted content", "hash_h2", "fact")
+    mid1 = await store.insert_memory("chat1", "active content", "hash_h1", "fact")
+    mid2 = await store.insert_memory("chat1", "deleted content", "hash_h2", "fact")
 
     # Soft-delete mid2
-    await search_db.soft_delete_memories([mid2])
+    await store.soft_delete_memories([mid2])
 
     # Mock search components to return both IDs
     with (

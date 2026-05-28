@@ -30,7 +30,7 @@ class VectorMemoryManager:
         self,
         user_id: str,
         query: str,
-        context_type: MemoryType | None = None,
+        context_type: MemoryType | list[MemoryType] | list[str] | str | None = None,
         limit: int = 5,
         namespace: str = "user",
     ) -> list[dict[str, Any]]:
@@ -43,8 +43,21 @@ class VectorMemoryManager:
         )
         elapsed = (time.monotonic() - start) * 1000
         self._log_trace(user_id, namespace, query, results, elapsed)
+
         if context_type:
-            results = [r for r in results if r["memory_type"] == context_type.value]
+            if isinstance(context_type, list):
+                allowed_types = {
+                    t.value if isinstance(t, Enum) else t for t in context_type
+                }
+                results = [r for r in results if r["memory_type"] in allowed_types]
+            else:
+                type_val = (
+                    context_type.value
+                    if isinstance(context_type, Enum)
+                    else context_type
+                )
+                results = [r for r in results if r["memory_type"] == type_val]
+
         return results
 
     def _log_trace(
@@ -81,6 +94,7 @@ class VectorMemoryManager:
         context_type: MemoryType = MemoryType.CONVERSATION,
         metadata: dict[str, Any] | None = None,
         namespace: str = "user",
+        source_skill: str | None = None,
     ) -> int:
         """Almacena contenido."""
         return await self.pipeline.process_text(
@@ -89,6 +103,7 @@ class VectorMemoryManager:
             memory_type=context_type.value,
             namespace=namespace,
             metadata=metadata,
+            source_skill=source_skill,
         )
 
     async def delete_file_knowledge(

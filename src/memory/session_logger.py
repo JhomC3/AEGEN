@@ -30,6 +30,7 @@ async def log_session_to_memory(chat_id: str, summary: str, buffer_len: int) -> 
             text=json.dumps(log_content, ensure_ascii=False),
             memory_type="document",
             metadata={"filename": f"session_{timestamp}.json", "type": "log"},
+            source_skill="session_logger",
         )
         logger.info("Log de sesión guardado para %s", chat_id)
 

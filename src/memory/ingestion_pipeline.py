@@ -26,13 +26,15 @@ class IngestionPipeline:
         self.deduplicator = Deduplicator()
         self.embedding_service = EmbeddingService()
 
-    async def process_text(
+    async def process_text(  # noqa: C901
         self,
         chat_id: str,
         text: str,
         memory_type: str = "conversation",
-        namespace: str = "user",
+        namespace: str | None = None,
         metadata: dict | None = None,
+        source_skill: str | None = None,
+        use_semantic_chunker: bool = False,
     ) -> int:
         """
         Procesa un texto completo: chunking -> dedupe -> embedding -> storage.
@@ -41,8 +43,10 @@ class IngestionPipeline:
             chat_id: ID del chat
             text: Texto a procesar
             memory_type: Tipo de memoria (fact, preference, etc.)
-            namespace: Espacio de nombres
+            namespace: Espacio de nombres (se calcula como 'user_{chat_id}' por defecto para usuarios)
             metadata: Metadatos base
+            source_skill: Skill origen que generó esta memoria
+            use_semantic_chunker: True si se debe usar segmentación semántica jerárquica (libros, YouTube)
 
         Returns:
             Número de fragmentos nuevos insertados.
@@ -50,8 +54,42 @@ class IngestionPipeline:
         if not text or not text.strip():
             return 0
 
+        # Namespace legacy "user" aún válido; nuevos registros usan "user_{chat_id}"
+        if namespace is None or namespace == "user":
+            final_namespace = f"user_{chat_id}"
+        else:
+            final_namespace = namespace
+
         metadata = metadata or {}
 
+        # Branch A: Ingesta Jerárquica Semántica (Pilar I) (Fase 3, Tarea 3.6)
+        if use_semantic_chunker:
+            try:
+                from src.memory.semantic_chunker import SemanticChunker
+
+                chunker = SemanticChunker()
+
+                # Ejecuta segmentación y purificación de Gemini
+                flat_structures = await chunker.chunk_semantically(text)
+                if not flat_structures:
+                    logger.warning(
+                        "[INGESTION] Semantic chunker returned empty structures. Fallback to Recursive."
+                    )
+                else:
+                    return await self._process_semantic_structures(
+                        chat_id,
+                        flat_structures,
+                        final_namespace,
+                        source_skill,
+                        metadata,
+                    )
+            except Exception as se:
+                logger.error(
+                    f"[INGESTION] Failed semantic chunker execution: {se}. Fallback to Recursive.",
+                    exc_info=True,
+                )
+
+        # Branch B: Chunker Recursivo tradicional (fallback para global o default para user)
         # 1. Chunking
         chunks = self.chunker.chunk(text, metadata)
         if not chunks:
@@ -88,14 +126,20 @@ class IngestionPipeline:
                     if k in chunk_meta
                 }
 
+                # Propagar source_skill si está provisto
+                final_source_skill = source_skill or chunk_meta.pop(
+                    "source_skill", None
+                )
+
                 # Insertar memoria de texto
                 memory_id = await self.store.insert_memory(
                     chat_id=chat_id,
                     content=chunk.content,
                     content_hash=content_hash,
                     memory_type=memory_type,
-                    namespace=namespace,
+                    namespace=final_namespace,
                     metadata=chunk_meta,
+                    source_skill=final_source_skill,
                     **provenance,
                 )
 
@@ -110,3 +154,107 @@ class IngestionPipeline:
 
         logger.info(f"Ingested {new_chunks_count} new chunks for chat {chat_id}")
         return new_chunks_count
+
+    async def _process_semantic_structures(  # noqa: C901
+        self,
+        chat_id: str,
+        structures: list[dict],
+        namespace: str,
+        source_skill: str | None,
+        base_metadata: dict,
+    ) -> int:
+        """
+        Procesa e ingesta la ontología jerárquica: Chunks Padres (Nivel 3)
+        y Chunks Hijos (Nivel 4) con su respectiva relación jerárquica (parent_id).
+        """
+        ingested_count = 0
+
+        for parent_data in structures:
+            # 1. Ingestar el Padre (Nivel 3)
+            parent_content = parent_data["content"]
+            parent_domain = parent_data["domain"]
+            parent_hash = self.deduplicator.generate_hash(parent_content)
+
+            # Chequear duplicidad del padre
+            if await self.store.hash_exists(parent_hash):
+                # Si existe, recuperamos su ID
+                db = await self.store.get_db()
+                async with db.execute(
+                    "SELECT id FROM memories WHERE content_hash = ?", (parent_hash,)
+                ) as cursor:
+                    row = await cursor.fetchone()
+                    parent_id = row[0] if row else -1
+            else:
+                meta = {
+                    **base_metadata,
+                    "domain": parent_domain,
+                    "hierarchy_level": 3,
+                }
+                parent_id = await self.store.insert_memory(
+                    chat_id=chat_id,
+                    content=parent_content,
+                    content_hash=parent_hash,
+                    memory_type="document_parent",  # tipo de persistencia padre
+                    namespace=namespace,
+                    metadata=meta,
+                    source_skill=source_skill,
+                    confidence=1.0,
+                    source_type="explicit",
+                )
+                if parent_id != -1:
+                    ingested_count += 1
+
+            if parent_id == -1:
+                continue
+
+            # 2. Ingestar Hijos (Nivel 4) con relación parent_id y vectorizar
+            children = parent_data.get("children", [])
+            if not children:
+                continue
+
+            # Filtrar duplicidad en hijos antes de vectorizar
+            children_to_embed = []
+            for child in children:
+                child_content = child["content"]
+                child_hash = self.deduplicator.generate_hash(child_content)
+                if not await self.store.hash_exists(child_hash):
+                    children_to_embed.append((child, child_hash))
+
+            if not children_to_embed:
+                continue
+
+            # Batch embedding de los hijos
+            child_texts = [item[0]["content"] for item in children_to_embed]
+            embeddings = await self.embedding_service.embed_texts(child_texts)
+
+            for (child, child_hash), embedding in zip(
+                children_to_embed, embeddings, strict=False
+            ):
+                meta = {
+                    **base_metadata,
+                    "domain": child["domain"],
+                    "hierarchy_level": 4,
+                }
+
+                # Insertamos con el parent_id resuelto (jerarquía vertical Parent-Child RAG)
+                child_id = await self.store.insert_memory(
+                    chat_id=chat_id,
+                    content=child["content"],
+                    content_hash=child_hash,
+                    memory_type="document",
+                    namespace=namespace,
+                    metadata=meta,
+                    source_skill=source_skill,
+                    parent_id=parent_id,  # Link jerárquico Padre-Hijo
+                    confidence=1.0,
+                    source_type="explicit",
+                )
+
+                if child_id != -1:
+                    await self.store.insert_vector(child_id, embedding)
+                    ingested_count += 1
+
+        logger.info(
+            f"[INGESTION] Hierarchical semantic ingestion complete. Inserted: {ingested_count} records."
+        )
+        return ingested_count

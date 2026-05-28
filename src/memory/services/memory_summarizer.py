@@ -17,8 +17,17 @@ class MemorySummarizer:
     Servicio de sumarización de memoria.
     """
 
-    def __init__(self, llm: Any) -> None:
-        self.llm = llm
+    def __init__(self, llm: Any = None) -> None:
+        if llm is None:
+            try:
+                from src.core.engine import get_rag_llm
+
+                self.llm = get_rag_llm()
+            except Exception as e:
+                logger.error(f"Error initializing get_rag_llm in MemorySummarizer: {e}")
+                self.llm = llm
+        else:
+            self.llm = llm
         self.summary_prompt = ChatPromptTemplate.from_messages([
             (
                 "system",
@@ -94,6 +103,7 @@ class MemorySummarizer:
                     text=new_summary,
                     memory_type="conversation",
                     metadata={"source": "long_term_memory_summary"},
+                    source_skill="consolidation",
                 )
                 logger.info(f"Summary persisted to SQLite. New chunks: {new_chunks}")
             except Exception as fe:

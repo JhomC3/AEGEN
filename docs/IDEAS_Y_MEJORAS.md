@@ -24,13 +24,5 @@ Este archivo sirve como repositorio de ideas, feedback de usuario y ajustes de c
 
 ---
 
-### 3. Agentes Especialistas de Análisis (Deep Analytics)
-
-- **Concepto:** Crear agentes que no chatean, sino que analizan la base de datos de hitos en profundidad.
-- **Ejemplo:** Un "Fitness Analytics Agent" que pueda graficar mentalmente el progreso de peso/repeticiones y sugerir ajustes en la carga de entrenamiento de forma científica.
-
-### 4. Memoria Selectiva (Olvido Inteligente)
-
-- **Concepto:** A medida que AEGEN recopila años de datos, no todo es relevante. Implementar un ranking de relevancia temporal para que MAGI no mencione cosas triviales de hace 3 años a menos que sean hitos fundacionales.
-
-* P
+### 3. Verificar como la identidad de MAGI quedo luego de los cambios si sigue teniendo las diferentes capas
+### 4.

@@ -95,6 +95,11 @@ class BaseAppSettings(BaseSettings):
     # Rutas de recursos
     PROMPTS_DIR: str = "src/prompts"
 
+    # --- Configuración RAG / Búsqueda Híbrida (v0.9.0) ---
+    MEMORY_DECAY_LAMBDA: float = 0.01  # λ para decaimiento exponencial temporal
+    MEMORY_RETRIEVAL_POOL: int = 100  # candidatos en Etapa 1 del Two-Stage
+    MEMORY_RETRIEVAL_TOP_K: int = 15  # resultado final tras re-ranking
+
     # --- Validación ---
     # Validar que claves esenciales existan en producción
     @model_validator(mode="after")

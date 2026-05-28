@@ -65,8 +65,28 @@ class OrchestratorGraphBuilder(GraphBuilder):
         # 1. Nodo de entrada: Meta-enrutador basado en capacidades
         graph_builder.add_node("meta_router", routing_functions["meta_router_fn"])
 
+        # Nodo intermedio: Context retriever (ADR-0031)
+        from src.agents.orchestrator.context_retriever import context_retriever_node
+
+        graph_builder.add_node("context_retriever", context_retriever_node)
+
         # 2. Nodos de especialistas: un nodo por cada especialista registrado
         all_specialists = self._specialist_registry.get_all_specialists()
+
+        # Mapper para enrutamiento inicial dinámico al context_retriever
+        initial_router_target_map = {s.name: s.name for s in all_specialists}
+
+        # Interceptamos el enrutamiento inicial de meta_router para redirigir a context_retriever
+        # Guardamos el especialista seleccionado en payload["next_action"]
+        async def initial_router_with_context_retriever(
+            state: GraphStateV2,
+        ) -> str:
+            # Invocar al router original
+            target: str = str(await routing_functions["initial_router_fn"](state))
+            if target in initial_router_target_map:
+                state["payload"]["next_action"] = target
+                return "context_retriever"
+            return target
 
         for specialist in all_specialists:
             compiled_graph = cast(Any, specialist.graph)
@@ -80,13 +100,36 @@ class OrchestratorGraphBuilder(GraphBuilder):
         # 3. Chain router para determinar siguiente especialista
         graph_builder.add_node("chain_router", routing_functions["chain_router_fn"])
 
+        # Redirección dinámica desde context_retriever al especialista guardado en next_action
+        def context_retriever_decision_fn(state: GraphStateV2) -> str:
+            target: str = str(state["payload"].get("next_action", "chat"))
+            if target in initial_router_target_map:
+                return target
+            logger.warning(
+                "context_retriever: next_action '%s' invalid. Fallback to chat.",
+                target,
+            )
+            return "chat"
+
+        # Conectar context_retriever con condicional hacia el especialista objetivo
+        graph_builder.add_conditional_edges(
+            "context_retriever",
+            context_retriever_decision_fn,
+            initial_router_target_map,
+        )
+
         # 4. Configuración de routing points
         graph_builder.set_entry_point("meta_router")
 
         # 5. Conditional edges para routing dinámico
+        # El meta_router ahora va primero al context_retriever (vía interceptor)
+        # que a su vez delegará al especialista una vez cargado el RAG
+        meta_router_targets = {
+            **initial_router_target_map,
+            "context_retriever": "context_retriever",
+        }
         graph_builder.add_conditional_edges(
-            "meta_router",
-            routing_functions["initial_router_fn"],
+            "meta_router", initial_router_with_context_retriever, meta_router_targets
         )
 
         graph_builder.add_conditional_edges(

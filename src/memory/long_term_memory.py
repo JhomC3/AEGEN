@@ -14,7 +14,13 @@ class LongTermMemoryManager:
     def __init__(self) -> None:
         self.llm = llm
         self._buffer_instance: RedisMessageBuffer | None = None
-        self._summarizer = MemorySummarizer(llm)
+        try:
+            from src.core.engine import get_rag_llm
+
+            summarizer_llm = get_rag_llm()
+        except Exception:
+            summarizer_llm = llm
+        self._summarizer = MemorySummarizer(summarizer_llm)
         logger.info("LongTermMemoryManager initialized")
 
     async def get_buffer(self) -> RedisMessageBuffer:

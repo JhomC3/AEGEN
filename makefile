@@ -54,6 +54,10 @@ test: ## Ejecuta pruebas unitarias y de integración con pytest
 	@echo "Running tests..."
 	$(PYTHON) -m pytest tests/ --ignore=tests/unit/test_cbt_safety.py --ignore=tests/unit/test_profile_manager.py || echo "Tests failed but continuing..."
 
+migrate-facts: ## Ejecuta el script de migración de hechos a atómicos
+	@echo "Migrating legacy JSON facts to atomic database facts..."
+	$(PYTHON) scripts/migrate_facts_to_atomic.py
+
 test-update-snapshots: ## Ejecuta pruebas y actualiza los snapshots
 	@echo "Running tests and updating snapshots..."
 	$(PYTHON) -m pytest tests/ --snapshot-update

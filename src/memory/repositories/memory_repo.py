@@ -30,6 +30,8 @@ class MemoryRepository:
         confidence: float = 1.0,
         sensitivity: str = "low",
         evidence: str | None = None,
+        source_skill: str | None = None,
+        parent_id: int | None = None,
     ) -> int:
         db = await self.get_db()
         metadata_json = json.dumps(metadata or {})
@@ -38,8 +40,8 @@ class MemoryRepository:
                 """
                 INSERT INTO memories
                     (chat_id, namespace, content, content_hash, memory_type,
-                     metadata, source_type, confidence, sensitivity, evidence)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     metadata, source_type, confidence, sensitivity, evidence, source_skill, parent_id)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     chat_id,
@@ -52,6 +54,8 @@ class MemoryRepository:
                     confidence,
                     sensitivity,
                     evidence,
+                    source_skill,
+                    parent_id,
                 ),
             )
             mid = cursor.lastrowid

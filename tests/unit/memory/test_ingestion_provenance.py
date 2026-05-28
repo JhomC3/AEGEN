@@ -15,14 +15,7 @@ async def pipeline_db():
     if db_path.exists():
         db_path.unlink()
     store = SQLiteStore(str(db_path))
-    await store.init_db(settings.SQLITE_SCHEMA_PATH)
     await store.connect()
-    yield store
-    await store.disconnect()
-    if db_path.exists():
-        db_path.unlink()
-
-    store = SQLiteStore(str(db_path))
     await store.init_db(settings.SQLITE_SCHEMA_PATH)
     from src.memory.migration import apply_migrations
 

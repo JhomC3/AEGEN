@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS memories (
     source_skill TEXT,                       -- Skill que generó o ruteó esta memoria
     confirmed_at TEXT,
     is_active INTEGER NOT NULL DEFAULT 1,
+    parent_id INTEGER REFERENCES memories(id) ON DELETE CASCADE, -- Profundidad jerárquica (ADR-0033)
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -78,3 +79,17 @@ AFTER DELETE ON vector_memory_map
 BEGIN
     DELETE FROM memory_vectors WHERE rowid = OLD.vector_id;
 END;
+
+-- Tabla de relaciones transversales (Graph-RAG verdadero) (ADR-0033)
+CREATE TABLE IF NOT EXISTS memory_edges (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    origen_id     INTEGER NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+    destino_id    INTEGER NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+    tipo_relacion TEXT NOT NULL CHECK(tipo_relacion IN (
+        'correlaciona_con', 'causa', 'resuelve', 'contradice', 'refuerza'
+    )),
+    peso          REAL NOT NULL DEFAULT 1.0 CHECK(peso >= 0.0 AND peso <= 1.0),
+    evidencia     TEXT,
+    created_by    TEXT NOT NULL,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

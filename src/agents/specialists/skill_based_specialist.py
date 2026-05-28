@@ -113,6 +113,7 @@ class SkillBasedSpecialist(SpecialistInterface):
             "chat_id": chat_id,
             "conversation_history": state.get("conversation_history", []),
             "routing_metadata": payload.get("routing_metadata", {}),
+            "rag_context": state.get("rag_context"),
         }
 
         # Enriquecer argumentos desde payload

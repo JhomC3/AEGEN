@@ -13,15 +13,7 @@ async def migration_db():
     if db_path.exists():
         db_path.unlink()
     store = SQLiteStore(str(db_path))
-    # Note: init_db uses settings.SQLITE_SCHEMA_PATH which we will update in Step 3
-    await store.init_db(settings.SQLITE_SCHEMA_PATH)
     await store.connect()
-    yield store
-    await store.disconnect()
-    if db_path.exists():
-        db_path.unlink()
-
-    store = SQLiteStore(str(db_path))
     # Note: init_db uses settings.SQLITE_SCHEMA_PATH which we will update in Step 3
     await store.init_db(settings.SQLITE_SCHEMA_PATH)
     yield store
