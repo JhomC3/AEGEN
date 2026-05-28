@@ -47,14 +47,21 @@ def update_state_with_decision(state: GraphStateV2, decision: RoutingDecision) -
         state["payload"] = {}
 
     payload = state["payload"]
+    intent_str = decision.intent.value
     payload.update({
         "next_node": decision.target_specialist,
         "routing_decision": decision.model_dump(),
-        "intent": decision.intent.value,
+        "intent": intent_str,
         "entities": [entity.model_dump() for entity in decision.entities],
         "confidence": decision.confidence,
         "requires_tools": decision.requires_tools,
     })
+
+    # Propagar intent a routing_metadata para consumo downstream
+    # (context_retriever_node, specialists, etc.)
+    if "routing_metadata" not in payload:
+        payload["routing_metadata"] = {}
+    payload["routing_metadata"]["intent"] = intent_str
 
     logger.info(
         f"Estado actualizado: {decision.intent} → "
