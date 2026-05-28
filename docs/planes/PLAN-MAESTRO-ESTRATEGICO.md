@@ -57,7 +57,12 @@ AEGEN debe pasar de ser un observador a ser un agente proactivo capaz de gestion
 - [x] **C.1 Fábrica de Habilidades**: Infraestructura de registro automático de herramientas y skills dinámicos. (Finalizado ✅ 2026-05-12)
 - [ ] **C.2 Integración de Herramientas**: Google Calendar, Búsqueda Web, Análisis de Archivos. (En Curso 🔄)
 - [ ] **C.3 Verificador de Verdad**: Proceso de auto-crítica contra la Bóveda de Conocimiento. (Pendiente ⏳)
-- [ ] **C.4 Graph-RAG para Todos los Especialistas**: Activar expansión de grafo condicional en cualquier intent cuando existan `memory_edges` relevantes. Sin esperar a intents analíticos. (Pendiente ⏳)
+- [ ] **C.4 Graph-RAG para Todos los Especialistas (Alta Prioridad)**: Activar expansión de grafo condicional en cualquier intent cuando existan `memory_edges` relevantes. Sin esperar a intents analíticos. Incluye:
+  - **Bug detectado:** Los intents analíticos `life_review`, `pattern_analysis`, `cross_domain_query` hardcodeados en `context_retriever.py` **no existen en el enum `IntentType`** ni en el Literal del tool de routing. El Graph-RAG por intents analíticos es código muerto — nunca se ejecuta.
+  - **Solución:** Reemplazar la lógica de intents analíticos por un chequeo rápido de existencia de aristas (`SELECT 1 FROM memory_edges WHERE origen_id IN (...) LIMIT 1`), que es <5ms si no hay aristas y ~50-150ms si las hay.
+  - **Verificación:** Una consulta cross-dominio (ej. "¿cómo afecta mi entrenamiento a mi estado de ánimo?") debe retornar fragmentos de al menos 2 dominios conectados por `memory_edges`.
+  - **Dependencia:** Requiere que `memory_edges` tenga datos (se genera en cada consolidación, ~10 mensajes).
+  - (Pendiente ⏳ — Ver plan detallado en `docs/planes/2026-MM-DD-graph-rag-universal.md`)
 
 ---
 
