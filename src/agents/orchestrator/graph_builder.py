@@ -78,11 +78,11 @@ class OrchestratorGraphBuilder(GraphBuilder):
 
         # Interceptamos el enrutamiento inicial de meta_router para redirigir a context_retriever
         # Guardamos el especialista seleccionado en payload["next_action"]
-        async def initial_router_with_context_retriever(
+        def initial_router_with_context_retriever(
             state: GraphStateV2,
         ) -> str:
-            # Invocar al router original
-            target: str = str(await routing_functions["initial_router_fn"](state))
+            # Invocar al router original (síncrono)
+            target: str = str(routing_functions["initial_router_fn"](state))
             if target in initial_router_target_map:
                 state["payload"]["next_action"] = target
                 return "context_retriever"
