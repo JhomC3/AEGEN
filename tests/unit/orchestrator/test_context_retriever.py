@@ -66,11 +66,14 @@ async def test_context_retriever_analytical_intent():
     )
 
     mock_facts = {
-        "calorias_meta": {
-            "value": "2000",
-            "confidence": 0.95,
-            "evidence": "Definido por nutricionista",
-        }
+        "preferences": [
+            {"key": "calorias_meta", "value": "2000", "confidence": 0.95, "evidence": "Definido por nutricionista"}
+        ],
+        "entities": [],
+        "medical": [],
+        "relationships": [],
+        "milestones": [],
+        "user_name": "Jhonn",
     }
 
     # Mock SemanticReranker to avoid actual API calls and return the candidates directly
@@ -102,6 +105,6 @@ async def test_context_retriever_analytical_intent():
         assert rag is not None
         assert len(rag["semantic_fragments"]) == 2
         assert len(rag["graph_fragments"]) == 1
-        assert len(rag["structured_facts"]) == 1
+        assert len(rag["structured_facts"]) == 2
         assert rag["structured_facts"][0]["key"] == "calorias_meta"
         assert rag["structured_facts"][0]["value"] == "2000"

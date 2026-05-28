@@ -52,7 +52,7 @@ src/memory/consolidation_worker.py
   → Consumido por: src/memory/long_term_memory.py (import diferido)
 
 src/memory/services/memory_summarizer.py
-  → Consumido por: src/memory/consolidation_worker.py
+  → Consumido por: src/memory/consolidation_worker.pyB
 
 src/core/schemas/graph.py (GraphStateV2)
   → Consumido por: src/agents/orchestrator/graph_builder.py

@@ -112,8 +112,19 @@ async def cbt_therapeutic_guidance_tool(
 
         # Formatear structured_facts de forma robusta
         facts_list = rag_context.get("structured_facts", [])
-        facts_dict = {f["key"]: f["value"] for f in facts_list}
-        structured_knowledge = format_knowledge_for_prompt(facts_dict)
+        # Formatear como string simple key=value, evitando
+        # format_knowledge_for_prompt que espera estructura de vault
+        facts_parts = []
+        for f in facts_list:
+            k = f.get("key", "")
+            v = f.get("value", "")
+            if k and v and not k.startswith("_"):
+                facts_parts.append(f"- {k}: {v}")
+        structured_knowledge = (
+            "\n".join(facts_parts)
+            if facts_parts
+            else "No hay hechos confirmados aún."
+        )
     else:
         # Fallback por compatibilidad directa o testing aislado
         semantic_fragments = await get_vector_memory_manager().retrieve_context(

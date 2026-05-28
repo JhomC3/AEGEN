@@ -154,28 +154,42 @@ async def context_retriever_node(state: GraphStateV2) -> GraphStateV2:  # noqa: 
         # B. Cargar hechos estructurados filtrando por confianza >= 0.7
         try:
             raw_facts = await knowledge_base_manager.load_knowledge(chat_id)
-            # El fact_extractor / knowledge_base retorna dict. Extraer hechos con confianza
             facts_list = []
-            for k, v in raw_facts.items():
-                if k == "last_updated" or k == "user_name":
+            # Iterar secciones de la bóveda (entities, preferences, etc.)
+            vault_sections = [
+                "entities",
+                "preferences",
+                "medical",
+                "relationships",
+                "milestones",
+            ]
+            for section in vault_sections:
+                items = raw_facts.get(section, [])
+                if not isinstance(items, list):
                     continue
-                # Si viene mapeado como objeto con confianza o directo
-                confidence = 1.0
-                evidence = None
-                if isinstance(v, dict):
-                    confidence = v.get("confidence", 1.0)
-                    evidence = v.get("evidence")
-                    val_str = str(v.get("value", v))
-                else:
-                    val_str = str(v)
-
-                if confidence >= 0.7:
-                    facts_list.append({
-                        "key": k,
-                        "value": val_str,
-                        "confidence": confidence,
-                        "evidence": evidence,
-                    })
+                for item in items:
+                    if not isinstance(item, dict):
+                        continue
+                    fact_key = item.get("key")
+                    fact_value = item.get("value")
+                    if not fact_key:
+                        continue
+                    confidence = float(item.get("confidence", 1.0))
+                    if confidence >= 0.7:
+                        facts_list.append({
+                            "key": fact_key,
+                            "value": str(fact_value) if fact_value else "",
+                            "confidence": confidence,
+                            "evidence": item.get("evidence"),
+                        })
+            # Incluir user_name si está presente
+            if raw_facts.get("user_name"):
+                facts_list.append({
+                    "key": "user_name",
+                    "value": str(raw_facts["user_name"]),
+                    "confidence": 1.0,
+                    "evidence": None,
+                })
             structured_facts = facts_list
         except Exception as ke:
             logger.warning(f"Error al cargar structured knowledge para RAG: {ke}")
