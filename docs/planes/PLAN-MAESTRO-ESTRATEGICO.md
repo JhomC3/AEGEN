@@ -27,11 +27,29 @@ La base legacy de Google Cloud y la dispersión de datos impedían el escalado y
 - [x] **A.1 Saneamiento de Raíz**: Unificación de almacenamiento en `/storage` y eliminación de scripts legacy. (Finalizado ✅ 2026-02-11)
 - [x] **A.2 Vigilante de Conocimiento**: Sincronización automática de archivos en `storage/knowledge/`. (Finalizado ✅ 2026-02-13)
 - [x] **A.3 Overhaul de Personalidad**: Implementación de arquitectura Soul Stack v2 y Espejo Natural. (Finalizado ✅ 2026-02-15)
-- [ ] **A.4 Refactor del Sistema de Intents — Bug Crítico (Prioridad Máxima)**:
-  - **Problema:** El `IntentType` enum (`src/core/routing_models.py`) define 10 intents. El `context_retriever.py` hardcodea 3 intents analíticos (`life_review`, `pattern_analysis`, `cross_domain_query`) para activar Graph-RAG. **Ninguno de esos 3 existe en el enum.** El Graph-RAG por intents analíticos es código muerto — nunca se ejecutó ni se ejecutará.
-  - **Problema adicional:** `routing_tools.py` tiene un `Literal` con 10 intents, pero falta `psicotrading` que sí existe en el enum. Hay sincronización manual entre 4 archivos distintos, cualquier cambio requiere modificar 4+ archivos.
-  - **Solución propuesta:** Eliminar la dependencia de intents para el Graph-RAG. Reemplazar por detección data-driven: si los fragmentos recuperados tienen aristas en `memory_edges`, expandir el grafo. Sin esperar intents analíticos. Esto también resuelve que cualquier especialista (CBT, Chat, etc.) pueda acceder a relaciones causales entre dominios.
-  - **Archivos afectados:** `context_retriever.py`, `routing_tools.py`, `specialist_mapper.py`, `routing_models.py`, tests de sync.
+- [ ] **A.4 Refactor del Sistema de Intents (Prioridad Máxima)**:
+  - **Problema:** El `IntentType` enum (`src/core/routing_models.py`) define 10 intents. El `context_retriever.py` hardcodea 3 intents analíticos (`life_review`, `pattern_analysis`, `cross_domain_query`) para activar Graph-RAG. **Ninguno de esos 3 existe en el enum.** El Graph-RAG por intents analíticos es código muerto. Adicionalmente, `routing_tools.py` no incluye `psicotrading` en su Literal.
+  - **Solución:** Eliminar la dependencia de intents para el Graph-RAG. Reemplazar por detección data-driven: si los fragmentos recuperados tienen aristas en `memory_edges`, expandir el grafo.
+  - (Pendiente ⏳)
+- [ ] **A.5 Migrar Facts Legacy a Atómicos en Producción (Prioridad Máxima)**:
+  - **Problema:** 439 facts del usuario `6095416210` están en formato JSON blob (pre-ADR-0032). El RAG no puede encontrarlos semánticamente.
+  - **Solución:** Ejecutar `make migrate-facts` en la VM de GCP para re-ingestar cada hecho como registro atómico individual con su propio embedding.
+  - (En Ejecución 🔄)
+- [ ] **A.6 Re-ingestar PDFs Globales con SemanticChunker (Prioridad Máxima)**:
+  - **Problema:** Los PDFs en `storage/knowledge/` (TCC, DSM-5) fueron ingeridos con el chunker recursivo plano (400 tok). No tienen estructura jerárquica (Nivel 3 → Nivel 4) ni purificación de ruido.
+  - **Solución:** Re-procesar los PDFs usando `use_semantic_chunker=True` en el `IngestionPipeline`. Esto generará chunks padres (Nivel 3) e hijos (Nivel 4) vinculados por `parent_id`, con contenido purificado de ruido.
+  - **Verificación:** Los chunks existentes se marcan `is_active=0`. Los nuevos chunks reemplazan a los viejos. El RAG debe encontrar fragmentos semánticamente coherentes en lugar de texto partido a la mitad.
+  - (Pendiente ⏳)
+- [ ] **A.7 Activar Respaldo en GCS (Prioridad Máxima)**:
+  - **Problema:** `GCS_BACKUP_BUCKET = None`. El `CloudBackupManager` es funcional pero nunca se activó. Si la VM se destruye, se pierden todos los datos.
+  - **Solución:** 
+    1. Crear bucket GCS (ej. `aegen-backups`) con retention policy de 30 días
+    2. Configurar `GCS_BACKUP_BUCKET` y `GCS_CREDENTIALS_JSON` en el `.env` de la VM
+    3. Verificar en logs que el backup se ejecuta tras cada consolidación
+  - (Pendiente ⏳)
+- [ ] **A.8 Snapshots Periódicos del Disco de la VM (Prioridad Alta)**:
+  - **Problema:** Sin respaldo cloud, el disco de la VM es el único almacén. Un fallo del disco o un delete accidental de la VM destruye todo.
+  - **Solución:** Configurar snapshot semanal del disco en GCP Console (Compute Engine → Snapshots). Retención de 4 semanas.
   - (Pendiente ⏳)
 
 ---
