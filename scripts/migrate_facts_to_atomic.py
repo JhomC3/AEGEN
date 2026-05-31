@@ -85,10 +85,17 @@ async def migrate_legacy_facts(store: SQLiteStore | None = None) -> None:
     logger.info("Iniciando migración de hechos a formato atómico...")
     db = await store.get_db()
 
+    # Registrar el store globalmente para que knowledge_base_manager lo use
+    import src.core.dependencies as deps
+
+    deps.sqlite_store = store
+
     # Buscar facts sin 'fact_key' en metadata (blobs JSON legacy)
+    # No filtramos por is_active para poder reprocesar registros
+    # que fueron marcados como inactivos en ejecuciones fallidas previas
     sql_find = (
         "SELECT id, chat_id, content FROM memories "
-        "WHERE memory_type = 'fact' AND is_active = 1 "
+        "WHERE memory_type = 'fact' "
         "AND metadata NOT LIKE '%\"fact_key\"%'"
     )
 
