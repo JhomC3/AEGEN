@@ -6,8 +6,6 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from src.core.engine import get_rag_llm
-
 logger = logging.getLogger(__name__)
 
 # Heurística para eliminar ruido común en transcripciones y documentos
@@ -29,30 +27,37 @@ class SemanticChunker:
     """
 
     def __init__(self) -> None:
-        self.llm = get_rag_llm()
         self.chunking_prompt = ChatPromptTemplate.from_messages([
             (
                 "system",
                 (
-                    "Eres un catalogador semántico de información clínica e investigativa. "
-                    "Tu tarea es dividir un texto extenso purificado en bloques lógicos o capítulos "
-                    "de marco teórico (Nivel 3) y, a partir de ellos, extraer pequeños fragmentos "
-                    "precisos y coherentes (Nivel 4) con su correspondiente clasificación de dominio.\n"
-                    "Dominios válidos: 'psychology', 'finance', 'fitness', 'nutrition', 'general'.\n"
-                    "Responde estrictamente con un objeto JSON con la lista estructurada jerárquicamente:\n"
+                    "Eres un catalogador semántico de información "
+                    "clínica e investigativa. Tu tarea es dividir un "
+                    "texto extenso purificado en bloques lógicos o "
+                    "capítulos de marco teórico (Nivel 3) y, a partir "
+                    "de ellos, extraer pequeños fragmentos precisos y "
+                    "coherentes (Nivel 4) con su correspondiente "
+                    "clasificación de dominio.\n"
+                    "Dominios válidos: 'psychology', 'finance', "
+                    "'fitness', 'nutrition', 'general'.\n"
+                    "Responde estrictamente con un objeto JSON con la "
+                    "lista estructurada jerárquicamente:\n"
                     "{\n"
                     '  "chunks": [\n'
                     "    {\n"
-                    '      "content": "Concepto o Marco Macro (Nivel 3)",\n'
+                    '      "content": "Concepto o Marco Macro (N3)",\n'
                     '      "domain": "psychology",\n'
                     '      "children": [\n'
-                    '        {"content": "Detalle preciso o técnica 1 (Nivel 4)", "domain": "psychology"},\n'
-                    '        {"content": "Detalle preciso o técnica 2 (Nivel 4)", "domain": "psychology"}\n'
+                    '        {"content": "Detalle 1 (N4)",'
+                    ' "domain": "psychology"},\n'
+                    '        {"content": "Detalle 2 (N4)",'
+                    ' "domain": "psychology"}\n'
                     "      ]\n"
                     "    }\n"
                     "  ]\n"
                     "}\n"
-                    "No incluyas explicaciones, responde puramente con el JSON crudo."
+                    "No incluyas explicaciones, responde puramente "
+                    "con el JSON crudo."
                 ),
             ),
             (
@@ -89,17 +94,23 @@ class SemanticChunker:
         """
         Limpia el texto y realiza la llamada a Gemini para segmentación semántica.
         Retorna una lista plana de chunks con su jerarquía parent_id resuelta.
+
+        Cada llamada obtiene un LLM fresco con key rotada via RoundRobinKeyProvider.
         """
         purified = self.clean_noise(text)
         if not purified:
             return []
+
+        from src.core.engine import get_rag_llm_async
+
+        llm = await get_rag_llm_async()
 
         logger.debug(
             "[SEMANTIC-CHUNKER] Sending purified text to Gemini Flash for chunking..."
         )
 
         try:
-            chain = self.chunking_prompt | self.llm
+            chain = self.chunking_prompt | llm
             response = await chain.ainvoke({
                 "text": purified[:8000]
             })  # Truncar a 8k caracteres para safety
@@ -147,7 +158,5 @@ class SemanticChunker:
             return flat_results
 
         except Exception as e:
-            logger.warning(
-                f"[SEMANTIC-CHUNKER] Failed semantic chunking: {e}. Falling back to empty structure."
-            )
+            logger.warning("[SEMANTIC-CHUNKER] Failed chunking: %s. Fallback empty.", e)
             return []

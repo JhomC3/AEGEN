@@ -101,6 +101,14 @@ La base legacy de Google Cloud y la dispersión de datos impedían el escalado y
   - **Problema:** `pyproject.toml` declaraba `version = "0.7.2"` pero el proyecto estaba en `v0.9.0` según `CHANGELOG.md` y `AGENTS.md`.
   - **Solución:** Actualizado `version` en `pyproject.toml` a `"0.9.0"`.
   - (Finalizado ✅ 2026-05-30)
+- [ ] **A.12 Desacoplamiento de Proveedores LLM (Prioridad Alta — A Discutir)**:
+  - **Problema:** `src/core/engine.py` tiene los proveedores LLM hardcodeados en funciones específicas (Groq para analítico, OpenRouter como fallback). Si se quiere cambiar dinámicamente de proveedor (ej. Google AI Studio → Groq), hay que modificar código Python. La arquitectura actual no soporta acoplamiento/desacoplamiento dinámico de proveedores y modelos desde configuración.
+  - **Discusión (2026-05-31):** Se evaluaron dos enfoques:
+    1. **Plan Completo (Factory Pattern Asíncrono):** Refactorizar `engine.py` con una fábrica `_create_llm_by_provider(provider, model)` guiada por `.env`. Ventajas: desacoplamiento total, cualquier proveedor configurable sin tocar código. Desventajas: modifica 7+ archivos, riesgo de regresión, complejidad alta (posible over-engineering).
+    2. **Plan Pragmático (Incremental):** Solo modificar lo necesario para habilitar la rotación de keys de Google AI Studio en `SemanticChunker` (2 archivos). Postergar la refactorización completa hasta que haya evidencia medible de necesidad (cambios frecuentes de proveedor).
+  - **Decisión Pendiente:** ¿Cuándo refactorizar `engine.py` al Factory Pattern? Criterio objetivo: si en 6 meses hay 2+ cambios de proveedor en producción, se ejecuta el Plan Completo. Si no, se mantiene el Plan Pragmático.
+  - **Dependencia:** RoundRobinKeyProvider (ya implementado, A.10), A.6 (reingesta con SemanticChunker)
+  - (Pendiente — A Discutir ⏳)
 
 ---
 

@@ -96,6 +96,46 @@ def get_rag_llm() -> Any:
     return _create_google_llm()
 
 
+async def get_rag_llm_async() -> Any:
+    """Motor Gemini con rotación round-robin de API keys.
+
+    Cada llamada obtiene una key fresca del RoundRobinKeyProvider,
+    permitiendo maximizar rate limits gratuitos de Google AI Studio.
+    """
+    from src.core.providers.round_robin_key import get_round_robin_provider
+
+    provider = get_round_robin_provider()
+    key = await provider.get_key()
+    if not key:
+        raise RuntimeError(
+            "No Gemini API keys configured. Set GEMINI_API_KEY_1 "
+            "or GOOGLE_API_KEY in .env"
+        )
+
+    from langchain_google_genai import ChatGoogleGenerativeAI
+    from pydantic import SecretStr
+
+    raw_model = settings.RAG_MODEL
+    target_model = (
+        raw_model if raw_model.startswith("models/") else f"models/{raw_model}"
+    )
+
+    logger.info(
+        "Initializing Google Gemini (key #%s) with model: %s",
+        provider.key_count,
+        target_model,
+    )
+
+    return ChatGoogleGenerativeAI(
+        model=target_model,
+        temperature=0.7,
+        top_p=0.9,
+        top_k=40,
+        convert_system_message_to_human=True,
+        api_key=SecretStr(key),
+    )
+
+
 # Mantener 'llm' global por compatibilidad legacy, apuntando al rápido por defecto
 llm = get_fast_llm()
 
