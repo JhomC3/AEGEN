@@ -46,9 +46,34 @@ def safe_json_loads(raw: str | None) -> dict[str, Any] | None:
     except (ValueError, SyntaxError):
         pass
 
+    # Estrategia 4: Extraer el primer objeto JSON de contenido con
+    # múltiples objetos concatenados o texto sobrante
+    extracted = _extract_first_json_object(raw)
+    if extracted:
+        try:
+            return cast(dict[str, Any], json.loads(extracted))
+        except json.JSONDecodeError:
+            pass
+
     logger.error(
-        f"JSON irrecuperable tras 3 estrategias. Primeros 100 chars: {raw[:100]}"
+        f"JSON irrecuperable tras 4 estrategias. Primeros 100 chars: {raw[:100]}"
     )
+    return None
+
+
+def _extract_first_json_object(raw: str) -> str | None:
+    """Extrae el primer objeto JSON válido de un string con múltiples objetos."""
+    brace_count = 0
+    start = raw.find("{")
+    if start == -1:
+        return None
+    for i, ch in enumerate(raw[start:], start=start):
+        if ch == "{":
+            brace_count += 1
+        elif ch == "}":
+            brace_count -= 1
+            if brace_count == 0:
+                return raw[start : i + 1]
     return None
 
 

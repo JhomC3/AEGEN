@@ -1,6 +1,5 @@
 # scripts/migrate_facts_to_atomic.py
 import asyncio
-import json
 import logging
 import sys
 from pathlib import Path
@@ -14,6 +13,47 @@ from src.memory.sqlite_store import SQLiteStore
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("migrate_facts_to_atomic")
+
+
+async def _migrate_single_row(
+    row: tuple, db: object, knowledge_base_manager: object
+) -> tuple[int, int] | None:
+    """Procesa un registro legacy y retorna (migrated, atoms_created) o None."""
+    from src.memory.json_sanitizer import safe_json_loads
+
+    legacy_id = row[0]
+    chat_id = row[1]
+    content = row[2]
+
+    try:
+        legacy_kb = safe_json_loads(content)
+        if legacy_kb is None:
+            logger.warning(
+                "Registro legacy %s: JSON irrecuperable. Saltando.", legacy_id
+            )
+            return None
+        if not isinstance(legacy_kb, dict):
+            logger.warning(
+                "Registro legacy %s no contiene un dict. Saltando.", legacy_id
+            )
+            return None
+
+        logger.info("Migrando hechos para chat %s (legacy id: %s)", chat_id, legacy_id)
+        await knowledge_base_manager.save_knowledge(chat_id, legacy_kb)
+
+        sections = ["entities", "preferences", "medical", "relationships", "milestones"]
+        added = sum(len(legacy_kb.get(s, [])) for s in sections)
+        if "user_name" in legacy_kb:
+            added += 1
+
+        await db.execute("UPDATE memories SET is_active = 0 WHERE id = ?", (legacy_id,))
+        await db.commit()
+
+        logger.info("Registro legacy %s desactivado correctamente.", legacy_id)
+        return (1, added)
+    except Exception as ex:
+        logger.error("Error procesando registro legacy %s: %s", legacy_id, ex)
+        return None
 
 
 async def migrate_legacy_facts(store: SQLiteStore | None = None) -> None:
@@ -56,64 +96,20 @@ async def migrate_legacy_facts(store: SQLiteStore | None = None) -> None:
                 )
                 return
 
-            logger.info(
-                f"Encontrados {len(rows)} registros de hechos legacy para procesar."
-            )
+            logger.info("Encontrados %s registros legacy para procesar.", len(rows))
 
             for row in rows:
-                legacy_id = row[0]
-                chat_id = row[1]
-                content = row[2]
-
-                try:
-                    # Intentar parsear el JSON legacy
-                    legacy_kb = json.loads(content)
-                    if not isinstance(legacy_kb, dict):
-                        logger.warning(
-                            f"Registro legacy {legacy_id} no contiene un diccionario válido. Saltando."
-                        )
-                        continue
-
-                    # 1. Guardar de forma atómica usando la nueva lógica
-                    # Esto itera entities, preferences, etc. y genera registros atómicos
-                    logger.info(
-                        f"Migrando hechos para el chat {chat_id} (Registro legacy id: {legacy_id})"
-                    )
-                    await knowledge_base_manager.save_knowledge(chat_id, legacy_kb)
-
-                    # Contabilizar de forma aproximada los hechos creados
-                    sections = [
-                        "entities",
-                        "preferences",
-                        "medical",
-                        "relationships",
-                        "milestones",
-                    ]
-                    added_atoms = sum(len(legacy_kb.get(s, [])) for s in sections)
-                    if "user_name" in legacy_kb:
-                        added_atoms += 1
-
-                    atomic_created_count += added_atoms
-
-                    # 2. Desactivar (Soft-delete) el registro legacy original
-                    await db.execute(
-                        "UPDATE memories SET is_active = 0 WHERE id = ?", (legacy_id,)
-                    )
-                    await db.commit()
-
-                    logger.info(
-                        f"Registro legacy {legacy_id} desactivado correctamente."
-                    )
-                    migrated_count += 1
-
-                except Exception as ex:
-                    logger.error(f"Error procesando registro legacy {legacy_id}: {ex}")
-                    continue
+                result = await _migrate_single_row(row, db, knowledge_base_manager)
+                if result:
+                    migrated_count += result[0]
+                    atomic_created_count += result[1]
 
         logger.info(
-            f"Migración completada exitosamente. "
-            f"Procesados: {migrated_count} registros legacy. "
-            f"Nuevos hechos atómicos insertados: {atomic_created_count}."
+            "Migración completada exitosamente. "
+            "Procesados: %s registros legacy. "
+            "Nuevos hechos atómicos insertados: %s.",
+            migrated_count,
+            atomic_created_count,
         )
 
     except Exception as e:

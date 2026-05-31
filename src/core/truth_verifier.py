@@ -51,10 +51,7 @@ async def verify_claim_against_knowledge(
     ) as cursor:
         rows = await cursor.fetchall()
 
-    results = [
-        {"id": r[0], "content": r[1], "score": r[2]}
-        for r in rows
-    ]
+    results = [{"id": r[0], "content": r[1], "score": r[2]} for r in rows]
 
     if not results:
         return {

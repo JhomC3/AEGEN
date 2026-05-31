@@ -87,7 +87,6 @@ async def _save_fact_if_new(
     Guarda el fact si no existe uno similar (deduplicacion por FTS5).
     Retorna True si se guardo, False si era duplicado.
     """
-    from src.memory.sqlite_store import SQLiteStore
 
     content = fact.get("content", "")
     if not content:
