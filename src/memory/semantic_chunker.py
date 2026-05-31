@@ -42,20 +42,20 @@ class SemanticChunker:
                     "'fitness', 'nutrition', 'general'.\n"
                     "Responde estrictamente con un objeto JSON con la "
                     "lista estructurada jerárquicamente:\n"
-                    "{\n"
+                    "{{\n"
                     '  "chunks": [\n'
-                    "    {\n"
+                    "    {{\n"
                     '      "content": "Concepto o Marco Macro (N3)",\n'
                     '      "domain": "psychology",\n'
                     '      "children": [\n'
-                    '        {"content": "Detalle 1 (N4)",'
-                    ' "domain": "psychology"},\n'
-                    '        {"content": "Detalle 2 (N4)",'
-                    ' "domain": "psychology"}\n'
+                    '        {{"content": "Detalle 1 (N4)",'
+                    ' "domain": "psychology"}},\n'
+                    '        {{"content": "Detalle 2 (N4)",'
+                    ' "domain": "psychology"}}\n'
                     "      ]\n"
-                    "    }\n"
+                    "    }}\n"
                     "  ]\n"
-                    "}\n"
+                    "}}\n"
                     "No incluyas explicaciones, responde puramente "
                     "con el JSON crudo."
                 ),
