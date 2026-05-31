@@ -140,6 +140,13 @@ class SQLiteStore:
     ) -> int:
         return await self._memory_repo.delete_memories_by_filename(filename, namespace)
 
+    async def hard_delete_memories_by_filename(
+        self, filename: str, namespace: str = "global"
+    ) -> int:
+        return await self._memory_repo.hard_delete_memories_by_filename(
+            filename, namespace
+        )
+
     async def get_memory_stats(self, chat_id: str) -> dict:
         return await self._memory_repo.get_memory_stats(chat_id)
 

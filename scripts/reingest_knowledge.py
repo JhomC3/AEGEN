@@ -64,11 +64,11 @@ async def reingest_knowledge() -> None:
         logger.info("Procesando: %s", filename)
 
         try:
-            # 1. Soft-delete chunks existentes de este archivo
-            deleted = await store.delete_memories_by_filename(
+            # 1. Hard-delete chunks existentes de este archivo
+            deleted = await store.hard_delete_memories_by_filename(
                 filename, namespace="global"
             )
-            logger.info("  -> %d chunks anteriores desactivados", deleted)
+            logger.info("  -> %d chunks anteriores eliminados", deleted)
             total_deleted += deleted
 
             # 2. Extraer texto
@@ -108,7 +108,7 @@ async def reingest_knowledge() -> None:
     logger.info(
         "Re-ingesta completada. "
         "Archivos: %d, "
-        "Chunks viejos desactivados: %d, "
+        "Chunks viejos eliminados: %d, "
         "Nuevos chunks: %d, "
         "Errores: %d",
         len(knowledge_files) - len(errors),

@@ -149,3 +149,18 @@ class MemoryRepository:
             logger.error("Delete file error: %s", e)
             await db.rollback()
             return 0
+
+    async def hard_delete_memories_by_filename(self, f: str, ns: str = "global") -> int:
+        db = await self.get_db()
+        try:
+            sql = (
+                "DELETE FROM memories WHERE namespace = ? "
+                "AND json_extract(metadata, '$.filename') = ?"
+            )
+            cursor = await db.execute(sql, (ns, f))
+            await db.commit()
+            return int(cursor.rowcount)
+        except Exception as e:
+            logger.error("Hard delete file error: %s", e)
+            await db.rollback()
+            return 0

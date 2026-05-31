@@ -121,9 +121,7 @@ async def cbt_therapeutic_guidance_tool(
             if k and v and not k.startswith("_"):
                 facts_parts.append(f"- {k}: {v}")
         structured_knowledge = (
-            "\n".join(facts_parts)
-            if facts_parts
-            else "No hay hechos confirmados aún."
+            "\n".join(facts_parts) if facts_parts else "No hay hechos confirmados aún."
         )
     else:
         # Fallback por compatibilidad directa o testing aislado

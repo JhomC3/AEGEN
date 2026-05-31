@@ -67,7 +67,12 @@ async def test_context_retriever_analytical_intent():
 
     mock_facts = {
         "preferences": [
-            {"key": "calorias_meta", "value": "2000", "confidence": 0.95, "evidence": "Definido por nutricionista"}
+            {
+                "key": "calorias_meta",
+                "value": "2000",
+                "confidence": 0.95,
+                "evidence": "Definido por nutricionista",
+            }
         ],
         "entities": [],
         "medical": [],

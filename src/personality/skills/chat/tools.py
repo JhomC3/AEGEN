@@ -118,9 +118,7 @@ async def conversational_chat_tool(
             v = f.get("value", "")
             if k and v and not k.startswith("_"):
                 facts_parts.append(f"- {k}: {v}")
-        structured_knowledge = (
-            "\n".join(facts_parts) if facts_parts else ""
-        )
+        structured_knowledge = "\n".join(facts_parts) if facts_parts else ""
     else:
         # Fallback por compatibilidad directa o testing aislado
         semantic_fragments = await get_vector_memory_manager().retrieve_context(
