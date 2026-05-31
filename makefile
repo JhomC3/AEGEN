@@ -62,24 +62,24 @@ migrate-facts: ## Ejecuta el script de migración de hechos a atómicos
 	@echo "Migrating legacy JSON facts to atomic database facts..."
 	$(PYTHON) scripts/migrate_facts_to_atomic.py
 
-knowledge-add: ## Añade archivo al sistema de conocimiento (FILE=path)
+knowledge-add: ## Añade archivo al sistema de conocimiento (FILE=path en contenedor)
 	@echo "Adding $(FILE)..."
-	$(PYTHON) scripts/knowledge_cli.py add $(FILE) --chunker $(CHUNKER)
+	docker-compose exec app python scripts/knowledge_cli.py add $(FILE) --chunker $(CHUNKER)
 
 knowledge-sync: ## Sincroniza storage/knowledge/ con el tracker
 	@echo "Syncing knowledge directory..."
-	$(PYTHON) scripts/knowledge_cli.py sync --chunker $(CHUNKER)
+	docker-compose exec app python scripts/knowledge_cli.py sync --chunker $(CHUNKER)
 
 knowledge-status: ## Muestra estado de todos los archivos de conocimiento
-	$(PYTHON) scripts/knowledge_cli.py status
+	docker-compose exec app python scripts/knowledge_cli.py status
 
 knowledge-delete: ## Elimina archivo y sus chunks (FILE=name)
 	@echo "Deleting $(FILE)..."
-	$(PYTHON) scripts/knowledge_cli.py delete $(FILE)
+	docker-compose exec app python scripts/knowledge_cli.py delete $(FILE)
 
 knowledge-reingest: ## Re-ingiere todos los archivos con chunker especificado
 	@echo "Re-ingesting with $(CHUNKER)..."
-	$(PYTHON) scripts/knowledge_cli.py reingest --chunker $(CHUNKER)
+	docker-compose exec app python scripts/knowledge_cli.py reingest --chunker $(CHUNKER)
 
 reingest-knowledge: knowledge-reingest ## Alias de knowledge-reingest
 
