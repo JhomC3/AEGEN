@@ -70,6 +70,18 @@ async def _migrate_single_row(
             return None
 
         logger.info("Migrando hechos para chat %s (legacy id: %s)", chat_id, legacy_id)
+
+        # Diagnóstico: qué campos tiene este registro legacy
+        list_keys = [k for k in legacy_kb if isinstance(legacy_kb.get(k), list)]
+        other_keys = [k for k in legacy_kb if k not in list_keys]
+        logger.info(
+            "Registro %s: keys=%s, list_keys=%s, list_counts=%s",
+            legacy_id,
+            other_keys,
+            list_keys,
+            {k: len(legacy_kb.get(k, [])) for k in list_keys},
+        )
+
         added = 0
 
         # Iterar secciones y crear hechos atómicos individuales
