@@ -175,16 +175,26 @@ class KnowledgeManager:
                 )
                 result = await self._ingest_file(kf, file_path, chunker)
                 results.append(result)
-            elif tracked.file_hash != file_hash:
-                # Archivo modificado
-                logger.info("[KNOWLEDGE] Archivo modificado: %s", filename)
-                await self._delete_chunks(tracked)
-                updated = await self.tracker.update_status(
-                    tracked.id, KnowledgeStatus.PENDING
+            elif (
+                tracked.status != KnowledgeStatus.DONE or tracked.file_hash != file_hash
+            ):
+                # Archivo modificado, fallido, o pendiente → reprocesar
+                logger.info(
+                    "[KNOWLEDGE] Reprocesando archivo: %s (estado=%s)",
+                    filename,
+                    tracked.status.value,
                 )
-                if updated:
-                    result = await self._ingest_file(updated, file_path, chunker)
-                    results.append(result)
+                await self._delete_chunks(tracked)
+                # Re-registrar con hash actualizado
+                await self.tracker.delete(tracked.id)
+                kf = await self.tracker.register_file(
+                    filename=filename,
+                    file_hash=file_hash,
+                    file_size=file_size,
+                    chunker=chunker,
+                )
+                result = await self._ingest_file(kf, file_path, chunker)
+                results.append(result)
             # else: sin cambios
 
         return results

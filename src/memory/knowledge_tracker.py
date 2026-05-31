@@ -175,7 +175,7 @@ class KnowledgeTracker:
         r: tuple = row  # type: ignore[assignment]
         chunks_ids: list[int] = []
         try:
-            raw = r[6]  # chunks_ids column
+            raw = r[7]  # chunks_ids column (JSON string)
             if raw:
                 chunks_ids = json.loads(raw)
         except (json.JSONDecodeError, TypeError):
@@ -188,7 +188,7 @@ class KnowledgeTracker:
             file_size=r[3],
             status=KnowledgeStatus(r[4]),
             chunker=KnowledgeChunker(r[5]),
-            chunks_count=r[7] or 0,
+            chunks_count=int(r[6]) if r[6] else 0,
             chunks_ids=chunks_ids,
             ingested_at=r[8] if r[8] else None,
             updated_at=r[9] if r[9] else datetime.now(),
