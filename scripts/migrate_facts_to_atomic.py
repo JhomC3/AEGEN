@@ -1,8 +1,16 @@
 # scripts/migrate_facts_to_atomic.py
+from __future__ import annotations
+
 import asyncio
 import logging
 import sys
 from pathlib import Path
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    import aiosqlite
+
+    from src.memory.knowledge_base import KnowledgeBaseManager
 
 # Configurar path para imports locales
 sys.path.append(str(Path(__file__).parent.parent))
@@ -16,7 +24,7 @@ logger = logging.getLogger("migrate_facts_to_atomic")
 
 
 async def _migrate_single_row(
-    row: tuple, db: object, knowledge_base_manager: object
+    row: Any, db: aiosqlite.Connection, kbm: KnowledgeBaseManager
 ) -> tuple[int, int] | None:
     """Procesa un registro legacy y retorna (migrated, atoms_created) o None."""
     from src.memory.json_sanitizer import safe_json_loads
@@ -39,7 +47,7 @@ async def _migrate_single_row(
             return None
 
         logger.info("Migrando hechos para chat %s (legacy id: %s)", chat_id, legacy_id)
-        await knowledge_base_manager.save_knowledge(chat_id, legacy_kb)
+        await kbm.save_knowledge(chat_id, legacy_kb)
 
         sections = ["entities", "preferences", "medical", "relationships", "milestones"]
         added = sum(len(legacy_kb.get(s, [])) for s in sections)
@@ -77,11 +85,11 @@ async def migrate_legacy_facts(store: SQLiteStore | None = None) -> None:
     logger.info("Iniciando migración de hechos a formato atómico...")
     db = await store.get_db()
 
-    # Query: buscar memorias activas de tipo 'fact' que NO tengan el campo 'fact_key' en su metadata
-    # (lo que indica que son blobs JSON legacy completos en lugar de hechos individuales atómicos)
+    # Buscar facts sin 'fact_key' en metadata (blobs JSON legacy)
     sql_find = (
         "SELECT id, chat_id, content FROM memories "
-        "WHERE memory_type = 'fact' AND is_active = 1 AND metadata NOT LIKE '%\"fact_key\"%'"
+        "WHERE memory_type = 'fact' AND is_active = 1 "
+        "AND metadata NOT LIKE '%\"fact_key\"%'"
     )
 
     migrated_count = 0
@@ -89,11 +97,9 @@ async def migrate_legacy_facts(store: SQLiteStore | None = None) -> None:
 
     try:
         async with db.execute(sql_find) as cursor:
-            rows = await cursor.fetchall()
+            rows = list(await cursor.fetchall())
             if not rows:
-                logger.info(
-                    "No se encontraron registros de hechos legacy para migrar. Esquema limpio."
-                )
+                logger.info("No se encontraron hechos legacy. Esquema limpio.")
                 return
 
             logger.info("Encontrados %s registros legacy para procesar.", len(rows))
