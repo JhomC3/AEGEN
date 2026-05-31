@@ -58,6 +58,10 @@ migrate-facts: ## Ejecuta el script de migración de hechos a atómicos
 	@echo "Migrating legacy JSON facts to atomic database facts..."
 	$(PYTHON) scripts/migrate_facts_to_atomic.py
 
+reingest-knowledge: ## Re-ingiere storage/knowledge/ con SemanticChunker
+	@echo "Re-ingesting all knowledge with SemanticChunker (L3->L4)..."
+	$(PYTHON) scripts/reingest_knowledge.py
+
 test-update-snapshots: ## Ejecuta pruebas y actualiza los snapshots
 	@echo "Running tests and updating snapshots..."
 	$(PYTHON) -m pytest tests/ --snapshot-update

@@ -71,67 +71,36 @@ async def _migrate_single_row(
 
         logger.info("Migrando hechos para chat %s (legacy id: %s)", chat_id, legacy_id)
 
-        # Diagnóstico: qué campos tiene este registro legacy
-        list_keys = [k for k in legacy_kb if isinstance(legacy_kb.get(k), list)]
-        other_keys = [k for k in legacy_kb if k not in list_keys]
-        logger.info(
-            "Registro %s: keys=%s, list_keys=%s, list_counts=%s",
-            legacy_id,
-            other_keys,
-            list_keys,
-            {k: len(legacy_kb.get(k, [])) for k in list_keys},
+        # Cada registro legacy es UN solo hecho atomico (dict plano)
+        # No es una coleccion con entities/preferences, es el item en si
+        fact_key = (
+            legacy_kb.get("name")
+            or legacy_kb.get("key")
+            or legacy_kb.get("type")
+            or list(legacy_kb.keys())[0]
+            if legacy_kb
+            else ""
         )
-
-        added = 0
-
-        # Iterar secciones y crear hechos atómicos individuales
-        sections = ["entities", "preferences", "medical", "relationships", "milestones"]
-        for section in sections:
-            items = legacy_kb.get(section, [])
-            if not isinstance(items, list):
-                continue
-            for item in items:
-                if not isinstance(item, dict):
-                    continue
-                fact_key = item.get("name") or item.get("key") or ""
-                text = json.dumps(item, ensure_ascii=False)
-                meta = {
-                    "source": "migration",
-                    "type": "structured_fact",
-                    "section": section,
-                    "source_type": item.get("source_type", "explicit"),
-                    "confidence": item.get("confidence", 1.0),
-                    "evidence": item.get("evidence", ""),
-                    "sensitivity": item.get("sensitivity", "medium"),
-                    "domain": _infer_domain(item),
-                    "hierarchy_level": 4,
-                    "fact_key": fact_key,
-                }
-                await pipeline.process_text(
-                    chat_id=chat_id,
-                    text=text,
-                    memory_type="fact",
-                    metadata=meta,
-                    source_skill="knowledge_base",
-                )
-                added += 1
-
-        # user_name como hecho independiente
-        if "user_name" in legacy_kb and legacy_kb["user_name"]:
-            await pipeline.process_text(
-                chat_id=chat_id,
-                text=str(legacy_kb["user_name"]),
-                memory_type="fact",
-                metadata={
-                    "source": "migration",
-                    "type": "structured_fact",
-                    "domain": "psychology",
-                    "hierarchy_level": 4,
-                    "fact_key": "user_name",
-                },
-                source_skill="knowledge_base",
-            )
-            added += 1
+        text = json.dumps(legacy_kb, ensure_ascii=False)
+        meta = {
+            "source": "migration",
+            "type": "structured_fact",
+            "source_type": legacy_kb.get("source_type", "explicit"),
+            "confidence": legacy_kb.get("confidence", 1.0),
+            "evidence": str(legacy_kb.get("evidence", "")),
+            "sensitivity": str(legacy_kb.get("sensitivity", "medium")),
+            "domain": _infer_domain(legacy_kb),
+            "hierarchy_level": 4,
+            "fact_key": str(fact_key),
+        }
+        await pipeline.process_text(
+            chat_id=chat_id,
+            text=text,
+            memory_type="fact",
+            metadata=meta,
+            source_skill="knowledge_base",
+        )
+        added = 1
 
         await db.execute("UPDATE memories SET is_active = 0 WHERE id = ?", (legacy_id,))
         await db.commit()
