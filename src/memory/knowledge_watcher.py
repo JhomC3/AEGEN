@@ -81,7 +81,7 @@ class KnowledgeWatcher:
             if file_path.is_dir() or file_path.name.startswith("."):
                 continue
 
-            should_process, _ = self.loader._should_process_file(file_path)
+            should_process, _ = self.loader.should_process_file(file_path)
             if should_process:
                 try:
                     files[file_path.name] = (file_path, file_path.stat().st_mtime)

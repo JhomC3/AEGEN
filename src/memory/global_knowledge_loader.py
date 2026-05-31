@@ -36,7 +36,7 @@ class GlobalKnowledgeLoader:
             self._manager = get_vector_memory_manager()
         return self._manager
 
-    def _extract_pdf_text(self, pdf_path: Path) -> str:
+    def extract_pdf_text(self, pdf_path: Path) -> str:
         """Extrae texto plano de un PDF usando PyMuPDF."""
         try:
             import fitz
@@ -53,7 +53,7 @@ class GlobalKnowledgeLoader:
             logger.error("Error extrayendo texto de PDF %s: %s", pdf_path.name, e)
             return ""
 
-    def _should_process_file(self, file_path: Path) -> tuple[bool, str]:
+    def should_process_file(self, file_path: Path) -> tuple[bool, str]:
         """Determina si un archivo debe ser procesado."""
         import re
 
@@ -80,7 +80,7 @@ class GlobalKnowledgeLoader:
         try:
             content = ""
             if file_path.suffix.lower() == ".pdf":
-                content = self._extract_pdf_text(file_path)
+                content = self.extract_pdf_text(file_path)
             else:
                 async with aiofiles.open(file_path, encoding="utf-8") as f:
                     content = await f.read()
@@ -122,7 +122,7 @@ class GlobalKnowledgeLoader:
             if file_path.is_dir() or file_path.name.startswith("."):
                 continue
 
-            should_process, reason = self._should_process_file(file_path)
+            should_process, reason = self.should_process_file(file_path)
             if not should_process:
                 logger.info(
                     "[INGESTA] Archivo descartado: %s | Razón: %s",
