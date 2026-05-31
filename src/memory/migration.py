@@ -95,12 +95,16 @@ async def apply_migrations(store: SQLiteStore) -> None:
             """
             CREATE TABLE IF NOT EXISTS memory_edges (
                 id            INTEGER PRIMARY KEY AUTOINCREMENT,
-                origen_id     INTEGER NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
-                destino_id    INTEGER NOT NULL REFERENCES memories(id) ON DELETE CASCADE,
+                origen_id     INTEGER NOT NULL
+                    REFERENCES memories(id) ON DELETE CASCADE,
+                destino_id    INTEGER NOT NULL
+                    REFERENCES memories(id) ON DELETE CASCADE,
                 tipo_relacion TEXT NOT NULL CHECK(tipo_relacion IN (
-                    'correlaciona_con', 'causa', 'resuelve', 'contradice', 'refuerza'
+                    'correlaciona_con', 'causa', 'resuelve',
+                    'contradice', 'refuerza'
                 )),
-                peso          REAL NOT NULL DEFAULT 1.0 CHECK(peso >= 0.0 AND peso <= 1.0),
+                peso          REAL NOT NULL DEFAULT 1.0
+                    CHECK(peso >= 0.0 AND peso <= 1.0),
                 evidencia     TEXT,
                 created_by    TEXT NOT NULL,
                 created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -108,13 +112,15 @@ async def apply_migrations(store: SQLiteStore) -> None:
             """
         )
         await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_edges_origen ON memory_edges(origen_id);"
+            "CREATE INDEX IF NOT EXISTS idx_edges_origen " "ON memory_edges(origen_id);"
         )
         await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_edges_destino ON memory_edges(destino_id);"
+            "CREATE INDEX IF NOT EXISTS idx_edges_destino "
+            "ON memory_edges(destino_id);"
         )
         await db.execute(
-            "CREATE UNIQUE INDEX IF NOT EXISTS idx_edges_pair ON memory_edges(origen_id, destino_id, tipo_relacion);"
+            "CREATE UNIQUE INDEX IF NOT EXISTS idx_edges_pair "
+            "ON memory_edges(origen_id, destino_id, tipo_relacion);"
         )
         await db.commit()
     except Exception as e:
@@ -135,3 +141,37 @@ async def apply_migrations(store: SQLiteStore) -> None:
 
     if applied_cols == 0 and applied_idx == 0:
         logger.debug("Migration: schema already up to date")
+
+    # 3. Crear tabla knowledge_files si no existe (gestión de conocimiento)
+    try:
+        await db.execute(
+            """
+            CREATE TABLE IF NOT EXISTS knowledge_files (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                filename TEXT UNIQUE NOT NULL,
+                file_hash TEXT UNIQUE NOT NULL,
+                file_size INTEGER NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending'
+                    CHECK(status IN ('pending', 'ingesting', 'done', 'failed')),
+                chunker TEXT NOT NULL DEFAULT 'semantic'
+                    CHECK(chunker IN ('semantic', 'recursive')),
+                chunks_count INTEGER DEFAULT 0,
+                chunks_ids TEXT DEFAULT '[]',
+                ingested_at TEXT,
+                updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                error_message TEXT
+            );
+            """
+        )
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_knowledge_files_hash "
+            "ON knowledge_files(file_hash)"
+        )
+        await db.execute(
+            "CREATE INDEX IF NOT EXISTS idx_knowledge_files_status "
+            "ON knowledge_files(status)"
+        )
+        await db.commit()
+        logger.info("Migration: knowledge_files table check complete")
+    except Exception as e:
+        logger.warning(f"Error al verificar/crear tabla knowledge_files: {e}")

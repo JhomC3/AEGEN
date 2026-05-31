@@ -5,6 +5,10 @@ VENV_DIR := .venv
 PYTHON := uv run python
 UV := $(shell command -v uv 2> /dev/null) # Encuentra uv
 
+# Variables por defecto para knowledge commands
+FILE ?=
+CHUNKER ?= semantic
+
 help: ## Muestra esta ayuda
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
@@ -58,9 +62,26 @@ migrate-facts: ## Ejecuta el script de migración de hechos a atómicos
 	@echo "Migrating legacy JSON facts to atomic database facts..."
 	$(PYTHON) scripts/migrate_facts_to_atomic.py
 
-reingest-knowledge: ## Re-ingiere storage/knowledge/ con SemanticChunker
-	@echo "Re-ingesting all knowledge with SemanticChunker (L3->L4)..."
-	$(PYTHON) scripts/reingest_knowledge.py
+knowledge-add: ## Añade archivo al sistema de conocimiento (FILE=path)
+	@echo "Adding $(FILE)..."
+	$(PYTHON) scripts/knowledge_cli.py add $(FILE) --chunker $(CHUNKER)
+
+knowledge-sync: ## Sincroniza storage/knowledge/ con el tracker
+	@echo "Syncing knowledge directory..."
+	$(PYTHON) scripts/knowledge_cli.py sync --chunker $(CHUNKER)
+
+knowledge-status: ## Muestra estado de todos los archivos de conocimiento
+	$(PYTHON) scripts/knowledge_cli.py status
+
+knowledge-delete: ## Elimina archivo y sus chunks (FILE=name)
+	@echo "Deleting $(FILE)..."
+	$(PYTHON) scripts/knowledge_cli.py delete $(FILE)
+
+knowledge-reingest: ## Re-ingiere todos los archivos con chunker especificado
+	@echo "Re-ingesting with $(CHUNKER)..."
+	$(PYTHON) scripts/knowledge_cli.py reingest --chunker $(CHUNKER)
+
+reingest-knowledge: knowledge-reingest ## Alias de knowledge-reingest
 
 test-update-snapshots: ## Ejecuta pruebas y actualiza los snapshots
 	@echo "Running tests and updating snapshots..."
