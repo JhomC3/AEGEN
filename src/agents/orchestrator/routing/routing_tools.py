@@ -6,25 +6,16 @@ Reemplaza structured output con function calling approach para
 eliminar bottleneck de performance (36+s → <2s).
 """
 
-from typing import Any, Literal
+from typing import Any
 
 from langchain_core.tools import tool
+
+from src.core.routing_models import IntentType
 
 
 @tool
 async def route_user_message(
-    intent: Literal[
-        "chat",
-        "file_analysis",
-        "search",
-        "help",
-        "task_execution",
-        "information_request",
-        "planning",
-        "document_creation",
-        "vulnerability",
-        "topic_shift",
-    ],
+    intent: IntentType,
     confidence: float,
     target_specialist: str,
     entities: list[str] | None = None,

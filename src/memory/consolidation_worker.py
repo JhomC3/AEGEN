@@ -264,5 +264,195 @@ class ConsolidationManager:
         except Exception as e:
             logger.warning("Error generating transversal edges for %s: %s", chat_id, e)
 
+    async def _adjust_edge_weights_from_feedback(
+        self,
+        store: Any,
+        chat_id: str,
+        conversation_history: list[dict],
+        injected_graph_fragments: list[dict],
+    ) -> dict:
+        """
+        El LLM evalua que fragmentos del grafo inyectados en el contexto
+        fueron pertinentes. Los pesos de las aristas asociadas se refuerzan
+        (+0.05) o se atenuan (-0.03).
+        """
+        if not injected_graph_fragments:
+            return {"reinforced": 0, "decayed": 0}
+
+        from src.core.engine import get_rag_llm
+
+        fragments_text = "\n".join([
+            f"- [{f.get('id', '?')}] {f.get('content', '')[:200]}"
+            for f in injected_graph_fragments
+        ])
+        conv_text = "\n".join([
+            f"{m.get('role', 'user')}: {m.get('content', '')[:300]}"
+            for m in conversation_history[-20:]
+        ])
+
+        prompt = (
+            "Analiza esta conversacion y los fragmentos de memoria del grafo "
+            "que fueron inyectados en el contexto.\n"
+            "Determina cuales fragmentos fueron SEMANTICAMENTE PERTINENTES "
+            "al razonamiento de la conversacion.\n\n"
+            f"CONVERSACION:\n{conv_text}\n\n"
+            f"FRAGMENTOS:\n{fragments_text}\n\n"
+            "Responde SOLO con un JSON: "
+            '{"useful_ids": [lista de IDs de fragmentos utiles]}'
+        )
+
+        try:
+            llm = get_rag_llm()
+            response = await llm.ainvoke(prompt)
+            content = (
+                response.content if hasattr(response, "content") else str(response)
+            )
+            start = content.find("{")
+            end = content.rfind("}") + 1
+            if start < 0 or end <= start:
+                return {"reinforced": 0, "decayed": 0}
+
+            import json
+
+            data = json.loads(content[start:end])
+            useful_ids = set(data.get("useful_ids", []))
+
+            db = await store.get_db()
+            reinforced = 0
+            decayed = 0
+
+            for frag in injected_graph_fragments:
+                edge_id = frag.get("edge_id")
+                if not edge_id:
+                    continue
+                frag_id = frag.get("id")
+                if frag_id in useful_ids:
+                    await db.execute(
+                        "UPDATE memory_edges SET peso = MIN(2.0, peso + 0.05) "
+                        "WHERE id = ?",
+                        (edge_id,),
+                    )
+                    reinforced += 1
+                else:
+                    await db.execute(
+                        "UPDATE memory_edges SET peso = MAX(0.0, peso - 0.03) "
+                        "WHERE id = ?",
+                        (edge_id,),
+                    )
+                    decayed += 1
+
+            await db.commit()
+            logger.info(
+                "[FEEDBACK] chat=%s: %d/%d fragmentos utiles",
+                chat_id,
+                reinforced,
+                len(injected_graph_fragments),
+            )
+            return {"reinforced": reinforced, "decayed": decayed}
+        except Exception as e:
+            logger.warning("[FEEDBACK] Error ajustando pesos: %s", e)
+            return {"reinforced": 0, "decayed": 0}
+
+    async def _detect_temporal_patterns(self, chat_id: str, store: Any) -> list[dict]:
+        """
+        Detecta patrones temporales en los facts del usuario.
+        Agrupa por day_of_week y hour_of_day para encontrar
+        correlaciones (ej. "los lunes reporta mas ansiedad").
+        """
+        import json
+
+        db = await store.get_db()
+
+        sql = """
+            SELECT id, content, metadata FROM memories
+            WHERE chat_id = ? AND memory_type IN ('fact', 'preference')
+            AND is_active = 1 AND metadata LIKE '%"day_of_week"%'
+            ORDER BY created_at DESC
+            LIMIT 200
+        """
+
+        async with db.execute(sql, (chat_id,)) as cursor:
+            rows = await cursor.fetchall()
+
+        if len(rows) < 10:
+            return []
+
+        facts_by_day: dict[int, list[dict]] = {}
+        for row in rows:
+            try:
+                meta = json.loads(row[2]) if isinstance(row[2], str) else row[2]
+                dow = meta.get("day_of_week")
+                if dow is not None:
+                    facts_by_day.setdefault(dow, []).append({
+                        "id": row[0],
+                        "content": row[1],
+                        "metadata": meta,
+                    })
+            except Exception:
+                continue
+
+        patterns = []
+        day_names = [
+            "lunes",
+            "martes",
+            "miercoles",
+            "jueves",
+            "viernes",
+            "sabado",
+            "domingo",
+        ]
+
+        anxiety_keywords = [
+            "ansied",
+            "estres",
+            "nervios",
+            "angustia",
+            "preocup",
+            "miedo",
+            "panico",
+        ]
+        energy_keywords = [
+            "energia",
+            "motiv",
+            "entusias",
+            "activo",
+            "productiv",
+            "bien",
+            "mejor",
+        ]
+
+        for day, facts in facts_by_day.items():
+            if len(facts) < 3:
+                continue
+
+            content_lower = " ".join(f["content"].lower() for f in facts)
+
+            anxiety_count = sum(1 for kw in anxiety_keywords if kw in content_lower)
+            energy_count = sum(1 for kw in energy_keywords if kw in content_lower)
+
+            if anxiety_count >= 2:
+                patterns.append({
+                    "content": (
+                        f"Patron detectado: el usuario reporta ansiedad "
+                        f"con mas frecuencia los {day_names[day]}."
+                    ),
+                    "type": "temporal_pattern",
+                    "confidence": 0.7,
+                    "day_of_week": day,
+                })
+
+            if energy_count >= 2:
+                patterns.append({
+                    "content": (
+                        f"Patron detectado: el usuario muestra mas energia "
+                        f"los {day_names[day]}."
+                    ),
+                    "type": "temporal_pattern",
+                    "confidence": 0.7,
+                    "day_of_week": day,
+                })
+
+        return patterns
+
 
 consolidation_manager = ConsolidationManager()

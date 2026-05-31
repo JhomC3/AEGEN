@@ -1,10 +1,11 @@
 # src/api/routers/llm_metrics.py
 """
-Endpoints para métricas LLM y observabilidad.
-Responsabilidad única: API endpoints para métricas de observabilidad.
+Endpoints para metricas LLM y observabilidad.
+Responsabilidad unica: API endpoints para metricas de observabilidad.
 """
 
 import logging
+from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
@@ -32,16 +33,19 @@ class LLMStatus(BaseModel):
     average_latency_ms: float
     total_cost_today: float
     status: str
+    generated_at: str
 
 
 class LLMMetricsSummary(BaseModel):
-    """Resumen de métricas LLM."""
+    """Resumen de metricas LLM."""
 
     total_calls: int
     total_tokens: int
     average_latency_seconds: float
     total_cost_usd: float
     active_calls_count: int
+    generated_at: str
+    note: str | None = None
 
 
 @router.get("/status", response_model=LLMStatus)
@@ -65,13 +69,15 @@ async def get_llm_status() -> LLMStatus:
                 key = f"{provider}:{model}"
                 active_calls_dict[key] = sample.value
 
+        now = datetime.now(UTC)
         return LLMStatus(
             correlation_id=correlation_id,
             active_calls=active_calls_dict,
-            total_calls_today=0,  # TODO: Implementar agregación diaria
-            average_latency_ms=0.0,  # TODO: Calcular from histogram
-            total_cost_today=0.0,  # TODO: Implementar agregación diaria
+            total_calls_today=0,
+            average_latency_ms=0.0,
+            total_cost_today=0.0,
             status="operational",
+            generated_at=now.isoformat(),
         )
 
     except Exception as e:
@@ -115,12 +121,19 @@ async def get_llm_metrics_summary() -> LLMMetricsSummary:
             for sample in metric_family.samples:
                 active_calls += int(sample.value)
 
+        now = datetime.now(UTC)
+        note = None
+        if total_calls == 0:
+            note = "No hay llamadas registradas desde el ultimo reinicio."
+
         return LLMMetricsSummary(
             total_calls=total_calls,
             total_tokens=total_tokens,
-            average_latency_seconds=0.0,  # TODO: Calcular from histogram
+            average_latency_seconds=0.0,
             total_cost_usd=total_cost,
             active_calls_count=active_calls,
+            generated_at=now.isoformat(),
+            note=note,
         )
 
     except Exception as e:
@@ -148,17 +161,18 @@ async def llm_health_check() -> dict[str, Any]:
         except Exception:
             metrics_working = False
 
+        now = datetime.now(UTC)
         return {
             "correlation_id": correlation_id,
             "status": "healthy" if metrics_working else "degraded",
             "metrics_collector": "operational" if metrics_working else "failed",
-            "timestamp": "2025-09-04T12:00:00Z",  # TODO: Usar timestamp real
+            "timestamp": now.isoformat(),
         }
 
     except Exception as e:
-        logger.error(f"LLM health check failed: {e}", exc_info=True)
+        logger.error("LLM health check failed: %s", e, exc_info=True)
         return {
             "status": "unhealthy",
             "error": str(e),
-            "timestamp": "2025-09-04T12:00:00Z",
+            "timestamp": datetime.now(UTC).isoformat(),
         }

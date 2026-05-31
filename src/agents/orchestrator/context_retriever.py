@@ -1,7 +1,11 @@
 # src/agents/orchestrator/context_retriever.py
 import json
 import logging
+import re
 import time
+import unicodedata
+from datetime import UTC, datetime
+from typing import Any
 
 from src.core.dependencies import get_vector_memory_manager, redis_connection
 from src.core.schemas.graph import GraphStateV2
@@ -10,8 +14,72 @@ from src.memory.long_term_memory import long_term_memory
 
 logger = logging.getLogger(__name__)
 
-# Intents conversacionales básicos que no activan búsqueda semántica documental pesada
-CASUAL_INTENTS = {"casual_greeting", "farewell", "acknowledgement"}
+
+def _format_fact_age(created_at: str) -> str:
+    """Formatea la antiguedad de un hecho en lenguaje natural."""
+    try:
+        ts = datetime.fromisoformat(created_at)
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=UTC)
+        delta = datetime.now(UTC) - ts
+    except Exception:
+        return ""
+
+    if delta.days == 0:
+        return "hoy"
+    if delta.days <= 7:
+        return f"hace {delta.days} dia{'s' if delta.days > 1 else ''}"
+    if delta.days <= 30:
+        weeks = delta.days // 7
+        return f"hace {weeks} semana{'s' if weeks > 1 else ''}"
+    if delta.days <= 365:
+        months = delta.days // 30
+        return f"hace {months} mes{'es' if months > 1 else ''}"
+    years = delta.days // 365
+    return f"hace {years} ano{'s' if years > 1 else ''}"
+
+
+_CASUAL_PATTERN = re.compile(
+    r"^\s*(hola|hey|buenas?\s*(tardes|dias|noches)?|ey|hi|hello|"
+    r"ok|okey|vale|gracias|de nada|bye|hasta\s*(luego|pronto)?|"
+    r"adi[oó]s|chao|entendido|claro|perfecto|"
+    r"👋|🙋|👍|✅)\s*[!.?]*\s*$",
+    re.IGNORECASE | re.UNICODE,
+)
+
+
+def _is_casual_message(text: str) -> bool:
+    """Detecta mensajes triviales que no requieren búsqueda semántica."""
+    normalized = unicodedata.normalize("NFC", text)
+    return bool(_CASUAL_PATTERN.match(normalized))
+
+
+async def _check_edges_exist(  # noqa: S608
+    store: Any, memory_ids: list[int]
+) -> bool:
+    """
+    Verifica si existe al menos una arista en memory_edges para los IDs dados.
+    Verifica tanto origen_id como destino_id: las aristas son direccionales
+    pero nos interesa saber si el fragmento participa en CUALQUIER relacion.
+    Costo: <5ms si no hay aristas (caso tipico en sesiones nuevas).
+    Usa parametros parametrizados (?); el f-string solo genera placeholders.
+    """
+    if not memory_ids:
+        return False
+    placeholders = ",".join("?" * len(memory_ids))
+    query = (
+        "SELECT 1 FROM memory_edges "
+        f"WHERE origen_id IN ({placeholders}) OR destino_id IN ({placeholders}) "
+        "LIMIT 1"
+    )  # noqa: S608
+    try:
+        params = memory_ids + memory_ids
+        result = await store.execute(query, params)
+        rows = await result.fetchone()
+        return rows is not None
+    except Exception as e:
+        logger.warning(f"Error verificando aristas en memory_edges: {e}")
+        return False
 
 
 async def _load_evolution_note(chat_id: str) -> tuple[str | None, bool]:
@@ -76,13 +144,15 @@ async def context_retriever_node(state: GraphStateV2) -> GraphStateV2:  # noqa: 
         memory_data = await long_term_memory.get_summary(chat_id)
         evolution_note = memory_data.get("summary", "Sin historial previo.")
 
-    # 2. Condición: Intents Conversacionales
+    # 2. Condición: Mensajes Conversacionales Triviales
     if (
-        intent in CASUAL_INTENTS
+        _is_casual_message(user_message)
         or payload.get("processing_type") == "conversational_only"
     ):
         logger.info(
-            f"[CONTEXT-RETRIEVER] Casual intent '{intent}' detected. Skipping semantical search."
+            "[CONTEXT-RETRIEVER] Casual intent '%s' detected. "
+            "Skipping semantical search.",
+            intent,
         )
         state["rag_context"] = {
             "semantic_fragments": [],
@@ -137,17 +207,28 @@ async def context_retriever_node(state: GraphStateV2) -> GraphStateV2:  # noqa: 
         else:
             semantic_fragments = []
 
-        # Graph-RAG Transversal: Expansión de Grafo (ADR-0033) (Tarea 3.4)
-        # Los intents analíticos ejecutan búsquedas multi-salto
-        analytical_intents = {"life_review", "pattern_analysis", "cross_domain_query"}
-        if intent in analytical_intents and semantic_fragments:
+        # Graph-RAG Transversal: Expansión de Grafo (ADR-0033 + ADR-0034)
+        # Activación data-driven: si los fragmentos recuperados tienen aristas,
+        # expandir el grafo sin discriminar por intent.
+        # `expand_with_edges` ya incluye poda por accumulated_weight > 0.3
+        # y límite de 8 fragmentos en la CTE recursiva (ver ADR-0034 sección 1b).
+        if semantic_fragments:
             try:
                 from src.memory.graph_search import expand_with_edges
 
                 seed_ids = [item["id"] for item in semantic_fragments if "id" in item]
-                graph_fragments = await expand_with_edges(
-                    store=manager.store, seed_memory_ids=seed_ids, max_hops=2
+                has_edges = await _check_edges_exist(
+                    store=manager.store, memory_ids=seed_ids
                 )
+                if has_edges:
+                    graph_fragments = await expand_with_edges(
+                        store=manager.store, seed_memory_ids=seed_ids, max_hops=2
+                    )
+                    logger.info(
+                        "[CONTEXT-RETRIEVER] Graph-RAG expandido: "
+                        "%d fragmentos de grafo",
+                        len(graph_fragments),
+                    )
             except Exception as ge:
                 logger.warning(f"Error expandiendo grafo en context_retriever: {ge}")
 

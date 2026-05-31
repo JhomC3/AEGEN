@@ -6,14 +6,15 @@ correctamente las peticiones a la API de Telegram y maneja las respuestas
 esperadas (tanto exitosas como de error) sin realizar llamadas de red reales.
 """
 
-import json
 from pathlib import Path
+from urllib.parse import unquote_plus
 
 import pytest
 import respx
 from httpx import Response
 from pydantic import SecretStr
 
+from src.tools import telegram_interface
 from src.tools.telegram_interface import TelegramToolManager
 
 # Constantes para los tests
@@ -26,13 +27,14 @@ FILE_BASE_URL = f"https://api.telegram.org/file/bot{BOT_TOKEN}"
 def telegram_tool(monkeypatch) -> TelegramToolManager:
     """
     Fixture que proporciona una instancia de la TelegramToolManager, mockeando
-    el token de Telegram en la configuración para el entorno de prueba.
+    el token de Telegram en la configuracion para el entorno de prueba.
     """
-    # Mockea la configuración para que la herramienta use el token de prueba
+    # Reset singleton before each test
+    telegram_interface._telegram_manager = None
     monkeypatch.setattr(
         "src.core.config.settings.TELEGRAM_BOT_TOKEN", SecretStr(BOT_TOKEN)
     )
-    return TelegramToolManager()
+    return telegram_interface.get_telegram_manager()
 
 
 @respx.mock
@@ -125,9 +127,12 @@ async def test_send_message_success(telegram_tool: TelegramToolManager):
     assert success is True
     assert send_message_route.called
     request = send_message_route.calls.last.request
-    # Cargar el contenido del body para una comparación robusta de JSON
-    sent_data = json.loads(request.content)
-    assert sent_data == {"chat_id": chat_id, "text": text}
+    # The code sends form-encoded data, not JSON
+    sent_data = dict(
+        unquote_plus(pair).split("=") for pair in request.content.decode().split("&")
+    )
+    assert sent_data["chat_id"] == chat_id
+    assert sent_data["text"] == text
 
 
 @respx.mock

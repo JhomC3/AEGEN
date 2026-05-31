@@ -55,6 +55,19 @@ class TelegramToolManager:
                 logger.error("Error action: %s", e)
                 return False
 
+    async def download_file(self, file_id: str, dest_dir: Path) -> Path | None:
+        file_path = await self.get_file_path(file_id)
+        if not file_path:
+            return None
+        url = f"{self.file_base_url}/{file_path}"
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            resp = await client.get(url)
+            resp.raise_for_status()
+            filename = Path(file_path).name
+            dest = dest_dir / filename
+            dest.write_bytes(resp.content)
+            return dest
+
 
 @tool
 async def download_telegram_file(file_id: str, save_path: Path) -> bool:
@@ -75,5 +88,16 @@ async def reply_to_telegram_chat(chat_id: str, text: str) -> bool:
     return await telegram_manager.send_message(chat_id, text)
 
 
-# Singleton instance
-telegram_manager = TelegramToolManager()
+# Singleton instance (lazy)
+_telegram_manager: TelegramToolManager | None = None
+
+
+def get_telegram_manager() -> TelegramToolManager:
+    """Lazy initialization to allow test mocking."""
+    global _telegram_manager
+    if _telegram_manager is None:
+        _telegram_manager = TelegramToolManager()
+    return _telegram_manager
+
+
+telegram_manager = get_telegram_manager()

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aegen"
-version = "0.7.2"
+version = "0.9.0"
 description = "Sistema multiagente"
 authors = [{ name = "Jhonn Muñoz C.", email = "jhonnmcortes@gmail.com" }]
 readme = "README.md"

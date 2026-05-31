@@ -9,17 +9,58 @@ from .metrics import LLMCallMetrics
 
 logger = logging.getLogger(__name__)
 
+_PROVIDER_BY_CLASS = {
+    "ChatGoogleGenerativeAI": "google",
+    "ChatGroq": "groq",
+    "ChatAnthropic": "anthropic",
+}
+
+_OPENROUTER_DOMAINS = {"openrouter.ai"}
+_AZURE_DOMAINS = {"openai.azure.com"}
+
+_COST_PER_1K_TOKENS: dict[str, dict[str, float]] = {
+    "groq": {"input": 0.0, "output": 0.0},
+    "google": {"input": 0.000075, "output": 0.0003},
+    "openrouter": {"input": 0.0, "output": 0.0},
+    "openai": {"input": 0.0025, "output": 0.01},
+    "anthropic": {"input": 0.003, "output": 0.015},
+    "azure_openai": {"input": 0.0, "output": 0.0},
+    "unknown": {"input": 0.0, "output": 0.0},
+}
+
 
 def extract_model_info(serialized: dict[str, Any]) -> tuple[str, str]:
     """Extrae provider y modelo del LLM serializado."""
-    provider = "unknown"
-    model = "unknown"
+    class_name = (serialized.get("id") or ["unknown"])[-1]
+    kwargs = serialized.get("kwargs", {})
 
-    if serialized.get("id", [])[-1] == "ChatGoogleGenerativeAI":
-        provider = "google"
-        model = serialized.get("kwargs", {}).get("model", "gemini-pro")
+    if class_name in _PROVIDER_BY_CLASS:
+        provider = _PROVIDER_BY_CLASS[class_name]
+    elif class_name == "ChatOpenAI":
+        base_url = str(kwargs.get("openai_api_base") or kwargs.get("base_url", ""))
+        if any(domain in base_url for domain in _OPENROUTER_DOMAINS):
+            provider = "openrouter"
+        elif any(domain in base_url for domain in _AZURE_DOMAINS):
+            provider = "azure_openai"
+        else:
+            provider = "openai"
+    else:
+        provider = "unknown"
 
+    model = kwargs.get("model_name") or kwargs.get("model", "unknown")
     return provider, model
+
+
+def estimate_cost_usd(
+    provider: str,
+    input_tokens: int | None,
+    output_tokens: int | None,
+) -> float:
+    """Estima el costo en USD basado en el provider y tokens consumidos."""
+    costs = _COST_PER_1K_TOKENS.get(provider, _COST_PER_1K_TOKENS["unknown"])
+    input_cost = ((input_tokens or 0) / 1000) * costs["input"]
+    output_cost = ((output_tokens or 0) / 1000) * costs["output"]
+    return round(input_cost + output_cost, 8)
 
 
 def create_initial_metrics(
@@ -56,27 +97,26 @@ def update_metrics_from_result(
     success: bool,
     error: BaseException | None = None,
 ) -> None:
-    """Actualiza métricas con resultado de la llamada."""
+    """Actualiza metricas con resultado de la llamada."""
     metrics.success = success
     if error:
         metrics.error_message = str(error)
 
     if response:
-        # 1. Intentar extraer de Generations (LangChain legacy/standard)
         if hasattr(response, "generations") and response.generations:
             first_gen = response.generations[0][0] if response.generations[0] else None
             if first_gen and hasattr(first_gen, "message"):
                 msg = first_gen.message
                 if hasattr(msg, "usage_metadata") and msg.usage_metadata:
                     _extract_from_usage_metadata(metrics, msg.usage_metadata)
+                    _update_cost(metrics)
                     return
 
-        # 2. Intentar usage_metadata directo (newer LangChain)
         if hasattr(response, "usage_metadata") and response.usage_metadata:
             _extract_from_usage_metadata(metrics, response.usage_metadata)
+            _update_cost(metrics)
             return
 
-        # 3. Fallback a llm_output (legacy)
         if hasattr(response, "llm_output") and response.llm_output:
             usage = response.llm_output.get("usage", {})
             metrics.input_tokens = usage.get("prompt_tokens") or usage.get(
@@ -85,6 +125,18 @@ def update_metrics_from_result(
             metrics.output_tokens = usage.get("completion_tokens") or usage.get(
                 "output_tokens"
             )
+
+    _update_cost(metrics)
+
+
+def _update_cost(metrics: LLMCallMetrics) -> None:
+    """Actualiza el costo estimado si hay tokens disponibles."""
+    if metrics.input_tokens is not None or metrics.output_tokens is not None:
+        metrics.estimated_cost_usd = estimate_cost_usd(
+            metrics.provider,
+            metrics.input_tokens,
+            metrics.output_tokens,
+        )
 
 
 def _extract_from_usage_metadata(

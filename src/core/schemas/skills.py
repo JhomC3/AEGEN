@@ -14,6 +14,14 @@ class SkillRequirements(BaseModel):
     chain_to: str | None = None
 
 
+class SkillGatingRequirements(BaseModel):
+    """Requisitos de gating condicional para carga de skills."""
+
+    env: list[str] = Field(default_factory=list)
+    python_packages: list[str] = Field(default_factory=list)
+    bins: list[str] = Field(default_factory=list)
+
+
 class SkillSchedule(BaseModel):
     """Configuración de ejecución programada de un skill."""
 
@@ -30,6 +38,7 @@ class SkillManifest(BaseModel):
     version: str = "1.0.0"
     capabilities: list[str] = Field(default_factory=list)
     requirements: SkillRequirements = Field(default_factory=SkillRequirements)
+    requires: SkillGatingRequirements = Field(default_factory=SkillGatingRequirements)
     async_capable: bool = False
     schedule: SkillSchedule | None = None
 

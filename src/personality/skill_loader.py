@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import importlib.util
 import logging
+import os
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -25,6 +27,32 @@ class LoadedSkill:
     tool_module: Any = None
     schemas_module: Any = None
     path: Path = field(default_factory=Path)
+    status: str = "active"
+
+
+def _check_requirements(requires: dict) -> bool:
+    """
+    Verifica que los requisitos de un skill están disponibles.
+
+    Usa importlib.util.find_spec() en lugar de importlib.import_module()
+    para verificar existencia de paquetes Python SIN ejecutarlos.
+    """
+    for env_var in requires.get("env", []):
+        if not os.environ.get(env_var):
+            logger.debug("[SKILL-LOADER] Requisito env no satisfecho: %s", env_var)
+            return False
+
+    for package in requires.get("python_packages", []):
+        if importlib.util.find_spec(package) is None:
+            logger.debug("[SKILL-LOADER] Requisito Python no instalado: %s", package)
+            return False
+
+    for binary in requires.get("bins", []):
+        if not shutil.which(binary):
+            logger.debug("[SKILL-LOADER] Binario no encontrado en PATH: %s", binary)
+            return False
+
+    return True
 
 
 class SkillLoader:
@@ -67,6 +95,21 @@ class SkillLoader:
                             skill_dir,
                         )
                         continue
+
+                    requires = skill.content.manifest.requires.model_dump()
+                    if (
+                        requires.get("env")
+                        or requires.get("python_packages")
+                        or requires.get("bins")
+                    ):
+                        if not _check_requirements(requires):
+                            logger.info(
+                                "Skill '%s' deshabilitado por requisitos "
+                                "no satisfechos",
+                                skill_id,
+                            )
+                            skill.status = "disabled"
+                            continue
 
                     seen_ids.add(skill_id)
                     loaded.append(skill)

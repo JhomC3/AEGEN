@@ -32,21 +32,24 @@ async def test_expand_with_edges_2_hops(graph_db):
     # 1. Insertar 3 memorias activas
     # ID 1: meta déficit calórico
     await db.execute(
-        "INSERT INTO memories (id, chat_id, namespace, content, content_hash, memory_type) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (1, "chat_g1", "user", "Déficit calórico sostenido", "hash_g1", "fact"),
+        "INSERT INTO memories "
+        "(id, chat_id, namespace, content, content_hash, memory_type, is_active) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (1, "chat_g1", "user", "Déficit calórico sostenido", "hash_g1", "fact", 1),
     )
     # ID 2: irritabilidad
     await db.execute(
-        "INSERT INTO memories (id, chat_id, namespace, content, content_hash, memory_type) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (2, "chat_g1", "user", "Alta irritabilidad matutina", "hash_g2", "fact"),
+        "INSERT INTO memories "
+        "(id, chat_id, namespace, content, content_hash, memory_type, is_active) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (2, "chat_g1", "user", "Alta irritabilidad matutina", "hash_g2", "fact", 1),
     )
     # ID 3: gasto impulsivo en café
     await db.execute(
-        "INSERT INTO memories (id, chat_id, namespace, content, content_hash, memory_type) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (3, "chat_g1", "user", "Gasto impulsivo en café", "hash_g3", "fact"),
+        "INSERT INTO memories "
+        "(id, chat_id, namespace, content, content_hash, memory_type, is_active) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (3, "chat_g1", "user", "Gasto impulsivo en café", "hash_g3", "fact", 1),
     )
     await db.commit()
 
@@ -54,12 +57,14 @@ async def test_expand_with_edges_2_hops(graph_db):
     # 1 (déficit) -> causa -> 2 (irritabilidad) con peso 0.8
     # 2 (irritabilidad) -> causa -> 3 (gasto) con peso 0.9
     await db.execute(
-        "INSERT INTO memory_edges (origen_id, destino_id, tipo_relacion, peso, created_by) "
+        "INSERT INTO memory_edges "
+        "(origen_id, destino_id, tipo_relacion, peso, created_by) "
         "VALUES (?, ?, ?, ?, ?)",
         (1, 2, "causa", 0.8, "test"),
     )
     await db.execute(
-        "INSERT INTO memory_edges (origen_id, destino_id, tipo_relacion, peso, created_by) "
+        "INSERT INTO memory_edges "
+        "(origen_id, destino_id, tipo_relacion, peso, created_by) "
         "VALUES (?, ?, ?, ?, ?)",
         (2, 3, "causa", 0.9, "test"),
     )

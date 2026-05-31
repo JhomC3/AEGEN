@@ -16,7 +16,8 @@ async def expand_with_edges(
 ) -> list[dict[str, Any]]:
     """
     Dado un conjunto de memory IDs semilla (resultado del Two-Stage Retrieval),
-    expande el grafo horizontalmente usando memory_edges con un límite fijo de max_hops (límite hard = 2).
+    expande el grafo horizontalmente usando memory_edges con un límite fijo
+    de max_hops (límite hard = 2).
 
     Retorna los recuerdos del sub-grafo con su peso de relevancia acumulada.
     """
@@ -40,23 +41,26 @@ async def expand_with_edges(
         params.extend(relation_types)
 
     # Query CTE recursiva para expansión transversal (ADR-0033)
-    sql_cte = f"""  # noqa: S608
+    sql_cte = f"""
     WITH RECURSIVE subgraph(memory_id, depth, accumulated_weight) AS (
-        -- Semilla: los IDs del RAG inicial
-        SELECT id, 0, 1.0 FROM memories WHERE id IN ({placeholder_seeds}) AND is_active = 1
+        SELECT id, 0, 1.0 FROM memories
+        WHERE id IN ({placeholder_seeds}) AND is_active = 1
         UNION ALL
         SELECT e.destino_id, s.depth + 1, s.accumulated_weight * e.peso
         FROM memory_edges e
         JOIN subgraph s ON e.origen_id = s.memory_id
         WHERE s.depth < ? {relation_filter}
     )
-    SELECT g.memory_id, MAX(g.accumulated_weight) as relevance, m.chat_id, m.content, m.memory_type, m.metadata
+    SELECT g.memory_id,
+           MAX(g.accumulated_weight) as relevance,
+           m.chat_id, m.content, m.memory_type, m.metadata
     FROM subgraph g
     JOIN memories m ON g.memory_id = m.id
-    WHERE m.is_active = 1 AND g.memory_id NOT IN ({placeholder_seeds})
+    WHERE m.is_active = 1
+      AND g.memory_id NOT IN ({placeholder_seeds})
     GROUP BY g.memory_id
     ORDER BY relevance DESC
-    """
+    """  # noqa: S608
 
     # Añadimos el parámetro de profundidad a params
     params_final = params[: len(seed_memory_ids)] + [hops]
@@ -80,7 +84,9 @@ async def expand_with_edges(
                 })
 
         logger.debug(
-            f"[GRAPH-SEARCH] Expanded seed {seed_memory_ids} into {len(results)} transversal fragments."
+            "[GRAPH-SEARCH] Expanded seed %s into %d fragments.",
+            seed_memory_ids,
+            len(results),
         )
         return results
 

@@ -6,6 +6,7 @@ Orchestrates Chunker, Deduplicator, EmbeddingService, and SQLiteStore.
 """
 
 import logging
+from datetime import UTC, datetime
 
 from src.memory.chunker import RecursiveChunker
 from src.memory.deduplicator import Deduplicator
@@ -13,6 +14,17 @@ from src.memory.embeddings import EmbeddingService
 from src.memory.sqlite_store import SQLiteStore
 
 logger = logging.getLogger(__name__)
+
+
+def _enrich_temporal_metadata(metadata: dict) -> dict:
+    """Añade campos temporales derivados de created_at al metadata."""
+    now = datetime.now(UTC)
+    ts = datetime.fromisoformat(metadata.get("created_at", now.isoformat()))
+    metadata["day_of_week"] = ts.weekday()
+    metadata["hour_of_day"] = ts.hour
+    metadata["week_of_year"] = ts.isocalendar()[1]
+    metadata["is_weekend"] = ts.weekday() >= 5
+    return metadata
 
 
 class IngestionPipeline:
@@ -61,6 +73,7 @@ class IngestionPipeline:
             final_namespace = namespace
 
         metadata = metadata or {}
+        metadata = _enrich_temporal_metadata(metadata)
 
         # Branch A: Ingesta Jerárquica Semántica (Pilar I) (Fase 3, Tarea 3.6)
         if use_semantic_chunker:
