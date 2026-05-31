@@ -55,10 +55,12 @@ class IngestionPipeline:
             chat_id: ID del chat
             text: Texto a procesar
             memory_type: Tipo de memoria (fact, preference, etc.)
-            namespace: Espacio de nombres (se calcula como 'user_{chat_id}' por defecto para usuarios)
+            namespace: Espacio de nombres
+                (calculado como 'user_{chat_id}' por defecto)
             metadata: Metadatos base
             source_skill: Skill origen que generó esta memoria
-            use_semantic_chunker: True si se debe usar segmentación semántica jerárquica (libros, YouTube)
+            use_semantic_chunker: True para segmentación semántica
+                jerárquica (libros, YouTube)
 
         Returns:
             Número de fragmentos nuevos insertados.
@@ -77,32 +79,27 @@ class IngestionPipeline:
 
         # Branch A: Ingesta Jerárquica Semántica (Pilar I) (Fase 3, Tarea 3.6)
         if use_semantic_chunker:
-            try:
-                from src.memory.semantic_chunker import SemanticChunker
+            from src.memory.semantic_chunker import SemanticChunker
 
-                chunker = SemanticChunker()
+            chunker = SemanticChunker()
 
-                # Ejecuta segmentación y purificación de Gemini
-                flat_structures = await chunker.chunk_semantically(text)
-                if not flat_structures:
-                    logger.warning(
-                        "[INGESTION] Semantic chunker returned empty structures. Fallback to Recursive."
-                    )
-                else:
-                    return await self._process_semantic_structures(
-                        chat_id,
-                        flat_structures,
-                        final_namespace,
-                        source_skill,
-                        metadata,
-                    )
-            except Exception as se:
-                logger.error(
-                    f"[INGESTION] Failed semantic chunker execution: {se}. Fallback to Recursive.",
-                    exc_info=True,
+            # Ejecuta segmentación y purificación de Gemini
+            flat_structures = await chunker.chunk_semantically(text)
+            if not flat_structures:
+                raise RuntimeError(
+                    "[INGESTION] Semantic chunker returned empty. "
+                    "No fallback: use_semantic_chunker=True."
                 )
 
-        # Branch B: Chunker Recursivo tradicional (fallback para global o default para user)
+            return await self._process_semantic_structures(
+                chat_id,
+                flat_structures,
+                final_namespace,
+                source_skill,
+                metadata,
+            )
+
+        # Branch B: Chunker Recursivo tradicional
         # 1. Chunking
         chunks = self.chunker.chunk(text, metadata)
         if not chunks:
@@ -249,7 +246,7 @@ class IngestionPipeline:
                     "hierarchy_level": 4,
                 }
 
-                # Insertamos con el parent_id resuelto (jerarquía vertical Parent-Child RAG)
+                # Insertamos con parent_id (jerarquía Parent-Child RAG)
                 child_id = await self.store.insert_memory(
                     chat_id=chat_id,
                     content=child["content"],
@@ -268,6 +265,7 @@ class IngestionPipeline:
                     ingested_count += 1
 
         logger.info(
-            f"[INGESTION] Hierarchical semantic ingestion complete. Inserted: {ingested_count} records."
+            "[INGESTION] Hierarchical semantic ingestion: %d records.",
+            ingested_count,
         )
         return ingested_count
