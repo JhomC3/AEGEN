@@ -1,106 +1,156 @@
-# Manual de Gestión de Conocimiento (Auto-Sync)
+# Manual de Gestión de Conocimiento de AEGEN
 
-Este manual describe cómo alimentar el cerebro de **AEGEN** con nuevos documentos, guías terapéuticas y material de referencia sin necesidad de conocimientos de programación ni reinicios del sistema.
+Este manual describe cómo alimentar a AEGEN con documentos, guías terapéuticas
+y material de referencia usando el nuevo sistema de gestión de conocimiento.
 
-## 1. Concepto de "Auto-Sync"
-AEGEN cuenta con un **Vigilante de Conocimiento** (`KnowledgeWatcher`) que monitorea constantemente una carpeta específica.
-Cualquier archivo válido que coloques allí será:
-1.  **Detectado** automáticamente en menos de 30 segundos.
-2.  **Leído y procesado** (extracción de texto).
-3.  **Indexado** en la memoria vectorial para ser usado en futuras conversaciones.
+## 1. Arquitectura del Sistema
 
----
+AEGEN cuenta con un sistema profesional de gestión de conocimiento que incluye:
+
+| Componente | Función |
+|---|---|
+| `KnowledgeManager` | Orquestador principal: valida, registra e ingiere archivos |
+| `KnowledgeTracker` | Tabla `knowledge_files` en SQLite con trazabilidad completa |
+| `KnowledgeIngestor` | Extrae texto y lo ingiere con `SemanticChunker` (Gemini Flash) o `RecursiveChunker` |
+| `KnowledgeWatcher` | Vigilante opcional que detecta cambios en `storage/knowledge/` |
+
+Cada archivo queda registrado con su hash SHA-256, estado, chunker usado y
+cantidad de chunks generados. Esto permite saber exactamente qué está en el
+sistema y cuándo se ingirió.
 
 ## 2. Tipos de Archivos Soportados
 
 | Formato | Extensión | Recomendación |
-| :--- | :--- | :--- |
-| **PDF** | `.pdf` | Ideal para libros, papers y guías formateadas. **Debe tener texto seleccionable** (no escaneos de imagen). |
-| **Markdown** | `.md` | El mejor formato para notas técnicas o estructuradas. |
-| **Texto Plano** | `.txt` | Para notas rápidas o transcripciones simples. |
+|---|---|---|
+| **PDF** | `.pdf` | Ideal para libros y guías. Debe tener texto seleccionable (no escaneos). |
+| **Markdown** | `.md` | Mejor formato para notas estructuradas. |
+| **Texto Plano** | `.txt` | Para notas rápidas o transcripciones. |
 
-> ⚠️ **Nota:** Los archivos de imagen, Word (.docx) o Excel (.xlsx) **NO** son procesados actualmente y serán ignorados por el sistema.
+## 3. Cómo Subir Documentos
 
----
+### Método A: Consola Web de Google Cloud (Recomendado)
 
-## 3. Cómo Subir Documentos (Paso a Paso)
-
-El sistema se ejecuta en una Máquina Virtual (VM) de Google Cloud. Debes colocar los archivos en la carpeta `~/AEGEN/storage/knowledge/` de esa VM.
-
-### Método A: Desde la Consola Web de Google Cloud (Fácil)
-Ideal para subir 1 o 2 archivos rápidamente sin configurar nada en tu PC.
-
-1.  Ve a [Google Cloud Console > Compute Engine](https://console.cloud.google.com/compute/instances).
-2.  Ubica tu instancia (ej. `aegen-vm`) y haz clic en el botón **SSH**. Se abrirá una terminal en tu navegador.
-3.  En la esquina superior derecha de esa terminal, haz clic en el botón de **"Subir archivo"** (Upload file).
-4.  Selecciona el PDF desde tu computadora. El archivo se subirá a tu carpeta de usuario (ej. `/home/tu_usuario/`).
-5.  **Mueve el archivo a la carpeta de conocimiento** ejecutando este comando en la terminal SSH:
-
-    ```bash
-    # Reemplaza 'mi_documento.pdf' por el nombre real de tu archivo
-    mv mi_documento.pdf ~/AEGEN/storage/knowledge/
-    ```
-
-### Método B: Usando línea de comandos (Avanzado)
-Si tienes `gcloud` instalado en tu computadora, puedes subir archivos directamente:
+1. Ve a [Google Cloud Console](https://console.cloud.google.com/compute/instances).
+2. Ubica tu VM (`instance-20251218-164804`) y haz clic en **SSH** > **Abrir en ventana del navegador**.
+3. En la esquina superior derecha de la terminal, haz clic en el ícono de **Subir archivo**.
+4. Selecciona el PDF desde tu computadora. Se subirá a tu home (`~`).
+5. Mueve el archivo a la carpeta de conocimiento:
 
 ```bash
-# Sintaxis: gcloud compute scp [ARCHIVO_LOCAL] [USUARIO]@[INSTANCIA]:[RUTA_DESTINO]
-gcloud compute scp "C:\Documentos\Guia_TCC.pdf" usuario@aegen-vm:~/AEGEN/storage/knowledge/ --zone us-central1-a
+mv ~/*.pdf ~/AEGEN/storage/knowledge/
 ```
 
----
-
-## 4. Ciclo de Vida de los Documentos
-
-El sistema es inteligente y reacciona a tus acciones sobre los archivos:
-
-### ➤ Añadir conocimiento
-Simplemente **copia** el archivo a la carpeta.
-*   **Resultado:** AEGEN lee el archivo y lo aprende.
-
-### ➤ Actualizar conocimiento
-Si modificas un archivo (ej. corriges un error en un `.md`) y lo **sobreescribes** en la carpeta:
-*   **Resultado:** AEGEN detecta el cambio, **borra** lo que sabía de la versión anterior y **re-aprende** la nueva versión inmediatamente.
-
-### ➤ Eliminar conocimiento
-Si **borras** un archivo de la carpeta:
-*   **Resultado:** AEGEN **elimina** todas las memorias asociadas a ese documento para evitar dar información obsoleta.
+### Método B: Línea de comandos (Avanzado)
 
 ```bash
-# Ejemplo: Borrar un documento desde la terminal SSH
-rm ~/AEGEN/storage/knowledge/documento_obsoleto.pdf
+gcloud compute scp "mi-documento.pdf" \
+  jjhonn_1020@instance-20251218-164804:~/AEGEN/storage/knowledge/ \
+  --zone us-central1-a
 ```
 
----
+### Método C: Desde Google Drive
 
-## 5. Verificación (¿Cómo sé si funcionó?)
-
-Puedes ver en tiempo real qué está haciendo el cerebro de AEGEN consultando los "logs" (registros) del sistema.
-
-Desde la terminal SSH de tu VM:
+Si tienes los PDFs en Google Drive, desde la VM:
 
 ```bash
-# Ver los logs del sistema filtrando por el vigilante
+pip install gdown
+gdown "https://drive.google.com/uc?id=FILE_ID" -O ~/AEGEN/storage/knowledge/libro.pdf
+```
+
+El FILE_ID se obtiene del link de compartir de Google Drive:
+`https://drive.google.com/file/d/FILE_ID/view`
+
+## 4. Comandos de Gestión
+
+Después de subir los archivos, usar los siguientes comandos desde la VM:
+
+```bash
 cd ~/AEGEN
-docker-compose logs -f app | grep "KnowledgeWatcher"
+
+# Ver estado de todos los archivos registrados
+make knowledge-status
+
+# Sincronizar archivos nuevos en storage/knowledge/
+make knowledge-sync
+
+# Añadir un archivo específico
+make knowledge-add FILE=ruta/al/archivo.pdf
+
+# Eliminar un archivo y sus chunks
+make knowledge-delete FILE=archivo.pdf
+
+# Re-ingestiar todo (cambiar de chunker recursive → semantic)
+make knowledge-reingest CHUNKER=semantic
 ```
 
-**Deberías ver mensajes como estos:**
-> `INFO:     Detectado archivo nuevo: Guia_Ansiedad.pdf`
-> `INFO:     Procesando conocimiento global: Guia_Ansiedad.pdf`
-> `INFO:     ✅ Ingeridos 45 fragmentos nuevos de Guia_Ansiedad.pdf`
+### Interpretación del Estado
 
-Si ves el ✅, ¡el conocimiento ya está disponible para el Agente!
+| Estado | Significado |
+|---|---|
+| `pending` | Archivo registrado, pendiente de ingestión |
+| `ingesting` | Ingestión en progreso |
+| `done` | Ingestión exitosa |
+| `failed` | Error durante la ingestión (ver `error_message`) |
 
----
+### Ver Logs en Tiempo Real
 
-## 6. Buenas Prácticas para Documentos
+```bash
+docker-compose logs -f app | grep "KNOWLEDGE\|INGESTION\|CHUNKER"
+```
 
-Para que AEGEN entienda mejor tus documentos:
+## 5. Chunkers Disponibles
 
-1.  **Nombres Claros:** Usa nombres de archivo descriptivos.
-    *   ✅ `Protocolo_TCC_Depresion.pdf`
-    *   ❌ `doc_v2_final.pdf`
-2.  **Texto Limpio:** En PDFs, asegúrate de que el texto sea legible y no esté torcido o manchado (si es escaneado, usa un OCR antes).
-3.  **Estructura:** Si usas Markdown (`.md`), usa títulos (`#`, `##`) para separar secciones. Esto ayuda al sistema a dividir la información en "trozos" coherentes.
+| Chunker | Ventajas | Desventajas |
+|---|---|---|
+| `semantic` | Jerarquía L3→L4, dominio clasificado, ruido purificado | Usa Gemini (costo de API), más lento |
+| `recursive` | Rápido, no usa API externa | Chunks planos por tamaño, puede cortar ideas |
+
+**Recomendación:** Usar `semantic` para documentos importantes (libros, guías
+clínicas). Usar `recursive` para notas rápidas o documentos de referencia.
+
+## 6. Verificación Mensual de Integridad
+
+Cada mes, verificar que los backups y snapshots están funcionando:
+
+```bash
+# 1. Verificar que los snapshots del disco existen
+#    Ir a GCP Console → Compute Engine → Snapshots
+#    Debe mostrarse un snapshot reciente (< 24h)
+
+# 2. Verificar que el backup en GCS existe
+gsutil ls gs://aegen-backups-jjhonn/backups/
+
+# 3. Verificar el estado del sistema de conocimiento
+make knowledge-status
+```
+
+## 7. Limpieza de Archivos Obsoletos
+
+Periódicamente, eliminar archivos legacy que ya no se usan:
+
+```bash
+cd ~/AEGEN
+
+# Eliminar archivos de BD obsoletos (si existen)
+rm -f storage/memory.db storage/memory.sqlite
+
+# Eliminar backups locales antiguos (GCS ya los tiene)
+rm -f storage/backups/*.db
+```
+
+## 8. Respaldo y Recuperación
+
+### Backup Automático
+
+El sistema respalda automáticamente la base de datos a GCS después de cada
+sesión de conversación (`session_logger.py`).
+
+**Bucket:** `gs://aegen-backups-jjhonn`
+**Retención:** 30 días (lifecycle rule automática)
+**Snapshot del disco:** Diario con retención de 14 días
+
+### Recuperación desde Backup
+
+Si la VM se destruye o la base de datos se corrompe, el sistema restaura
+automáticamente desde el último backup en GCS al arrancar (`dependencies.py:37`).
+No se requiere intervención manual.

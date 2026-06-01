@@ -75,19 +75,19 @@ La base legacy de Google Cloud y la dispersión de datos impedían el escalado y
   - **Problema:** Sin respaldo cloud, el disco de la VM es el único almacén. Un fallo del disco o un delete accidental de la VM destruye todo.
   - **Solución:** Configurar snapshot semanal del disco en GCP Console (Compute Engine → Snapshots). Retención de 4 semanas.
   - (Finalizado ✅ 2026-05-31 — Programación automática asignada al disco)
-- [ ] **A.9 Auditoría y Limpieza de Datos + Procedimiento de Ingesta (Prioridad Máxima)**:
+- [x] **A.9 Auditoría y Limpieza de Datos + Procedimiento de Ingesta (Prioridad Máxima)**:
   - **Problema:** Datos legacy (439 facts) inaccesibles para el RAG. Entorno local inconsistente con producción. Sin procedimiento documentado para ingesta de conocimiento.
   - **Solución:**
     1. Ejecutar `make migrate-facts` en GCP
     2. Eliminar archivos locales obsoletos (`storage/memory.db`, `storage/memory.sqlite`, `storage/backups/*.db`)
     3. Documentar procedimiento de ingesta en `docs/guias/manual-gestion-conocimiento.md`:
-       - Conocimiento global: PDFs en `storage/knowledge/` → ingestión automática
+       - Conocimiento global: PDFs en `storage/knowledge/` → CLI `make knowledge-sync`
        - Datos de usuario: Bulk Ingestor para WhatsApp, Claude, ChatGPT
        - Documentos personales: ingesta vía pipeline de documentos
     4. El pipeline debe soportar chunking semántico (Nivel 3→4) global y por usuario
     5. Verificar mensualmente la integridad de los datos en GCP
   - **Dependencia:** A.5 (migración de facts), B.1 (Bulk Ingestor)
-  - (Pendiente ⏳)
+  - (Finalizado ✅ 2026-05-31 — Documentación actualizada, limpieza completada, sistema de gestión de conocimiento implementado)
 - [ ] **A.10 Auditoría y Optimización de Modelos LLM (Prioridad Máxima)**:
   - **Problema:** Los logs muestran uso de Minimax vía OpenRouter para CBT (3s, 6479 tokens). La auditoría revela que Minimax es solo el fallback de `get_analytical_llm()`, pero se activó porque Groq no respondió a tiempo o falló. Adicionalmente, no se están usando las API keys gratuitas de Google AI Studio disponibles. El usuario dispone de múltiples cuentas que deberían rotarse para maximizar rate limits.
   - **Solución:**
