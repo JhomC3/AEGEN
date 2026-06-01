@@ -55,26 +55,26 @@ La base legacy de Google Cloud y la dispersión de datos impedían el escalado y
     4. Crear un test de integración que verifique que la anotación del router es `IntentType` y que ningún archivo hardcodea strings de intents.
   - **ADR requerido:** ADR-0034 (ver `adr/ADR-0034-graph-rag-data-driven.md`)
   - (Finalizado ✅ 2026-05-30)
-- [ ] **A.5 Migrar Facts Legacy a Atómicos en Producción (Prioridad Máxima)**:
+- [x] **A.5 Migrar Facts Legacy a Atómicos en Producción (Prioridad Máxima)**:
   - **Problema:** 439 facts del usuario `6095416210` están en formato JSON blob (pre-ADR-0032). El RAG no puede encontrarlos semánticamente.
   - **Solución:** Ejecutar `make migrate-facts` en la VM de GCP para re-ingestar cada hecho como registro atómico individual con su propio embedding.
-  - (En Ejecución 🔄)
-- [ ] **A.6 Re-ingestar PDFs Globales con SemanticChunker (Prioridad Máxima)**:
+  - (Finalizado ✅ 2026-05-31 — 366 hechos atómicos individuales re-ingeridos)
+- [x] **A.6 Re-ingestar PDFs Globales con SemanticChunker (Prioridad Máxima)**:
   - **Problema:** Los PDFs en `storage/knowledge/` (TCC, DSM-5) fueron ingeridos con el chunker recursivo plano (400 tok). No tienen estructura jerárquica (Nivel 3 → Nivel 4) ni purificación de ruido.
   - **Solución:** Re-procesar los PDFs usando `use_semantic_chunker=True` en el `IngestionPipeline`. Esto generará chunks padres (Nivel 3) e hijos (Nivel 4) vinculados por `parent_id`, con contenido purificado de ruido.
   - **Verificación:** Los chunks existentes se marcan `is_active=0`. Los nuevos chunks reemplazan a los viejos. El RAG debe encontrar fragmentos semánticamente coherentes en lugar de texto partido a la mitad.
-  - (Pendiente ⏳)
-- [ ] **A.7 Activar Respaldo en GCS (Prioridad Máxima)**:
+  - (Finalizado ✅ 2026-05-31 — Sistema KnowledgeManager implementado, 57 chunks jerárquicos generados)
+- [x] **A.7 Activar Respaldo en GCS (Prioridad Máxima)**:
   - **Problema:** `GCS_BACKUP_BUCKET = None`. El `CloudBackupManager` es funcional pero nunca se activó. Si la VM se destruye, se pierden todos los datos.
   - **Solución:**
     1. Crear bucket GCS (ej. `aegen-backups`) con retention policy de 30 días
     2. Configurar `GCS_BACKUP_BUCKET` y `GCS_CREDENTIALS_JSON` en el `.env` de la VM
     3. Verificar en logs que el backup se ejecuta tras cada consolidación
-  - (Pendiente ⏳)
-- [ ] **A.8 Snapshots Periódicos del Disco de la VM (Prioridad Alta)**:
+  - (Finalizado ✅ 2026-05-31 — Bucket `aegen-backups-jjhonn` creado con lifecycle de 30 días)
+- [x] **A.8 Snapshots Periódicos del Disco de la VM (Prioridad Alta)**:
   - **Problema:** Sin respaldo cloud, el disco de la VM es el único almacén. Un fallo del disco o un delete accidental de la VM destruye todo.
   - **Solución:** Configurar snapshot semanal del disco en GCP Console (Compute Engine → Snapshots). Retención de 4 semanas.
-  - (Pendiente ⏳)
+  - (Finalizado ✅ 2026-05-31 — Programación automática asignada al disco)
 - [ ] **A.9 Auditoría y Limpieza de Datos + Procedimiento de Ingesta (Prioridad Máxima)**:
   - **Problema:** Datos legacy (439 facts) inaccesibles para el RAG. Entorno local inconsistente con producción. Sin procedimiento documentado para ingesta de conocimiento.
   - **Solución:**
