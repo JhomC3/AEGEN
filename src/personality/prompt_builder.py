@@ -98,6 +98,13 @@ class SystemPromptBuilder:
             else None
         )
 
+        # Persistir StyleSignals en el perfil para memoria de estilo
+        if style and profile.get("identity", {}).get("chat_id"):
+            from src.core.profile_manager import user_profile_manager
+
+            chat_id = profile["identity"]["chat_id"]
+            await user_profile_manager.update_style_signals(chat_id, style)
+
         # 3. Generar sección del prompt
         section = f"# ESPEJO: CÓMO ME ADAPTO A TI ({user_name})\n"
 

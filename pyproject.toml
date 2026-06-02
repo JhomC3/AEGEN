@@ -59,6 +59,7 @@ dependencies = [
     "sqlean-driver>=0.2.0",
     "google-cloud-storage",
     "pymupdf",
+    "langdetect>=1.0.9",
 ]
 
 [project.optional-dependencies]

@@ -12,6 +12,7 @@ from src.core.profile_localization import (
     update_location_from_user_input,
 )
 from src.core.profile_seeder import ensure_profile_complete, get_default_profile
+from src.personality.types import StyleSignals
 
 logger = logging.getLogger(__name__)
 
@@ -113,6 +114,17 @@ class UserProfileManager:
         except Exception as e:
             logger.error("Error list perfiles: %s", e)
             return []
+
+    async def update_style_signals(self, chat_id: str, signals: StyleSignals) -> None:
+        """Actualiza el campo style_signals del perfil."""
+        profile = await self.load_profile(chat_id)
+        profile["style_signals"] = {
+            "detected_language": signals.detected_language,
+            "formality_indicator": signals.formality_indicator,
+            "brevity": signals.brevity,
+            "uses_emoji": signals.uses_emoji,
+        }
+        await self.save_profile(chat_id, profile)
 
     async def seed_identity_from_platform(
         self, chat_id: str, first_name: str | None
