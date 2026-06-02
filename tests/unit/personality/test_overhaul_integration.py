@@ -22,9 +22,10 @@ async def test_prompt_adaptation_formal():
         "Agradezco de antemano su atención y quedo a la espera de su respuesta.",
     ]
 
-    prompt = await system_prompt_builder.build(
+    result = await system_prompt_builder.build(
         profile=profile, recent_user_messages=messages
     )
+    prompt = "\n".join([msg[1] for msg in result])
 
     # Verificar que el prompt contiene señales de formalidad
     assert "MUY FORMAL" in prompt
@@ -47,9 +48,10 @@ async def test_prompt_adaptation_casual_telegraphic():
     # Mensajes casuales y cortos
     messages = ["hola q tal", "necesito ayuda xq no entiendo", "jaja ok pa"]
 
-    prompt = await system_prompt_builder.build(
+    result = await system_prompt_builder.build(
         profile=profile, recent_user_messages=messages
     )
+    prompt = "\n".join([msg[1] for msg in result])
 
     # Verificar que el prompt contiene señales casuales y concisas
     assert "casual" in prompt.lower()
@@ -65,7 +67,8 @@ async def test_preferred_dialect_override():
         "localization": {"dialect": "colombiano", "confirmed_by_user": True},
     }
 
-    prompt = await system_prompt_builder.build(profile=profile)
+    result = await system_prompt_builder.build(profile=profile)
+    prompt = "\n".join([msg[1] for msg in result])
 
     # El dialecto preferido debe ganar sobre el localizado
     assert "argentino" in prompt.lower()

@@ -27,7 +27,8 @@ async def _get_chat_rag_context(chat_id: str, user_message: str) -> str:
     try:
         manager = get_vector_memory_manager()
         # Buscar en conocimiento global y del usuario filtrando por tipos válidos
-        # Excluimos memorias de tipo conversation para no duplicar el historial en ventana
+        # Excluimos memorias de tipo conversation
+        # para no duplicar el historial en ventana
         allowed_types = ["fact", "document"]
         global_results = await manager.retrieve_context(
             user_id="system",
@@ -145,7 +146,7 @@ async def conversational_chat_tool(
     history_limit = adaptation.get("history_limit", 10)
     messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
 
-    persona_template = await system_prompt_builder.build(
+    persona_messages = await system_prompt_builder.build(
         profile=profile,
         skill_name="chat",
         runtime_context={
@@ -158,17 +159,20 @@ async def conversational_chat_tool(
 
     # Inyección de instrucciones de enrutamiento
     if "monitor_emotional_cues" in next_actions:
-        persona_template += (
-            "\n\nAVISO DE ENRUTAMIENTO: Se han detectado señales sutiles de "
+        persona_messages.append((
+            "system",
+            "AVISO DE ENRUTAMIENTO: Se han detectado señales sutiles de "
             "vulnerabilidad. Mantén un tono empático y valida sus sentimientos "
-            "si parece necesario, pero sin forzar una conversación profunda.\n"
-        )
+            "si parece necesario, pero sin forzar una conversación profunda.",
+        ))
 
-    conversational_prompt = ChatPromptTemplate.from_messages([
-        ("system", persona_template),
-        MessagesPlaceholder(variable_name="messages"),
-        ("user", "{user_message}"),
-    ])
+    conversational_prompt = ChatPromptTemplate.from_messages(
+        persona_messages
+        + [
+            MessagesPlaceholder(variable_name="messages"),
+            ("user", "{user_message}"),
+        ]
+    )
 
     # 3. Ejecución
     try:

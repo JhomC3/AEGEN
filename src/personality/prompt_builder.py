@@ -27,7 +27,7 @@ class SystemPromptBuilder:
         skill_name: str = "chat",
         runtime_context: dict[str, Any] | None = None,
         recent_user_messages: list[str] | None = None,
-    ) -> str:
+    ) -> list[tuple[str, str]]:
         """
         Compone el prompt final ensamblando las 5 capas del Soul Stack.
         """
@@ -49,20 +49,19 @@ class SystemPromptBuilder:
             runtime_context or {}, profile.get("localization", {})
         )
 
-        # Composición Final (Ensamblaje Raw)
-        prompt = f"""
-{identity_section}
+        messages = [
+            ("system", identity_section.strip()),
+            ("system", soul_section.strip()),
+            ("system", user_section.strip()),
+        ]
 
-{soul_section}
+        if skill_section:
+            messages.append(("system", skill_section.strip()))
 
-{user_section}
+        if runtime_section:
+            messages.append(("system", runtime_section.strip()))
 
-{skill_section}
-
-{runtime_section}
-"""
-        # ESCAPADO DE SEGURIDAD PARA LANGCHAIN
-        return prompt.strip().replace("{", "{{").replace("}", "}}")
+        return messages
 
     def _build_identity_section(self, identity: dict[str, str]) -> str:
         items = "\n".join([f"- **{k.capitalize()}:** {v}" for k, v in identity.items()])

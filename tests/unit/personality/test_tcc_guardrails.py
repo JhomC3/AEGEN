@@ -30,7 +30,7 @@ class TestTCCGuardrails:
             "src.personality.skills.tcc.tools.detect_crisis"
         ) as mock_detect, patch("src.core.engine.get_analytical_llm") as mock_llm:
             mock_load.return_value = mock_profile
-            mock_build.return_value = "System prompt base"
+            mock_build.return_value = [("system", "System prompt base")]
             mock_detect.return_value = {
                 "is_crisis": True,
                 "level": "high",
@@ -72,7 +72,7 @@ class TestTCCGuardrails:
             "src.personality.skills.tcc.tools.detect_crisis"
         ) as mock_detect, patch("src.core.engine.get_analytical_llm") as mock_llm:
             mock_load.return_value = mock_profile
-            mock_build.return_value = "System prompt base"
+            mock_build.return_value = [("system", "System prompt base")]
             mock_detect.return_value = {
                 "is_crisis": False,
                 "level": "none",

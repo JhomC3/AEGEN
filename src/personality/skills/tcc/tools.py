@@ -150,7 +150,7 @@ async def cbt_therapeutic_guidance_tool(
     history_limit = adaptation.get("history_limit", 5)
     messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
 
-    persona_template = await system_prompt_builder.build(
+    persona_messages = await system_prompt_builder.build(
         profile=profile,
         skill_name="tcc",
         runtime_context={
@@ -164,7 +164,7 @@ async def cbt_therapeutic_guidance_tool(
     # 3. Inyecciones Adicionales (Enriquecimiento + Guardrails + Routing)
     enriched_context = build_enriched_profile_context(profile)
     if enriched_context:
-        persona_template += f"\n\n{enriched_context}"
+        persona_messages.append(("system", enriched_context))
 
     crisis_result = detect_crisis(user_message)
     if crisis_result["is_crisis"]:
@@ -173,11 +173,11 @@ async def cbt_therapeutic_guidance_tool(
             crisis_result["level"],
             crisis_result["confidence"],
         )
-        persona_template += CLINICAL_GUARDRAILS
+        persona_messages.append(("system", CLINICAL_GUARDRAILS))
 
     routing_instructions = build_routing_instructions(next_actions)
     if routing_instructions:
-        persona_template += routing_instructions
+        persona_messages.append(("system", routing_instructions))
 
     # 4. Ejecución
     try:
@@ -186,11 +186,13 @@ async def cbt_therapeutic_guidance_tool(
         analytical_llm = get_analytical_llm()
 
         config = create_observable_config(call_type="cbt_therapeutic_response")
-        conversational_prompt = ChatPromptTemplate.from_messages([
-            ("system", persona_template),
-            MessagesPlaceholder(variable_name="messages"),
-            ("user", "{user_message}"),
-        ])
+        conversational_prompt = ChatPromptTemplate.from_messages(
+            persona_messages
+            + [
+                MessagesPlaceholder(variable_name="messages"),
+                ("user", "{user_message}"),
+            ]
+        )
 
         chain = conversational_prompt | analytical_llm
         response = await chain.ainvoke(
