@@ -6,6 +6,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 
 from src.agents.utils.knowledge_formatter import format_knowledge_for_prompt
+from src.core.crisis_detector import detect_crisis
 from src.core.dependencies import get_vector_memory_manager
 from src.core.engine import create_observable_config
 from src.core.message_utils import (
@@ -165,7 +166,14 @@ async def cbt_therapeutic_guidance_tool(
     if enriched_context:
         persona_template += f"\n\n{enriched_context}"
 
-    persona_template += CLINICAL_GUARDRAILS
+    crisis_result = detect_crisis(user_message)
+    if crisis_result["is_crisis"]:
+        logger.info(
+            "[CBT-GUARDRAILS] Crisis detected: level=%s, confidence=%.2f",
+            crisis_result["level"],
+            crisis_result["confidence"],
+        )
+        persona_template += CLINICAL_GUARDRAILS
 
     routing_instructions = build_routing_instructions(next_actions)
     if routing_instructions:
