@@ -166,8 +166,13 @@ async def conversational_chat_tool(
             "si parece necesario, pero sin forzar una conversación profunda.",
         ))
 
+    # Convertir system tuples a SystemMessage para evitar parsing de { } como variables
+    from langchain_core.messages import SystemMessage
+
+    system_messages = [SystemMessage(content=msg[1]) for msg in persona_messages]
+
     conversational_prompt = ChatPromptTemplate.from_messages(
-        persona_messages
+        system_messages
         + [
             MessagesPlaceholder(variable_name="messages"),
             ("user", "{user_message}"),

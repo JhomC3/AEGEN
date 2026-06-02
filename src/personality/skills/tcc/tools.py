@@ -185,9 +185,13 @@ async def cbt_therapeutic_guidance_tool(
 
         analytical_llm = get_analytical_llm()
 
+        from langchain_core.messages import SystemMessage
+
+        system_messages = [SystemMessage(content=msg[1]) for msg in persona_messages]
+
         config = create_observable_config(call_type="cbt_therapeutic_response")
         conversational_prompt = ChatPromptTemplate.from_messages(
-            persona_messages
+            system_messages
             + [
                 MessagesPlaceholder(variable_name="messages"),
                 ("user", "{user_message}"),
