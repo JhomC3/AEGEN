@@ -10,6 +10,8 @@
 - **Razón de Creación:** Planificación a largo plazo para la evolución del sistema AEGEN hacia la autonomía total.
 - **Objetivo General:** Transformar AEGEN en un sistema de IA autónomo, profesional, con memoria persistente y capacidades de acción externa.
 - **Versión actual:** v0.9.0 (CHANGELOG.md) — `pyproject.toml` sincronizado a `0.9.0`.
+- **Última auditoría forense:** 2026-06-02 — análisis de logs de producción (36h, 31-May a 02-Jun). 7 problemas identificados, 5 requieren acción inmediata. Ver plan `2026-06-02-correcciones-forenses-post-analisis-logs.md`.
+- **Última refactorización estructural:** 2026-06-02 — Soul Stack P0+P1 (B.6 completado). Ver plan `2026-06-02-refactor-soul-stack-p0-p1.md` y forense `2026-06-02-forense-latencia-soul-stack.md`.
 
 ---
 
@@ -26,6 +28,16 @@ Este plan maestro define la hoja de ruta técnica para AEGEN. Se divide en cuatr
 | BUG-3 | `"psicotrading"` faltaba en el `Literal` de `routing_tools.py` — el LLM nunca podía enrutar al especialista psicotrading                                                           | `src/agents/orchestrator/routing/routing_tools.py` | Especialista psicotrading inaccesible vía LLM | ✅ FIX |
 | BUG-4 | `extract_model_info` en `metrics_processor.py` solo detectaba `ChatGoogleGenerativeAI` — Groq/OpenRouter producían `provider="unknown"`                                            | `src/core/observability/metrics_processor.py`      | Telemetría ciega para 80%+ de llamadas LLM    | ✅ FIX |
 | BUG-5 | `pyproject.toml` declaraba versión `0.7.2` pero el proyecto estaba en `v0.9.0`                                                                                                     | `pyproject.toml`                                   | Versión incorrecta en metadata del paquete    | ✅ FIX |
+
+### Bugs identificados en auditoría forense (2026-06-02) — PENDIENTES ⚠️
+
+| ID    | Bug                                                                                                                                                                                | Archivos                                           | Impacto                                       | Estado |
+| ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- | --------------------------------------------- | ------ |
+| BUG-6 | `_check_edges_exist` en `context_retriever.py` llama `store.execute()` — método inexistente en `SQLiteStore`. Graph-RAG nunca expande aristas pese a tener datos.                   | `src/agents/orchestrator/context_retriever.py:77`  | Expansión de grafo (ADR-0033) silenciosamente deshabilitada en cada request | ⚠️ PEND |
+| BUG-7 | `ChatGroq(max_retries=3)` reintenta 3 veces con backoff (hasta 50s) antes de activar `.with_fallbacks()`. Latencia degrada de 8s → 48s bajo rate limiting de Groq.                 | `src/core/engine.py:41,46`                         | P99 latencia 48s en producción con Groq       | ⚠️ PEND |
+| BUG-8 | `therapeutic_session.py` fuerza CBT ante cualquier intent excepto TOPIC_SHIFT. Feedback sobre estilo ("tus respuestas son muy largas") se clasifica como VULNERABILITY y se reenvía a CBT, creando loop negativo. | `src/agents/orchestrator/routing/therapeutic_session.py:20`, `src/core/routing_models.py:15-29` | Usuarios en CBT no pueden ajustar estilo de respuesta | ⚠️ PEND |
+| BUG-9 | `logger.info("Health check requested.")` genera ~1400 entradas en 36h de producción. Ruido excesivo en logs.                                                                      | `src/api/routers/status.py:99`                     | Logs ruidosos, dificulta debugging            | ⚠️ PEND |
+| BUG-10 | `ADMIN_CHAT_ID` no validado en producción. `AdminNotificator` se deshabilita sin advertencia visible al operador.                                                                   | `src/core/config/base.py:34,109`                   | Sin alertas admin ante fallos de LLM          | ⚠️ PEND |
 
 ---
 
@@ -109,6 +121,20 @@ La base legacy de Google Cloud y la dispersión de datos impedían el escalado y
   - **Decisión Pendiente:** ¿Cuándo refactorizar `engine.py` al Factory Pattern? Criterio objetivo: si en 6 meses hay 2+ cambios de proveedor en producción, se ejecuta el Plan Completo. Si no, se mantiene el Plan Pragmático.
   - **Dependencia:** RoundRobinKeyProvider (ya implementado, A.10), A.6 (reingesta con SemanticChunker)
   - (Pendiente — A Discutir ⏳)
+- [ ] **A.13 Correcciones Forenses Post-Análisis de Logs (Prioridad Máxima)**:
+  - **Origen:** Análisis forense de logs de producción (2026-05-31 a 2026-06-02). Plan completo en `docs/planes/2026-06-02-correcciones-forenses-post-analisis-logs.md`.
+  - **Problemas identificados (7 total, 5 requieren acción inmediata):**
+    1. **BUG-6 — `_check_edges_exist` roto:** La función llama `store.execute()` en `context_retriever.py:77` pero `SQLiteStore` no expone ese método. El patrón correcto (`db = await store.get_db()`) ya existe en `graph_search.py:29` y `memory_repo.py:18-19`. La expansión de grafo Graph-RAG (ADR-0033/0034) está silenciosamente deshabilitada en cada request. Fix: 3 líneas.
+    2. **BUG-7 — Degradación de latencia por rate limiting de Groq:** `ChatGroq(max_retries=3)` reintenta 3 veces con backoff (6s, 40s, 4s = 50s) antes de lanzar excepción y activar `.with_fallbacks()`. El fallback nativo de LangChain (Groq → OpenRouter → Groq backup) funciona pero nunca se activa a tiempo. Fix: reducir `max_retries=1`, `timeout=30` en `engine.py`. Complementa el trabajo de A.10 (RoundRobinKeyProvider) al reducir la latencia de fallback.
+    3. **BUG-8 — Feedback loop terapéutico:** `therapeutic_session.py` fuerza CBT ante cualquier intent excepto TOPIC_SHIFT (ADR-0024). El feedback del usuario sobre el estilo de respuesta (ej. "tus respuestas son muy largas", "pareces un check list") se clasifica como VULNERABILITY y se reenvía a `cbt_specialist` con acciones `["handle_resistance", "validate_frustration"]`. El CBT responde con ~7000 tokens en formato checklist, frustrando más al usuario. La infraestructura de estilo (StyleAnalyzer, prompt_builder, profile_manager) ya existe pero no recibe estos datos.
+    - **Solución:** Añadir `IntentType.META_FEEDBACK` al enum, patterns en `intent_patterns_data.py`, y añadirlo a `SESSION_BREAKING_INTENTS` para permitir salida de CBT en estos casos. El `prompt_builder` ya renderiza "Preferencias Aprendidas" (Línea 123-125) — solo hay que alimentarlas. Sin nuevo especialista ni segundo LLM call.
+    - **ADR requerido:** `adr/ADR-0039-intent-meta-feedback.md`
+    4. **BUG-9 — Ruido en logs de health check:** `logger.info("Health check requested.")` en `status.py:99` se ejecuta cada 60s (Docker healthcheck). ~1400 entradas en 36h. Fix: `logger.debug`.
+    5. **BUG-10 — ADMIN_CHAT_ID no validado:** El `model_validator` de Pydantic en `base.py` solo valida `GOOGLE_API_KEY`. Sin `ADMIN_CHAT_ID`, el `AdminNotificator` se deshabilita sin advertencia visible al operador. Complementa C.5 (Observabilidad). Fix: añadir warn-level en el validator existente.
+  - **Archivos afectados:** 8 archivos modificados, 0 archivos nuevos creados, 1 ADR nuevo.
+  - **Dependencia:** La solución de BUG-8 (META_FEEDBACK) alimenta directamente al Bloque D (Aprendizaje Continuo) al cerrar el loop de feedback del usuario sobre el estilo de respuesta. La detección de patrones de insatisfacción con el estilo puede evolucionar hacia el Nudge de skills post-turno (D.1.2) y reescritura de SOUL.md (B.6.5).
+  - **Referencias:** Plan `2026-06-02-correcciones-forenses-post-analisis-logs.md`, ADR `ADR-0039-intent-meta-feedback.md`, ADR-0024 (Protección Terapéutica), ADR-0027 (Inteligencia Asimétrica), ADR-0033/0034 (Graph-RAG).
+  - (Pendiente ⏳ — Plan aprobado, pendiente de ejecución)
 
 ---
 
@@ -129,17 +155,24 @@ La IA es más potente cuanta más información histórica posee del usuario para
 - [x] **B.3 Olvido Inteligente (Smart Decay)**: Algoritmo de Ranking con factor temporal. (Finalizado ✅ 2026-05-26 — ADR-0030, Plan `2026-05-26-arquitectura-memoria-asociativa-v090.md`, Fase 1 Tarea 1.3)
 - [x] **B.4 Arquitectura de Memoria Asociativa Multiresolución (Graph-RAG)**: Grafo relacional entre dominios, ingesta atómica de facts, RAG adaptativo y Two-Stage Retrieval. (Finalizado ✅ 2026-05-27 — ADRs 0029-0033, Plan `2026-05-26-arquitectura-memoria-asociativa-v090.md`, Todas las fases completadas)
 - [ ] **B.5 Aprendizaje de Aristas por Feedback**: Refuerzo y refinamiento de `memory_edges` basado en feedback implícito y explícito del usuario. El `ConsolidationWorker` ajusta pesos y crea/elimina aristas según la retroalimentación conversacional. (Finalizado ✅ 2026-05-30 — `_adjust_edge_weights_from_feedback` implementado)
-- [ ] **B.6 Auditoría y Refactor del Sistema de Personalidad (Prioridad Máxima)**:
-  - **Problema:** El prompt CBT incluye `CLINICAL_GUARDRAILS` que ordena al LLM mostrar recursos de crisis ante cualquier indicio. El usuario reporta respuestas repetitivas con "Línea 106" incluso cuando la mención fue metafórica ("apagarme"). No hay detección a nivel de código — solo confianza en el LLM.
-  - **Solución:**
-    1. Revisar los prompts de todas las skills (chat, tcc, psicotrading, transcription) para eliminar "basura" y mejorar naturalidad
-    2. Implementar detección de crisis a nivel de código (keywords + análisis de sentimiento) antes de recurrir a guardrails LLM
-    3. Hacer que los guardrails clínicos sean contextuales: que NO se activen por frases metafóricas
-    4. Incorporar el sistema de archivos bootstrap de OpenClaw (IDENTITY.md, SOUL.md, USER.md inyectados)
-    5. Permitir que la personalidad evolucione con feedback del usuario (re-escribir SOUL.md basado en interacciones)
-    6. Verificar que el Soul Stack de 5 capas se está componiendo correctamente en los prompts
-  - **Inspiración:** OpenClaw (archivos bootstrap + evolución de personalidad)
-  - (Parcialmente implementado ✅ 2026-05-30 — crisis_detector.py a nivel de codigo con deteccion de metaforas)
+- [x] **B.6 Auditoría y Refactor del Sistema de Personalidad (Prioridad Máxima)** ✅ COMPLETADO 2026-06-02:
+  - **Problema original:** El prompt CBT incluía `CLINICAL_GUARDRAILS` incondicionalmente, desperdiciando ~150 tokens/turno en conversaciones no-críticas. El `prompt_builder.py` usaba hack de escape `.replace("{", "{{")` que rompía JSON en prompts. `StyleAnalyzer` tenía detección de idioma por keywords (fallaba en mensajes cortos) sin persistencia de estado. `crisis_detector.py` existía pero nunca se importaba (código muerto).
+  - **Solución implementada (4 fases, 22 tests nuevos):**
+    1. ✅ Activado `crisis_detector.py` con inyección condicional de `CLINICAL_GUARDRAILS` (solo si `detect_crisis()` retorna medium/high). Filtro de metáforas ya operativo.
+    2. ✅ Refactorizado `prompt_builder.py` para retornar `list[tuple[str, str]]` (mensajes system) en lugar de string, eliminando el hack de escape. Migrado a `SystemMessage` en `chat/tools.py` y `tcc/tools.py` para evitar que LangChain parsee `{` como variables de template.
+    3. ✅ Reemplazada detección de idioma primitiva por `langdetect>=1.0.9`. Persistido `StyleSignals` en `profiles` vía `profile_manager.update_style_signals()` para memoria de estilo entre sesiones.
+    4. ✅ Eliminada duplicación de regla de idioma entre `SOUL.md` y `render_dialect_rules()`.
+  - **Archivos modificados:** `prompt_builder.py`, `chat/tools.py`, `tcc/tools.py`, `style_analyzer.py`, `prompt_renders.py`, `profile_manager.py`, `SOUL.md`, `pyproject.toml`
+  - **Archivos creados:** `test_crisis_detector.py`, `test_tcc_guardrails.py`, `test_prompt_builder_structured.py`, `test_style_analyzer.py`, `test_profile_manager_style.py`
+  - **Dependencia añadida:** `langdetect>=1.0.9` en `requirements.lock`
+  - **Plan de referencia:** `docs/planes/2026-06-02-refactor-soul-stack-p0-p1.md`
+  - **Auditoría forense de referencia:** `docs/reportes/2026-06-02-forense-latencia-soul-stack.md`
+  - **Deuda remanente (documentada en forense):**
+    - F1: Cold start sin telemetría en `system_prompt_builder.build()` — gap de 52-69s sin logs (solo primer request post-deploy)
+    - F2: `get_analytical_llm()` crea clientes LLM nuevos en cada tool call (no singleton)
+    - F3: RAG global via `models/gemini-embedding-001` consistentemente lento (1.7-9s)
+    - F4: Rate limit de Groq free tier (8000 TPM) con conversaciones acumuladas >8k tokens
+  - **Nota:** El bug de `{timing}` en prompts (Fase 2) fue corregido con `SystemMessage` en commit `511e7d5`. El diagnóstico de tamaño de prompt (`[CBT-PROMPT-SIZE]`) está activo en producción para medición precisa de tokens por componente.
 - [ ] **B.7 Inteligencia Temporal y Análisis Temporal (Prioridad Máxima)**:
   - **Problema:** El sistema inyecta la hora local del usuario en el prompt (Layer 5 del Soul Stack), pero no tiene:
     1. Decaimiento temporal visible (el `MEMORY_DECAY_LAMBDA` afecta el ranking pero no se comunica al LLM)
@@ -174,7 +207,7 @@ AEGEN debe pasar de ser un observador a ser un agente proactivo capaz de gestion
   - **Solución:** Reemplazar la lógica de intents analíticos por un chequeo rápido de existencia de aristas: `SELECT 1 FROM memory_edges WHERE origen_id IN (...) OR destino_id IN (...) LIMIT 1`. La expansión usa siempre `max_hops=2` con poda por peso (>0.3) y límite de 8 fragmentos. Las aristas aprenden y evolucionan con feedback del ConsolidationWorker (ADR-0034 sección 1c).
   - **Verificación:** Una consulta cross-dominio (ej. "¿cómo afecta mi entrenamiento a mi estado de ánimo?") debe retornar fragmentos de al menos 2 dominios distintos conectados por `memory_edges`.
   - **Dependencia:** Requiere que `memory_edges` tenga datos (se genera en cada consolidacion, ~10 mensajes). Si no hay aristas, la expansion no se ejecuta y no hay penalizacion de latencia.
-  - (Finalizado ✅ 2026-05-30 — Graph-RAG data-driven activado)
+  - (Finalizado ✅ 2026-05-30 — Graph-RAG data-driven activado. **Nota 2026-06-02:** BUG-6 descubierto en auditoría forense: `_check_edges_exist` llama `store.execute()` que no existe. La lógica data-driven existe pero la verificación de aristas falla silenciosamente. Fix en plan `2026-06-02-correcciones-forenses-post-analisis-logs.md`, Fase 1.)
 - [ ] **C.5 Observabilidad Completa para Auditoria (Prioridad Maxima)**:
   - **Problema:** La observabilidad actual tenia fallos criticos que impedian auditar si el sistema funciona correctamente.
   - **Solucion implementada:**
@@ -221,7 +254,7 @@ Los proyectos Hermes-agent (Nous Research, 172k⭐) y OpenClaw (375k⭐) han dem
     5. **Session search tool:** Implementar búsqueda full-text sobre conversaciones previas usando FTS5 (ya existe en `keyword_search.py`), expuesta como tool para que MAGI pueda consultar su propia historia.
      6. **Insights engine:** Dashboard de analítica de uso: modelos más usados, costos, skills más cargadas, tokens por sesión, patrones de actividad. (Finalizado ✅ 2026-05-30 — insights_engine.py)
   - **Archivos de referencia (Hermes-agent):** `agent/curator.py`, `agent/memory_manager.py`, `agent/context_compressor.py`, `agent/insights.py`
-  - (Finalizado ✅ 2026-05-30 — nudge worker, session search, curador, compresor, insights)
+  - (Finalizado ✅ 2026-05-30 — nudge worker, session search, curador, compresor, insights. **Nota 2026-06-02:** BUG-8 (loop terapéutico) identificado en forense. El usuario da feedback sobre estilo de respuesta pero el sistema lo clasifica como vulnerabilidad y lo reenvía a CBT. La solución con `IntentType.META_FEEDBACK` (ADR-0039) alimenta este bucle: las preferencias de estilo aprendidas se inyectan vía `prompt_builder` en el system prompt del especialista. Ver plan `2026-06-02-correcciones-forenses-post-analisis-logs.md`, Fase 5.)
 - [ ] **D.2 Sistema de Skills Dinamicos Auto-generados (Prioridad Maxima)**:
   - **Inspiracion:** OpenClaw (https://github.com/openclaw/openclaw)
   - **Objetivo:** El sistema debe poder crear, modificar y eliminar skills basandose en las necesidades del usuario, sin intervencion manual del desarrollador.
@@ -244,8 +277,8 @@ Los proyectos Hermes-agent (Nous Research, 172k⭐) y OpenClaw (375k⭐) han dem
 
 - La transicion a memoria local-first requiere una gestion cuidadosa de las migraciones de SQLite.
 - Los parsers externos (WhatsApp) son sensibles a cambios de formato de la plataforma.
-- **Deuda tecnica de intents:** Los bugs BUG-1 a BUG-5 fueron corregidos.
-- **Orden de ejecucion recomendado (ciclo actual):** A.5 → A.6 → A.7 → A.8 → A.9 (requieren GCP) → B.6 (completo: guardrails) → C.5 (dashboard + alertas) → D.2 (allowlists + AEGEN Hub).
+- **Deuda tecnica de intents:** Los bugs BUG-1 a BUG-5 fueron corregidos. BUG-6 a BUG-10 (forense Jun 2026) pendientes en plan A.13.
+- **Orden de ejecucion recomendado (ciclo actual):** **A.13 (Correcciones Forenses — 5 bugs activos)** → C.5 (dashboard + alertas) → D.2 (allowlists + AEGEN Hub) → ~~B.6 (completo: prompts)~~ ✅ → A.12 (decision sobre desacoplamiento LLM).
 - **Bloque D (Auto-mejora) implementado:** Nudge worker, session search, curador, compresor, edge feedback, insights, skill workshop, gating, hot-reload, CLI.
 - **Bloqueantes externos (GCP):** A.5, A.6, A.7, A.8 y A.9 requieren acceso a la VM de GCP.
 - **Principio de diseño de intents:** Los 11 valores de `IntentType` representan verbos, no temas. Ver ADR-0038.
