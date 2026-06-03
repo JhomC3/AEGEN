@@ -199,6 +199,33 @@ async def cbt_therapeutic_guidance_tool(
         )
 
         chain = conversational_prompt | analytical_llm
+
+        # DIAGNÓSTICO TEMPORAL: medir tamaño exacto de cada componente del prompt
+        sys_chars = sum(len(m.content) for m in system_messages)
+        conv_chars = sum(len(m.content) for m in messages if hasattr(m, "content"))
+        knowledge_chars = len(knowledge_context)
+        facts_chars = len(structured_knowledge)
+        persona_chars = len(build_enriched_profile_context(profile))
+        total_chars = (
+            sys_chars
+            + conv_chars
+            + len(user_message)
+            + knowledge_chars
+            + facts_chars
+            + persona_chars
+        )
+        logger.info(
+            "[CBT-PROMPT-SIZE] total=%d sys=%d conv=%d facts=%d rag=%d "
+            "profile=%d user=%d",
+            total_chars,
+            sys_chars,
+            conv_chars,
+            facts_chars,
+            knowledge_chars,
+            persona_chars,
+            len(user_message),
+        )
+
         response = await chain.ainvoke(
             {"user_message": user_message, "messages": messages},
             config=cast(RunnableConfig, config),
