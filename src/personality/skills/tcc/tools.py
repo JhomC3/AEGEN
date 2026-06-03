@@ -214,6 +214,20 @@ async def cbt_therapeutic_guidance_tool(
             + facts_chars
             + persona_chars
         )
+        # Sub-desglose del system prompt
+        sub_sizes = [len(m.content) for m in system_messages]
+        logger.info(
+            "[CBT-PROMPT-SIZE] total=%d sys=%d conv=%d facts=%d rag=%d "
+            "profile=%d user=%d sub_sys=%s",
+            total_chars,
+            sys_chars,
+            conv_chars,
+            facts_chars,
+            knowledge_chars,
+            persona_chars,
+            len(user_message),
+            sub_sizes,
+        )
         logger.info(
             "[CBT-PROMPT-SIZE] total=%d sys=%d conv=%d facts=%d rag=%d "
             "profile=%d user=%d",
