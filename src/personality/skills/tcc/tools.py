@@ -146,8 +146,8 @@ async def cbt_therapeutic_guidance_tool(
 
     # 2. Configurar Persona y Prompts
     adaptation = user_profile_manager.get_personality_adaptation(profile)
-    # Reducido a 2 interacciones (4 mensajes) para no superar límite TPM de Groq (8000)
-    history_limit = adaptation.get("history_limit", 2)
+    # Reducido a 5 interacciones (10 mensajes) para no superar límite TPM de Groq
+    history_limit = adaptation.get("history_limit", 5)
     messages = dict_to_langchain_messages(conversation_history, limit=history_limit)
 
     persona_messages = await system_prompt_builder.build(
