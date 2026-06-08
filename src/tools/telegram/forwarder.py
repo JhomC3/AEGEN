@@ -15,5 +15,6 @@ def forward_to_local_api(update: dict, api_url: str) -> bool:
         req = urllib.request.Request(api_url, data=data, headers=h, method="POST")  # noqa: S310
         with urllib.request.urlopen(req, timeout=10) as resp:  # noqa: S310
             return resp.status in (200, 202)
-    except Exception:
+    except Exception as e:
+        logger.warning("API Local no disponible: %s: %s", type(e).__name__, e)
         return False

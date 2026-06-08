@@ -164,19 +164,7 @@ class CallRegistry:
                 from src.core.providers.round_robin_key import get_round_robin_provider
 
                 rr = get_round_robin_provider()
-                if sync:
-                    api_key = rr.get_key_sync()
-                else:
-                    try:
-                        loop = asyncio.get_running_loop()
-                        if loop.is_running():
-                            api_key = asyncio.run_coroutine_threadsafe(
-                                rr.get_key(), loop
-                            ).result()
-                        else:
-                            api_key = asyncio.run(rr.get_key())
-                    except RuntimeError:
-                        api_key = asyncio.run(rr.get_key())
+                api_key = rr.get_key_sync()
 
             if not api_key:
                 api_key = (
