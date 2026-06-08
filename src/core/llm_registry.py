@@ -273,9 +273,22 @@ class ManagedLLM(Runnable):
         concrete_llm = self._resolve_with_tools(sync=False)
         obs_config = self._enrich_config(config)
         self._capture_metadata(input, obs_config)
-        return await concrete_llm.ainvoke(
-            input, config=cast(RunnableConfig, obs_config), **kwargs
-        )
+
+        # Timeout adaptativo según el tipo de llamada
+        # Routing: 15s, Chat/CBT: 30s, RAG: 20s
+        timeout = 15 if self.call_name == "routing_analysis" else 30
+        try:
+            return await asyncio.wait_for(
+                concrete_llm.ainvoke(
+                    input, config=cast(RunnableConfig, obs_config), **kwargs
+                ),
+                timeout=timeout,
+            )
+        except TimeoutError:
+            logger.error("LLM call '%s' timed out after %ds", self.call_name, timeout)
+            raise RuntimeError(
+                f"LLM call '{self.call_name}' timed out after {timeout}s"
+            ) from None
 
     def invoke(
         self, input: Any, config: RunnableConfig | None = None, **kwargs: Any
