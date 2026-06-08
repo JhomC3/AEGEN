@@ -107,17 +107,13 @@ def main() -> None:
     logger.info("Iniciando Polling Service v0.5.0")
 
     # Esperar a que la API local esté disponible antes de iniciar el polling
-    # Esto evita el loop de "API Local no disponible" cuando la app aún
-    # no ha completado su inicialización (cold start ~120s con ingesta de PDFs)
-    logger.info("Esperando disponibilidad de API local en %s ...", API_URL)
+    health_url = "http://app:8000/system/health"
+    logger.info("Esperando disponibilidad de API en %s ...", health_url)
     startup_retries = 0
-    while startup_retries < 60:  # ~5 minutos máximo de espera
+    while startup_retries < 60:
         try:
-            req = urllib.request.Request(API_URL, method="POST")  # noqa: S310
-            req.add_header("Content-Type", "application/json")
-            req.data = b"{}"
-            with urllib.request.urlopen(req, timeout=3) as resp:  # noqa: S310
-                if resp.status in (200, 202):
+            with urllib.request.urlopen(health_url, timeout=3) as resp:  # noqa: S310
+                if resp.status == 200:
                     logger.info("API local disponible. Iniciando polling...")
                     break
         except Exception as e:
