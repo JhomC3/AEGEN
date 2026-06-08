@@ -1,4 +1,5 @@
 # src/api/routers/status.py
+import asyncio
 import logging
 import time
 from typing import Any, cast
@@ -57,13 +58,13 @@ async def check_llm_connection() -> ServiceStatus:
     try:
         from src.core.engine import check_llm_health
 
-        health_data = await check_llm_health()
+        health_data = await asyncio.wait_for(check_llm_health(), timeout=8.0)
         if health_data.get("status") == "healthy":
             result = ServiceStatus.OK
         else:
             result = ServiceStatus.ERROR
-    except Exception as e:
-        logger.warning(f"LLM health check failed: {e}")
+    except (Exception, TimeoutError):
+        logger.warning("LLM health check failed or timed out")
         result = ServiceStatus.ERROR
 
     # Actualizar cache
