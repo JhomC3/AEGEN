@@ -24,13 +24,20 @@ def create_observable_config(
     if "callbacks" not in config:
         config["callbacks"] = []
 
-    # Validamos si ya está el handler en callbacks para no duplicar
-    has_handler = any(
-        isinstance(cb, LLMObservabilityHandler) for cb in config["callbacks"]
-    )
+    callbacks = config["callbacks"]
+
+    # LangChain puede pasar un CallbackManager en vez de una lista.
+    # Normalizar a lista para poder iterar y hacer append.
+    if callbacks is None:
+        callbacks = []
+    elif not isinstance(callbacks, list):
+        callbacks = list(getattr(callbacks, "handlers", []))
+
+    config["callbacks"] = callbacks
+
+    has_handler = any(isinstance(cb, LLMObservabilityHandler) for cb in callbacks)
     if not has_handler:
-        observability_handler = LLMObservabilityHandler(call_type=call_type)
-        config["callbacks"].append(observability_handler)
+        config["callbacks"].append(LLMObservabilityHandler(call_type=call_type))
 
     return config
 

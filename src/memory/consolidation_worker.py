@@ -195,7 +195,7 @@ class ConsolidationManager:
                         "de causa, correlación, refuerzo o contradicción entre ellos.\n"
                         "Usa únicamente los tipos de relación permitidos: 'correlaciona_con', 'causa', 'resuelve', 'contradice', 'refuerza'.\n"
                         "Devuelve exclusivamente un objeto JSON estructurado con la lista de aristas:\n"
-                        '[{"origen": "llave_hecho_1", "destino": "llave_hecho_2", "tipo": "causa", "peso": 0.85, "evidencia": "El usuario indica que..."}]\n'
+                        '[{{"origen": "llave_hecho_1", "destino": "llave_hecho_2", "tipo": "causa", "peso": 0.85, "evidencia": "El usuario indica que..."}}]\n'
                         "No incluyas explicaciones, responde puramente con el JSON crudo."
                     ),
                 ),

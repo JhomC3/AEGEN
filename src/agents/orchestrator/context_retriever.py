@@ -67,18 +67,19 @@ async def _check_edges_exist(  # noqa: S608
     if not memory_ids:
         return False
     placeholders = ",".join("?" * len(memory_ids))
-    query = (
+    query = (  # noqa: S608
         "SELECT 1 FROM memory_edges "
         f"WHERE origen_id IN ({placeholders}) OR destino_id IN ({placeholders}) "
         "LIMIT 1"
-    )  # noqa: S608
+    )
     try:
         params = memory_ids + memory_ids
-        result = await store.execute(query, params)
-        rows = await result.fetchone()
+        db = await store.get_db()
+        async with db.execute(query, params) as cursor:
+            rows = await cursor.fetchone()
         return rows is not None
     except Exception as e:
-        logger.warning(f"Error verificando aristas en memory_edges: {e}")
+        logger.warning("Error verificando aristas en memory_edges: %s", e)
         return False
 
 

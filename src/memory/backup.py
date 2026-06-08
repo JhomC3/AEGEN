@@ -70,7 +70,17 @@ class CloudBackupManager:
                 return str(compressed_path.name)
 
         except Exception as e:
-            logger.error("Backup failed: %s", e)
+            error_msg = str(e)
+            if "403" in error_msg or "401" in error_msg:
+                logger.error(
+                    "Backup auth failed (IAM/scope issue): %s. "
+                    "Verify service account has 'Storage Object Admin' "
+                    "role on bucket '%s'.",
+                    e,
+                    self.bucket_name,
+                )
+            else:
+                logger.error("Backup failed: %s", e)
         finally:
             if snapshot_path.exists():
                 snapshot_path.unlink()
