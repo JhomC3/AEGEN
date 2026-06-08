@@ -8,7 +8,8 @@ from langchain_core.tools import tool
 
 from src.agents.utils.knowledge_formatter import format_knowledge_for_prompt
 from src.core.dependencies import get_vector_memory_manager
-from src.core.engine import create_observable_config, llm
+from src.core.engine import create_observable_config
+from src.core.llm_registry import get_llm
 from src.core.message_utils import (
     dict_to_langchain_messages,
     extract_recent_user_messages,
@@ -192,7 +193,7 @@ async def conversational_chat_tool(
                 cast(RunnableConfig, config),
             )
 
-        chain = conversational_prompt | llm
+        chain = conversational_prompt | get_llm("chat_response")
         response = await chain.ainvoke(
             prompt_input, config=cast(RunnableConfig, config)
         )

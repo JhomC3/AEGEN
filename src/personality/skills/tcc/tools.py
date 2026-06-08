@@ -9,6 +9,7 @@ from src.agents.utils.knowledge_formatter import format_knowledge_for_prompt
 from src.core.crisis_detector import detect_crisis
 from src.core.dependencies import get_vector_memory_manager
 from src.core.engine import create_observable_config
+from src.core.llm_registry import get_llm
 from src.core.message_utils import (
     dict_to_langchain_messages,
     extract_recent_user_messages,
@@ -181,9 +182,7 @@ async def cbt_therapeutic_guidance_tool(
 
     # 4. Ejecución
     try:
-        from src.core.engine import get_analytical_llm
-
-        analytical_llm = get_analytical_llm()
+        analytical_llm = get_llm("cbt_therapeutic_response")
 
         from langchain_core.messages import SystemMessage
 

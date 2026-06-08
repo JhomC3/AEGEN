@@ -12,7 +12,7 @@ import shutil
 from datetime import UTC, datetime
 from pathlib import Path
 
-import aioredis
+from redis import asyncio as aioredis
 
 logger = logging.getLogger(__name__)
 

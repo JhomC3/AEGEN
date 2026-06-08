@@ -66,8 +66,8 @@ async def compress_context_if_needed(
 
 
 async def _summarize_messages(messages: list[dict]) -> str:
-    """Resume el bloque de mensajes usando get_fast_llm."""
-    from src.core.engine import get_fast_llm
+    """Resume el bloque de mensajes usando get_llm."""
+    from src.core.llm_registry import get_llm
 
     formatted = "\n".join(
         f"{m.get('role', 'user')}: {m.get('content', '')[:500]}" for m in messages
@@ -78,7 +78,7 @@ async def _summarize_messages(messages: list[dict]) -> str:
     )
 
     try:
-        llm = get_fast_llm()
+        llm = get_llm("context_compression")
         response = await llm.ainvoke(prompt)
         raw = response.content if hasattr(response, "content") else str(response)
         return str(raw)

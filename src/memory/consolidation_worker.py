@@ -3,7 +3,6 @@ import logging
 import time
 from typing import Any
 
-from src.core.engine import llm
 from src.core.profile_manager import user_profile_manager
 from src.memory.evolution_applier import apply_evolution
 from src.memory.evolution_detector import EvolutionDetector
@@ -17,11 +16,13 @@ class ConsolidationManager:
 
     def __init__(self) -> None:
         try:
-            from src.core.engine import get_rag_llm
+            from src.core.llm_registry import get_llm
 
-            detector_llm = get_rag_llm()
+            detector_llm = get_llm("rag_summarization")
         except Exception:
-            detector_llm = llm
+            from src.core.llm_registry import get_llm
+
+            detector_llm = get_llm("chat_response")
         self.evolution_detector = EvolutionDetector(detector_llm)
 
     async def should_consolidate(self, chat_id: str, message_count: int) -> bool:
@@ -152,7 +153,7 @@ class ConsolidationManager:
             from langchain_core.prompts import ChatPromptTemplate
 
             from src.core.dependencies import get_sqlite_store
-            from src.core.engine import get_rag_llm
+            from src.core.llm_registry import get_llm
 
             # Solo operamos si hay suficientes hechos y el LLM está disponible
             store = get_sqlite_store()
@@ -208,8 +209,8 @@ class ConsolidationManager:
                 ),
             ])
 
-            # 3. Invocar Gemini Flash (get_rag_llm) para destilar el grafo
-            llm_chain = prompt | get_rag_llm()
+            # 3. Invocar Gemini Flash (get_llm) para destilar el grafo
+            llm_chain = prompt | get_llm("rag_fact_extraction")
             response = await llm_chain.ainvoke({
                 "facts_text": facts_text,
                 "conv_text": conv_text,
@@ -279,7 +280,7 @@ class ConsolidationManager:
         if not injected_graph_fragments:
             return {"reinforced": 0, "decayed": 0}
 
-        from src.core.engine import get_rag_llm
+        from src.core.llm_registry import get_llm
 
         fragments_text = "\n".join([
             f"- [{f.get('id', '?')}] {f.get('content', '')[:200]}"
@@ -302,7 +303,7 @@ class ConsolidationManager:
         )
 
         try:
-            llm = get_rag_llm()
+            llm = get_llm("rag_fact_extraction")
             response = await llm.ainvoke(prompt)
             content = (
                 response.content if hasattr(response, "content") else str(response)

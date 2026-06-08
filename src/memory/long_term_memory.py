@@ -1,7 +1,6 @@
 import logging
 from typing import Any
 
-from src.core.engine import llm
 from src.memory.redis_buffer import RedisMessageBuffer
 from src.memory.services.memory_summarizer import MemorySummarizer
 
@@ -12,14 +11,12 @@ class LongTermMemoryManager:
     """Gestiona la memoria episódica de largo plazo."""
 
     def __init__(self) -> None:
-        self.llm = llm
-        self._buffer_instance: RedisMessageBuffer | None = None
-        try:
-            from src.core.engine import get_rag_llm
+        from src.core.llm_registry import get_llm
 
-            summarizer_llm = get_rag_llm()
-        except Exception:
-            summarizer_llm = llm
+        self.llm = get_llm("chat_response")
+        self._buffer_instance: RedisMessageBuffer | None = None
+
+        summarizer_llm = get_llm("rag_summarization")
         self._summarizer = MemorySummarizer(summarizer_llm)
         logger.info("LongTermMemoryManager initialized")
 

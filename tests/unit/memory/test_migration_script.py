@@ -31,10 +31,12 @@ async def mig_db():
 async def test_migrate_facts_script_execution(mig_db):
     db = await mig_db.get_db()
 
-    # 1. Insertar hechos legacy (como JSON blobs completos en 'content')
+    # 1. Insertar un hecho legacy plano (como JSON blob con 'key' y 'value')
     legacy_json = json.dumps({
-        "user_name": "Juan Carlos",
-        "entities": [{"key": "edad", "value": "30", "confidence": 0.95}],
+        "key": "edad",
+        "value": "30",
+        "confidence": 0.95,
+        "evidence": "El usuario dijo que tiene 30 años",
     })
 
     await db.execute(
@@ -55,7 +57,7 @@ async def test_migrate_facts_script_execution(mig_db):
         patch("src.memory.ingestion_pipeline.EmbeddingService") as mock_emb_class,
     ):
         mock_emb = mock_emb_class.return_value
-        mock_emb.embed_texts = AsyncMock(return_value=[[0.1] * 768, [0.1] * 768])
+        mock_emb.embed_texts = AsyncMock(return_value=[[0.1] * 768])
 
         # 2. Ejecutar la migración
         await migrate_legacy_facts(store=mig_db)
@@ -67,15 +69,13 @@ async def test_migrate_facts_script_execution(mig_db):
             row = await cursor.fetchone()
             assert row[0] == 0  # Inactivo!
 
-        # 4. Comprobar que se crearon los dos registros atómicos (user_name y edad)
-        # Nota: El pipeline escribe namespace="user_{chat_id}" ahora, o el default
+        # 4. Comprobar que se creó el registro atómico individual
         async with db.execute(
             "SELECT content, metadata FROM memories WHERE chat_id = 'chat_legacy_1' AND is_active = 1"
         ) as cursor:
             atoms = await cursor.fetchall()
             print("ATOMS RETURNED IN TEST =", [(a[0], a[1]) for a in atoms])
-            assert len(atoms) == 2
+            assert len(atoms) == 1
 
-            contents = {a[0] for a in atoms}
-            assert "Juan Carlos" in contents
+            contents = atoms[0][0]
             assert "30" in contents

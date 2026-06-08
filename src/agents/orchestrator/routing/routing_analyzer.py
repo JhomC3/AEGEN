@@ -26,7 +26,7 @@ except ImportError:
 
 
 from src.agents.orchestrator.specialist_cache import SpecialistCache
-from src.core.engine import create_observable_config, llm
+from src.core.engine import create_observable_config
 from src.core.routing_models import RoutingDecision
 from src.core.schemas import GraphStateV2
 
@@ -49,8 +49,12 @@ class RoutingAnalyzer:
 
     def __init__(self, routing_prompt: ChatPromptTemplate):
         # ✅ PERFORMANCE FIX: Function calling en lugar de structured output
+        from src.core.llm_registry import get_llm
+
         routing_tools = [route_user_message]
-        self._chain = routing_prompt | llm.bind_tools(cast(Sequence, routing_tools))
+        self._chain = routing_prompt | get_llm("routing_analysis").bind_tools(
+            cast(Sequence, routing_tools)
+        )
         self._enhancer = RoutingEnhancer()
 
     async def analyze(

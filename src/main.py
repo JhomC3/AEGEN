@@ -118,12 +118,14 @@ from src.api.routers import (  # noqa: E402
     diagnostics,
     llm_metrics,
     status,
+    system_llm,
     webhooks,
 )
 
 app.include_router(status.router, prefix="/system", tags=["Status"])
 app.include_router(llm_metrics.router, prefix="/system/llm")
 app.include_router(diagnostics.router, prefix="/system/diagnostics")
+app.include_router(system_llm.router, prefix="")
 app.include_router(analysis.router, prefix="/api/v1/analysis")
 app.include_router(webhooks.router, prefix="/api/v1/webhooks")
 

@@ -2,8 +2,9 @@
 
 import logging
 from pathlib import Path
+from typing import Any
 
-from src.core.engine import llm
+from src.core.llm_registry import llm_call
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +39,9 @@ class SkillGenerator:
         self.storage_path = Path(storage_path)
         self.storage_path.mkdir(parents=True, exist_ok=True)
 
+    @llm_call("skill_generation")
     async def generate_from_history(
-        self, domain_name: str, conversation_samples: list[str]
+        self, domain_name: str, conversation_samples: list[str], *, _llm: Any = None
     ) -> str | None:
         """
         Genera un nuevo skill a partir de ejemplos de conversación.
@@ -50,7 +52,7 @@ class SkillGenerator:
         prompt = SKILL_GEN_PROMPT.format(history=history_text)
 
         try:
-            response = await llm.ainvoke(prompt)
+            response = await _llm.ainvoke(prompt)
             content = str(response.content).strip()
 
             # Limpiar posibles bloques de código markdown del LLM

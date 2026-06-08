@@ -45,9 +45,9 @@ async def psicotrading_guidance_tool(
         # Formatear historial (Limitado a 10 para ahorrar tokens)
         messages = dict_to_langchain_messages(conversation_history or [], limit=10)
 
-        from src.core.engine import get_analytical_llm
+        from src.core.llm_registry import get_llm
 
-        analytical_llm = get_analytical_llm()
+        analytical_llm = get_llm("psicotrading_response")
 
         chain = conversational_prompt | analytical_llm
         response = await chain.ainvoke({

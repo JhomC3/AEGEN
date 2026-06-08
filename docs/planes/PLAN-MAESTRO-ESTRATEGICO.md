@@ -113,14 +113,19 @@ La base legacy de Google Cloud y la dispersión de datos impedían el escalado y
   - **Problema:** `pyproject.toml` declaraba `version = "0.7.2"` pero el proyecto estaba en `v0.9.0` según `CHANGELOG.md` y `AGENTS.md`.
   - **Solución:** Actualizado `version` en `pyproject.toml` a `"0.9.0"`.
   - (Finalizado ✅ 2026-05-30)
-- [ ] **A.12 Desacoplamiento de Proveedores LLM (Prioridad Alta — A Discutir)**:
-  - **Problema:** `src/core/engine.py` tiene los proveedores LLM hardcodeados en funciones específicas (Groq para analítico, OpenRouter como fallback). Si se quiere cambiar dinámicamente de proveedor (ej. Google AI Studio → Groq), hay que modificar código Python. La arquitectura actual no soporta acoplamiento/desacoplamiento dinámico de proveedores y modelos desde configuración.
-  - **Discusión (2026-05-31):** Se evaluaron dos enfoques:
-    1. **Plan Completo (Factory Pattern Asíncrono):** Refactorizar `engine.py` con una fábrica `_create_llm_by_provider(provider, model)` guiada por `.env`. Ventajas: desacoplamiento total, cualquier proveedor configurable sin tocar código. Desventajas: modifica 7+ archivos, riesgo de regresión, complejidad alta (posible over-engineering).
-    2. **Plan Pragmático (Incremental):** Solo modificar lo necesario para habilitar la rotación de keys de Google AI Studio en `SemanticChunker` (2 archivos). Postergar la refactorización completa hasta que haya evidencia medible de necesidad (cambios frecuentes de proveedor).
-  - **Decisión Pendiente:** ¿Cuándo refactorizar `engine.py` al Factory Pattern? Criterio objetivo: si en 6 meses hay 2+ cambios de proveedor en producción, se ejecuta el Plan Completo. Si no, se mantiene el Plan Pragmático.
-  - **Dependencia:** RoundRobinKeyProvider (ya implementado, A.10), A.6 (reingesta con SemanticChunker)
-  - (Pendiente — A Discutir ⏳)
+- [ ] **A.12 Desacoplamiento de Proveedores LLM, Rotación Multi-Key y Registro de Llamadas (Prioridad Hypermáxima)**:
+  - **Problema:** `src/core/engine.py` tiene los proveedores LLM hardcodeados. Groq (primario) tiene cuota de 8k TPM, lo que provoca fallos HTTP 413 al procesar prompts acumulativos >30k caracteres. No hay visibilidad del contenido real de los prompts en producción (volamos a ciegas).
+  - **Decisión y Diseño (2026-06-04):** Aprobado el diseño completo validado por el análisis forense y optimizado para simplicidad y privacidad:
+    1. **Capa de Proveedores:** Gemini 2.5 Flash como primario con rotación automática multi-key (`RoundRobinKeyProvider`), y Groq como fallback.
+    2. **Capa de Registro Dual LCEL:** Función `get_llm("nombre")` que retorna un `ManagedLLM(Runnable)` compatible con tuberías pipe (`|`) de LangChain y el decorador `@llm_call("nombre")` para inyección de dependencias. Se descarta la fachada Bridge de compatibilidad; se realiza migración simultánea de los 17 archivos consumidores y eliminación total del código legacy en `engine.py`. Los imports estáticos en `reranker.py` y `fact_extractor.py` se refactorizan a lazy loading en el constructor.
+    3. **Medición Segura:** Se prohíbe el almacenamiento de texto crudo de los usuarios. La observabilidad se limita a la recolección de metadatos de tamaño numérico estructurado por sección del prompt y telemetría de tokens/costo expuesta en `/system/llm-telemetry` (protegida por autenticación de administrador).
+  - **Documentos de Referencia:**
+    - Justificación: [docs/investigacion/2026-06-03-justificacion-desacoplamiento-llm.md](../investigacion/2026-06-03-justificacion-desacoplamiento-llm.md)
+    - ADR: [adr/ADR-0040-desacoplamiento-proveedores-llm-inventario.md](../../adr/ADR-0040-desacoplamiento-proveedores-llm-inventario.md)
+    - Informe Forense & Especificación: [docs/reportes/2026-06-04-forense-y-diseno-llm-registry.md](../reportes/2026-06-04-forense-y-diseno-llm-registry.md)
+    - Plan de Ejecución: [docs/planes/2026-06-03-desacoplamiento-y-observabilidad-llm.md](2026-06-03-desacoplamiento-y-observabilidad-llm.md)
+  - **Dependencia:** RoundRobinKeyProvider (ya implementado, A.10)
+  - (En Ejecución ⏳)
 - [ ] **A.13 Correcciones Forenses Post-Análisis de Logs (Prioridad Máxima)**:
   - **Origen:** Análisis forense de logs de producción (2026-05-31 a 2026-06-02). Plan completo en `docs/planes/2026-06-02-correcciones-forenses-post-analisis-logs.md`.
   - **Problemas identificados (7 total, 5 requieren acción inmediata):**
@@ -278,7 +283,7 @@ Los proyectos Hermes-agent (Nous Research, 172k⭐) y OpenClaw (375k⭐) han dem
 - La transicion a memoria local-first requiere una gestion cuidadosa de las migraciones de SQLite.
 - Los parsers externos (WhatsApp) son sensibles a cambios de formato de la plataforma.
 - **Deuda tecnica de intents:** Los bugs BUG-1 a BUG-5 fueron corregidos. BUG-6 a BUG-10 (forense Jun 2026) pendientes en plan A.13.
-- **Orden de ejecucion recomendado (ciclo actual):** **A.13 (Correcciones Forenses — 5 bugs activos)** → C.5 (dashboard + alertas) → D.2 (allowlists + AEGEN Hub) → ~~B.6 (completo: prompts)~~ ✅ → A.12 (decision sobre desacoplamiento LLM).
+- **Orden de ejecucion recomendado (ciclo actual):** **A.12 (Desacoplamiento y Medición — Prioridad Hypermáxima)** → A.13 (Correcciones Forenses — 5 bugs activos) → C.5 (dashboard + alertas) → D.2 (allowlists + AEGEN Hub) → ~~B.6 (completo: prompts)~~ ✅.
 - **Bloque D (Auto-mejora) implementado:** Nudge worker, session search, curador, compresor, edge feedback, insights, skill workshop, gating, hot-reload, CLI.
 - **Bloqueantes externos (GCP):** A.5, A.6, A.7, A.8 y A.9 requieren acceso a la VM de GCP.
 - **Principio de diseño de intents:** Los 11 valores de `IntentType` representan verbos, no temas. Ver ADR-0038.

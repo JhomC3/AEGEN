@@ -54,7 +54,7 @@ async def run_life_review(
     """
     import json
 
-    from src.core.engine import get_analytical_llm
+    from src.core.llm_registry import get_llm
 
     conv_text = "\n".join([
         f"{m.get('role', 'user')}: {m.get('content', '')[:500]}"
@@ -64,7 +64,7 @@ async def run_life_review(
     prompt = LIFE_REVIEW_PROMPT.format(conversation=conv_text)
 
     try:
-        llm = get_analytical_llm()
+        llm = get_llm("life_review")
         response = await llm.ainvoke(prompt)
         content = response.content if hasattr(response, "content") else str(response)
 

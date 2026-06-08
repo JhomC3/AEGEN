@@ -20,15 +20,18 @@ class TestTCCGuardrails:
     @pytest.mark.asyncio
     async def test_guardrails_injected_on_crisis(self, mock_profile: dict) -> None:
         """Guardrails se inyectan cuando detect_crisis retorna is_crisis=True."""
-        with patch(
-            "src.personality.skills.tcc.tools.user_profile_manager.load_profile",
-            new_callable=AsyncMock,
-        ) as mock_load, patch(
-            "src.personality.skills.tcc.tools.system_prompt_builder.build",
-            new_callable=AsyncMock,
-        ) as mock_build, patch(
-            "src.personality.skills.tcc.tools.detect_crisis"
-        ) as mock_detect, patch("src.core.engine.get_analytical_llm") as mock_llm:
+        with (
+            patch(
+                "src.personality.skills.tcc.tools.user_profile_manager.load_profile",
+                new_callable=AsyncMock,
+            ) as mock_load,
+            patch(
+                "src.personality.skills.tcc.tools.system_prompt_builder.build",
+                new_callable=AsyncMock,
+            ) as mock_build,
+            patch("src.personality.skills.tcc.tools.detect_crisis") as mock_detect,
+            patch("src.personality.skills.tcc.tools.get_llm") as mock_llm,
+        ):
             mock_load.return_value = mock_profile
             mock_build.return_value = [("system", "System prompt base")]
             mock_detect.return_value = {
@@ -62,15 +65,18 @@ class TestTCCGuardrails:
         self, mock_profile: dict
     ) -> None:
         """Guardrails NO se inyectan cuando detect_crisis retorna is_crisis=False."""
-        with patch(
-            "src.personality.skills.tcc.tools.user_profile_manager.load_profile",
-            new_callable=AsyncMock,
-        ) as mock_load, patch(
-            "src.personality.skills.tcc.tools.system_prompt_builder.build",
-            new_callable=AsyncMock,
-        ) as mock_build, patch(
-            "src.personality.skills.tcc.tools.detect_crisis"
-        ) as mock_detect, patch("src.core.engine.get_analytical_llm") as mock_llm:
+        with (
+            patch(
+                "src.personality.skills.tcc.tools.user_profile_manager.load_profile",
+                new_callable=AsyncMock,
+            ) as mock_load,
+            patch(
+                "src.personality.skills.tcc.tools.system_prompt_builder.build",
+                new_callable=AsyncMock,
+            ) as mock_build,
+            patch("src.personality.skills.tcc.tools.detect_crisis") as mock_detect,
+            patch("src.personality.skills.tcc.tools.get_llm") as mock_llm,
+        ):
             mock_load.return_value = mock_profile
             mock_build.return_value = [("system", "System prompt base")]
             mock_detect.return_value = {

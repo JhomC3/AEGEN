@@ -5,18 +5,18 @@ from typing import Any
 
 from langchain_core.prompts import ChatPromptTemplate
 
-from src.core.engine import get_rag_llm
-
 logger = logging.getLogger(__name__)
 
 
 class SemanticReranker:
     """
-    Reranker semántico basado en llamadas ligeras a la API de Gemini (get_rag_llm).
+    Reranker semántico basado en llamadas ligeras a la API de Gemini.
     """
 
     def __init__(self) -> None:
-        self.llm = get_rag_llm()
+        from src.core.llm_registry import get_llm
+
+        self.llm = get_llm("rag_reranking")
         self.rerank_prompt = ChatPromptTemplate.from_messages([
             (
                 "system",

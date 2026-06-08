@@ -8,6 +8,8 @@ para maximizar rate limits gratuitos.
 
 import asyncio
 import os
+import threading
+import time
 
 
 class RoundRobinKeyProvider:
@@ -26,6 +28,7 @@ class RoundRobinKeyProvider:
         self._index: int = 0
         self._cooldowns: dict[str, float] = {}
         self._lock = asyncio.Lock()
+        self._sync_lock = threading.Lock()
         self._discover_keys()
 
     def _discover_keys(self) -> None:
@@ -57,9 +60,30 @@ class RoundRobinKeyProvider:
             self._index = (self._index + 1) % len(self._keys)
             return self._keys[self._index]
 
+    def get_key_sync(self) -> str | None:
+        """Obtiene una key de forma síncrona y segura para ManagedLLM.invoke()."""
+        if not self._keys:
+            return None
+        with self._sync_lock:
+            now = time.time()
+            # En contexto síncrono usamos time.time() para calcular expiraciones
+            for _ in range(len(self._keys)):
+                key = self._keys[self._index]
+                self._index = (self._index + 1) % len(self._keys)
+                cooldown_until = self._cooldowns.get(key, 0)
+                if now >= cooldown_until:
+                    return key
+            self._index = (self._index + 1) % len(self._keys)
+            return self._keys[self._index]
+
     async def mark_rate_limited(self, key: str) -> None:
         async with self._lock:
             self._cooldowns[key] = asyncio.get_running_loop().time() + 60
+
+    def mark_rate_limited_sync(self, key: str) -> None:
+        """Marca una key como rate-limited de forma síncrona."""
+        with self._sync_lock:
+            self._cooldowns[key] = time.time() + 60
 
     @property
     def key_count(self) -> int:

@@ -53,8 +53,8 @@ async def _get_recent_messages(
 
 
 async def _extract_lightweight_facts(messages: list[dict]) -> list[dict]:
-    """Usa get_fast_llm para extraer hechos concretos de los mensajes."""
-    from src.core.engine import get_fast_llm
+    """Usa get_llm para extraer hechos concretos de los mensajes."""
+    from src.core.llm_registry import get_llm
 
     if not messages:
         return []
@@ -65,7 +65,7 @@ async def _extract_lightweight_facts(messages: list[dict]) -> list[dict]:
     prompt = _NUDGE_PROMPT.format(messages=formatted)
 
     try:
-        llm = get_fast_llm()
+        llm = get_llm("nudge_extraction")
         response = await llm.ainvoke(prompt)
         content = response.content if hasattr(response, "content") else str(response)
         start = content.find("[")

@@ -20,12 +20,14 @@ class MemorySummarizer:
     def __init__(self, llm: Any = None) -> None:
         if llm is None:
             try:
-                from src.core.engine import get_rag_llm
+                from src.core.llm_registry import get_llm
 
-                self.llm = get_rag_llm()
+                self.llm = get_llm("rag_summarization")
             except Exception as e:
-                logger.error(f"Error initializing get_rag_llm in MemorySummarizer: {e}")
-                self.llm = llm
+                logger.error(f"Error initializing get_llm in MemorySummarizer: {e}")
+                from src.core.llm_registry import get_llm
+
+                self.llm = get_llm("chat_response")
         else:
             self.llm = llm
         self.summary_prompt = ChatPromptTemplate.from_messages([

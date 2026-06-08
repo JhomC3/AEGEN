@@ -6,7 +6,7 @@ from langchain_core.messages import HumanMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableConfig
 
-from src.core.engine import llm
+from src.core.llm_registry import get_llm
 
 
 async def process_image_input(
@@ -27,7 +27,7 @@ async def process_image_input(
             "image_url": {"url": f"data:image/jpeg;base64,{image_data}"},
         },
     ]
-    response = await llm.ainvoke(
+    response = await get_llm("chat_response").ainvoke(
         [HumanMessage(content=cast(Any, content_list))],
         config=config,
     )

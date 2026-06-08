@@ -101,9 +101,9 @@ class SemanticChunker:
         if not purified:
             return []
 
-        from src.core.engine import get_rag_llm_async
+        from src.core.llm_registry import get_llm
 
-        llm = await get_rag_llm_async()
+        llm = get_llm("rag_chunking")
 
         logger.debug(
             "[SEMANTIC-CHUNKER] Sending purified text to Gemini Flash for chunking..."

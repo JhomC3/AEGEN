@@ -76,7 +76,7 @@ async def generate_skill_from_pattern(
     Returns:
         Path al archivo SKILL.md generado.
     """
-    from src.core.engine import get_analytical_llm
+    from src.core.llm_registry import get_llm
 
     if output_dir is None:
         output_dir = Path("storage/skills/user")
@@ -95,7 +95,7 @@ async def generate_skill_from_pattern(
         generated_at=generated_at,
     )
 
-    llm = get_analytical_llm()
+    llm = get_llm("skill_generation")
     response = await llm.ainvoke(prompt)
     skill_content = response.content if hasattr(response, "content") else str(response)
 

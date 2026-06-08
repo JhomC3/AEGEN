@@ -9,7 +9,6 @@ Extraído del MasterOrchestrator para cumplir SRP y facilitar testing.
 import logging
 from typing import Any
 
-from src.core.engine import llm
 from src.core.registry import SpecialistRegistry
 
 from .strategies import SpecialistCache
@@ -69,11 +68,15 @@ class OptimizedSpecialistCache(SpecialistCache):
         }
 
         # LLM con herramientas pre-vinculadas
+        from src.core.llm_registry import get_llm
+
+        routing_llm = get_llm("routing_analysis")
+
         if self._routable_tools:
-            self._llm_with_tools = llm.bind_tools(self._routable_tools)
+            self._llm_with_tools = routing_llm.bind_tools(self._routable_tools)
             logger.info("LLM vinculado con %d herramientas", len(self._routable_tools))
         else:
-            self._llm_with_tools = llm
+            self._llm_with_tools = routing_llm
             logger.warning(
                 "No hay especialistas enrutables, usando LLM sin herramientas"
             )
