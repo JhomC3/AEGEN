@@ -37,9 +37,28 @@ class TelegramToolManager:
         async with httpx.AsyncClient(timeout=15.0) as client:
             try:
                 url = f"{self.base_url}/sendMessage"
-                payload = {"chat_id": chat_id, "text": text, "parse_mode": "Markdown"}
+                payload: dict[str, str] = {
+                    "chat_id": chat_id,
+                    "text": text,
+                    "parse_mode": "Markdown",
+                }
                 resp = await client.post(url, data=payload)
-                return cast(bool, resp.json().get("ok", False))
+                data = resp.json()
+                if data.get("ok"):
+                    return True
+                desc = data.get("description", "")
+                logger.warning("Telegram sendMessage failed: %s", desc)
+                if "can't parse entities" in desc.lower() or "parse" in desc.lower():
+                    payload.pop("parse_mode", None)
+                    resp2 = await client.post(url, data=payload)
+                    data2 = resp2.json()
+                    if data2.get("ok"):
+                        return True
+                    logger.warning(
+                        "Telegram sendMessage (plain text) also failed: %s",
+                        data2.get("description", ""),
+                    )
+                return False
             except Exception as e:
                 logger.error("Error sending: %s", e)
                 return False
