@@ -112,11 +112,10 @@ async def apply_migrations(store: SQLiteStore) -> None:
             """
         )
         await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_edges_origen " "ON memory_edges(origen_id);"
+            "CREATE INDEX IF NOT EXISTS idx_edges_origen ON memory_edges(origen_id);"
         )
         await db.execute(
-            "CREATE INDEX IF NOT EXISTS idx_edges_destino "
-            "ON memory_edges(destino_id);"
+            "CREATE INDEX IF NOT EXISTS idx_edges_destino ON memory_edges(destino_id);"
         )
         await db.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_edges_pair "

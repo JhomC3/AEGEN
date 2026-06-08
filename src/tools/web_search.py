@@ -39,8 +39,7 @@ async def _search_web(query: str, max_results: int = 5) -> list[dict]:
         ]
     except ImportError:
         logger.warning(
-            "[WEB-SEARCH] duckduckgo-search no instalado. "
-            "pip install duckduckgo-search"
+            "[WEB-SEARCH] duckduckgo-search no instalado. pip install duckduckgo-search"
         )
         return []
     except Exception as e:

@@ -18,11 +18,14 @@ class TestProfileManagerStyle:
             "metadata": {"last_updated": "2024-01-01"},
         }
 
-        with patch.object(
-            user_profile_manager, "load_profile", new_callable=AsyncMock
-        ) as mock_load, patch.object(
-            user_profile_manager, "save_profile", new_callable=AsyncMock
-        ) as mock_save:
+        with (
+            patch.object(
+                user_profile_manager, "load_profile", new_callable=AsyncMock
+            ) as mock_load,
+            patch.object(
+                user_profile_manager, "save_profile", new_callable=AsyncMock
+            ) as mock_save,
+        ):
             # load_profile retorna test_profile, luego save_profile guarda
             mock_load.return_value = test_profile
 
@@ -57,11 +60,14 @@ class TestProfileManagerStyle:
             },
         }
 
-        with patch.object(
-            user_profile_manager, "load_profile", new_callable=AsyncMock
-        ) as mock_load, patch.object(
-            user_profile_manager, "save_profile", new_callable=AsyncMock
-        ) as mock_save:
+        with (
+            patch.object(
+                user_profile_manager, "load_profile", new_callable=AsyncMock
+            ) as mock_load,
+            patch.object(
+                user_profile_manager, "save_profile", new_callable=AsyncMock
+            ) as mock_save,
+        ):
             mock_load.return_value = test_profile
 
             signals = StyleSignals(

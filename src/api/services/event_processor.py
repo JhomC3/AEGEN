@@ -96,18 +96,48 @@ async def _send_response(
     chat_id: str, final_state: dict[str, Any], task_id: str
 ) -> str:
     response_content = final_state.get("payload", {}).get("response")
+
+    logger.info(
+        "[TaskID: %s] _send_response: response_content type=%s, "
+        "len=%s, error_message=%s",
+        task_id,
+        type(response_content).__name__,
+        len(str(response_content)) if response_content else 0,
+        final_state.get("error_message"),
+    )
+
     message = (
         final_state.get("error_message") or str(response_content)
         if response_content and str(response_content).strip()
         else "La tarea se completó, pero el agente generó una respuesta vacía."
     )
+
     try:
-        await telegram_interface.reply_to_telegram_chat.ainvoke({
-            "chat_id": chat_id,
-            "text": message,
-        })
+        # Llamar directamente al manager en vez del @tool wrapper
+        # para obtener el resultado bool real y propagación de errores.
+        manager = telegram_interface.get_telegram_manager()
+        sent = await manager.send_message(chat_id, message)
+        if sent:
+            logger.info(
+                "[TaskID: %s] Respuesta enviada a Telegram (chat=%s, len=%d)",
+                task_id,
+                chat_id,
+                len(message),
+            )
+        else:
+            logger.error(
+                "[TaskID: %s] Telegram rechazó el mensaje (chat=%s, len=%d)",
+                task_id,
+                chat_id,
+                len(message),
+            )
     except Exception as e:
-        logger.error(f"[TaskID: {task_id}] Error enviando respuesta: {e}")
+        logger.error(
+            "[TaskID: %s] Error enviando respuesta: %s",
+            task_id,
+            e,
+            exc_info=True,
+        )
     return message
 
 

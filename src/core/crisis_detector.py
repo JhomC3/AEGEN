@@ -66,7 +66,7 @@ def detect_crisis(text: str) -> dict:
 
     if is_metaphor:
         logger.debug(
-            "[CRISIS-DETECTOR] Contexto metaforico detectado, " "no es crisis real: %s",
+            "[CRISIS-DETECTOR] Contexto metaforico detectado, no es crisis real: %s",
             metaphors,
         )
         return {
@@ -101,7 +101,7 @@ def detect_crisis(text: str) -> dict:
         level = "low"
 
     logger.info(
-        "[CRISIS-DETECTOR] Senal de crisis: level=%s, confidence=%.2f, " "keywords=%s",
+        "[CRISIS-DETECTOR] Senal de crisis: level=%s, confidence=%.2f, keywords=%s",
         level,
         base_confidence,
         keywords,

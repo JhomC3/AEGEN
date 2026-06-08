@@ -11,7 +11,6 @@ usando SemanticChunker para estructura jerarquica L3->L4.
 """
 
 import asyncio
-import json
 import logging
 import sys
 from pathlib import Path
@@ -29,7 +28,9 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("reingest_knowledge")
 
 
-async def backup_chunks(store: SQLiteStore, filename: str, namespace: str) -> list[dict]:
+async def backup_chunks(
+    store: SQLiteStore, filename: str, namespace: str
+) -> list[dict]:
     """Backup de chunks antes de borrarlos para rollback."""
     db = await store.get_db()
     sql = (
@@ -63,7 +64,7 @@ async def restore_chunks(store: SQLiteStore, chunks: list[dict]) -> int:
     """Restaura chunks desde backup en caso de fallo."""
     if not chunks:
         return 0
-    
+
     db = await store.get_db()
     restored = 0
     for chunk in chunks:
@@ -93,7 +94,7 @@ async def restore_chunks(store: SQLiteStore, chunks: list[dict]) -> int:
             restored += 1
         except Exception as e:
             logger.error("Error restaurando chunk %s: %s", chunk["id"], e)
-    
+
     await db.commit()
     return restored
 
@@ -174,7 +175,7 @@ async def reingest_knowledge() -> None:
                 source_skill="global_knowledge",
                 use_semantic_chunker=True,
             )
-            
+
             if count == 0:
                 logger.warning("  -> No se insertaron chunks, restaurando backup")
                 restored = await restore_chunks(store, backup)

@@ -81,7 +81,7 @@ Construir el cargador de manifiesto YAML, la clase `ManagedLLM` (LCEL-compatible
   - **Descripción:** Definir el catálogo inicial de llamadas del sistema (chat, cbt, psicotrading, routing, rag) mapeados a su proveedor primario, modelo por defecto, temperatura, key_rotation y fallbacks.
 - **Módulo/Archivo:** `src/core/llm_registry.py`
   - **Acción:** Crear
-  - **Descripción:** 
+  - **Descripción:**
     1. Implementar la clase `CallRegistry` para cargar el manifiesto YAML en memoria con soporte para recarga en caliente (hot reload).
     2. Implementar `ManagedLLM(Runnable)` que intercepta las llamadas en runtime, resuelve el proveedor/keys correctas y expone interfaz LCEL (hereda de `Runnable` de LangChain) con soporte para `bind_tools()`.
     3. Implementar el decorador `@llm_call(name: str)` para inyectar una instancia de `ManagedLLM` como argumento `_llm`.

@@ -45,14 +45,29 @@ class TelegramToolManager:
                 resp = await client.post(url, data=payload)
                 data = resp.json()
                 if data.get("ok"):
+                    logger.info(
+                        "Telegram sendMessage OK: chat_id=%s, len=%d",
+                        chat_id,
+                        len(text),
+                    )
                     return True
                 desc = data.get("description", "")
-                logger.warning("Telegram sendMessage failed: %s", desc)
+                error_code = data.get("error_code", "?")
+                logger.warning(
+                    "Telegram sendMessage failed: code=%s desc=%s chat_id=%s",
+                    error_code,
+                    desc,
+                    chat_id,
+                )
                 if "can't parse entities" in desc.lower() or "parse" in desc.lower():
                     payload.pop("parse_mode", None)
                     resp2 = await client.post(url, data=payload)
                     data2 = resp2.json()
                     if data2.get("ok"):
+                        logger.info(
+                            "Telegram sendMessage OK (plain): chat_id=%s",
+                            chat_id,
+                        )
                         return True
                     logger.warning(
                         "Telegram sendMessage (plain text) also failed: %s",
@@ -60,7 +75,7 @@ class TelegramToolManager:
                     )
                 return False
             except Exception as e:
-                logger.error("Error sending: %s", e)
+                logger.error("Error sending: %s", e, exc_info=True)
                 return False
 
     async def send_chat_action(self, chat_id: str, action: str) -> bool:

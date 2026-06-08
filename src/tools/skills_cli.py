@@ -51,7 +51,7 @@ def list_skills(verbose: bool = False) -> None:
     print(f"\n{'ID':<25} {'Name':<30} {'Version':<10} {'Source':<10}")
     print("-" * 75)
     for s in skills:
-        print(f"{s['id']:<25} {s['name']:<30} {s['version']:<10} " f"{s['source']:<10}")
+        print(f"{s['id']:<25} {s['name']:<30} {s['version']:<10} {s['source']:<10}")
         if verbose and s.get("capabilities"):
             print(f"  Capabilities: {', '.join(s['capabilities'])}")
     print(f"\nTotal: {len(skills)} skills\n")

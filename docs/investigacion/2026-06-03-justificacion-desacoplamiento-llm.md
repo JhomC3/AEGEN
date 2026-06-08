@@ -35,7 +35,7 @@ Inicialmente, el agente propuso dos soluciones rápidas y destructivas:
 1. Truncar el `evolution_note` clínico a un tamaño fijo de 2,000 caracteres.
 2. Limitar la lista de `learned_preferences` a los últimos 20 elementos.
 
-El operador solicitó una **reevaluación profunda**. 
+El operador solicitó una **reevaluación profunda**.
 
 Al analizar el código y el negocio, descubrimos que **estas propuestas eran destructivas**:
 - El `evolution_note` contiene un historial clínico estructurado de intervenciones, estado emocional y de riesgo del usuario. Cortarlo arbitrariamente ciega al terapeuta digital sobre el historial del paciente.

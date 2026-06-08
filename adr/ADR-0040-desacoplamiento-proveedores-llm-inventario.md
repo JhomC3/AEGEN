@@ -6,7 +6,7 @@
 
 ## Contexto
 
-El sistema AEGEN interactúa con modelos de lenguaje en 22 puntos de llamada (call sites) distribuidos en 17 archivos de especialistas (CBT, Psicotrading, Chat) y servicios de fondo (MemorySummarizer, FactExtractor, SemanticChunker). 
+El sistema AEGEN interactúa con modelos de lenguaje en 22 puntos de llamada (call sites) distribuidos en 17 archivos de especialistas (CBT, Psicotrading, Chat) y servicios de fondo (MemorySummarizer, FactExtractor, SemanticChunker).
 
 Actualmente, estos puntos están acoplados a funciones en `src/core/engine.py` como `get_fast_llm()` o `get_analytical_llm()`, las cuales instancian modelos de Groq (primario) y OpenRouter (fallback) con parámetros hardcodeados en el archivo de configuración global `src/core/config/base.py`.
 

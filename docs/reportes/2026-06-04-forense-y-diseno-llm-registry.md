@@ -10,7 +10,7 @@
 
 ## 1. Resumen Ejecutivo de la Inspección Forense
 
-Se ha realizado un escaneo estático y dinámico completo del código fuente (`src/`) para identificar la totalidad de los puntos de llamada (call sites) acoplados al motor de ejecución LLM (`src/core/engine.py`). 
+Se ha realizado un escaneo estático y dinámico completo del código fuente (`src/`) para identificar la totalidad de los puntos de llamada (call sites) acoplados al motor de ejecución LLM (`src/core/engine.py`).
 
 El plan original y el ADR-0040 estimaban **12 call sites**. El análisis forense real ha descubierto **22 call sites de invocación LLM distribuidos en 17 archivos independientes**. Esto representa una subestimación del **83%** del alcance técnico de la migración.
 
@@ -133,7 +133,7 @@ El motor cuenta actualmente con 4 factorías y 1 singleton expuestos, descritos 
 El operador pipe `|` en LangChain es resuelto por el método `__or__` de la clase base `Runnable`. Si intentamos usar un decorador simple `@llm_call` sobre una función para interceptar y retornar una instancia cruda del modelo, rompemos los casos donde el LLM es parte de una cadena pre-compilada, como en:
 `self._chain = routing_prompt | llm.bind_tools(routing_tools)` (routing_analyzer:53)
 
-En este escenario, `routing_analyzer` crea la cadena en el constructor (`__init__`), lo que significa que el modelo se enlaza una sola vez y no en tiempo de ejecución. 
+En este escenario, `routing_analyzer` crea la cadena en el constructor (`__init__`), lo que significa que el modelo se enlaza una sola vez y no en tiempo de ejecución.
 
 ### 4.2. La Arquitectura Dual Propuesta
 
@@ -173,10 +173,10 @@ class ModelRoute(BaseModel):
 
 class CallRegistry:
     """
-    Carga config/llm_inventory.yaml e instancia los proveedores 
+    Carga config/llm_inventory.yaml e instancia los proveedores
     abstrayendo la rotación de API keys y los fallbacks dinámicos.
     """
-    
+
     def __init__(self, yaml_path: str = "config/llm_inventory.yaml") -> None:
         self.yaml_path = Path(yaml_path)
         self.routes: Dict[str, ModelRoute] = {}
@@ -198,16 +198,16 @@ class CallRegistry:
             # Fallback de emergencia si no está definida en el inventario
             logger.warning("Call name '%s' not registered in inventory. Using general default.", call_name)
             return self._get_emergency_model()
-            
+
         return self._build_model_chain(route, sync)
 
     def _build_model_chain(self, route: ModelRoute, sync: bool) -> BaseLanguageModel:
         """Crea el modelo primario e inyecta su cadena de fallbacks."""
         primary = self._instantiate_concrete_provider(route.provider, route.model, route.temperature, route.key_rotation, sync)
-        
+
         if not route.fallbacks:
             return primary
-            
+
         fallback_instances = []
         for fb in route.fallbacks:
             fb_inst = self._instantiate_concrete_provider(
@@ -218,7 +218,7 @@ class CallRegistry:
                 sync=sync
             )
             fallback_instances.append(fb_inst)
-            
+
         return primary.with_fallbacks(fallback_instances)
 
     def _instantiate_concrete_provider(
@@ -259,10 +259,10 @@ class ManagedLLM(Runnable):
         concrete_llm = self.registry.resolve_provider(self.call_name, sync=False)
         if self._bound_tools:
             concrete_llm = concrete_llm.bind_tools(self._bound_tools, **self._kwargs)
-            
+
         obs_config = self._enrich_config(config)
         self._capture_metadata(input, obs_config)
-        
+
         return await concrete_llm.ainvoke(input, config=obs_config, **kwargs)
 
     def invoke(
@@ -275,10 +275,10 @@ class ManagedLLM(Runnable):
         concrete_llm = self.registry.resolve_provider(self.call_name, sync=True)
         if self._bound_tools:
             concrete_llm = concrete_llm.bind_tools(self._bound_tools, **self._kwargs)
-            
+
         obs_config = self._enrich_config(config)
         self._capture_metadata(input, obs_config)
-        
+
         return concrete_llm.invoke(input, config=obs_config, **kwargs)
 
     def _enrich_config(self, config: Optional[RunnableConfig]) -> RunnableConfig:
@@ -406,7 +406,7 @@ class SemanticReranker:
 
 ## 5. Estrategia de Migración Estructural ("Big Bang" sin Fachada de Compatibilidad)
 
-Para garantizar la máxima coherencia arquitectónica y evitar arrastrar deuda técnica a futuro, **se descarta cualquier solución de puente o fachada intermedia (Bridge) en `src/core/engine.py`**. 
+Para garantizar la máxima coherencia arquitectónica y evitar arrastrar deuda técnica a futuro, **se descarta cualquier solución de puente o fachada intermedia (Bridge) en `src/core/engine.py`**.
 
 Toda la aplicación será migrada de manera directa y simultánea al nuevo `llm_registry` mediante los siguientes cambios de importación y uso en los 17 archivos afectados. El archivo `src/core/engine.py` será simplificado eliminando por completo las factorías legacy obsoletas:
 

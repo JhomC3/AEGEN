@@ -96,8 +96,7 @@ async def cmd_status(args: argparse.Namespace) -> None:
 
         # Header
         header = (
-            f"{'Archivo':<35} {'Estado':<10} "
-            f"{'Chunker':<10} {'Chunks':<8} {'Hash':<16}"
+            f"{'Archivo':<35} {'Estado':<10} {'Chunker':<10} {'Chunks':<8} {'Hash':<16}"
         )
         print(header)
         print("-" * 85)
