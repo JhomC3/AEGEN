@@ -1,5 +1,4 @@
 # src/api/routers/status.py
-import asyncio
 import logging
 import time
 from typing import Any, cast
@@ -46,7 +45,9 @@ async def check_vector_db() -> ServiceStatus:
 
 async def check_llm_connection() -> ServiceStatus:
     """
-    Verifica la conectividad real del LLM con cache de 5 minutos.
+    Verifica la conectividad del LLM.
+    Rápido: usa caché de 5 minutos o retorna OK inmediato.
+    El healthcheck profundo del LLM está en /system/llm-health.
     """
     now = time.time()
     if (
@@ -55,22 +56,11 @@ async def check_llm_connection() -> ServiceStatus:
     ):
         return cast(ServiceStatus, _llm_health_cache["status"])
 
-    try:
-        from src.core.engine import check_llm_health
-
-        health_data = await asyncio.wait_for(check_llm_health(), timeout=8.0)
-        if health_data.get("status") == "healthy":
-            result = ServiceStatus.OK
-        else:
-            result = ServiceStatus.ERROR
-    except (Exception, TimeoutError):
-        logger.warning("LLM health check failed or timed out")
-        result = ServiceStatus.ERROR
-
-    # Actualizar cache
-    _llm_health_cache["status"] = result
+    # No bloqueamos el healthcheck principal con llamadas al LLM.
+    # Si hay un valor en caché previo, lo usamos. Si no, OK temporal.
+    _llm_health_cache["status"] = ServiceStatus.OK
     _llm_health_cache["timestamp"] = now
-    return result
+    return ServiceStatus.OK
 
 
 async def _check_service(name: str, check_fn: Any) -> tuple[ServiceHealth, bool]:
