@@ -183,6 +183,23 @@ async def conversational_chat_tool(
     # 3. Ejecución
     try:
         prompt_input = {"user_message": user_message, "messages": messages}
+
+        # Log del prompt formateado para depurar qué ve Gemini
+        try:
+            formatted = conversational_prompt.format(**prompt_input)
+            prompt_preview = []
+            for m in formatted[:6]:
+                role = getattr(m, "type", type(m).__name__)
+                content = str(getattr(m, "content", ""))[:60]
+                prompt_preview.append(f"{role}: '{content}'")
+            logger.info(
+                "[MAGI-PROMPT] messages=%d content=%s",
+                len(formatted),
+                " | ".join(prompt_preview),
+            )
+        except Exception as prompt_err:
+            logger.warning("[MAGI-PROMPT] Error formateando prompt: %s", prompt_err)
+
         config = create_observable_config(call_type="chat_response")
 
         if image_path and Path(image_path).exists():
