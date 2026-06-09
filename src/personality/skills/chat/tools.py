@@ -197,9 +197,15 @@ async def conversational_chat_tool(
         response = await chain.ainvoke(
             prompt_input, config=cast(RunnableConfig, config)
         )
-        return str(response.content).strip()
+        result = str(response.content).strip()
+        logger.info(
+            "[MAGI-RESPONSE] LLM respondió: len=%d preview='%s'",
+            len(result),
+            result[:80],
+        )
+        return result
     except Exception as e:
-        logger.error(f"Error en MAGI chat: {e}")
+        logger.error("Error en MAGI chat: %s", e, exc_info=True)
         return "Lo siento, tuve un problema interno. ¿Reintentamos?"
 
 
