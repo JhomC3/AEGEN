@@ -1,9 +1,11 @@
-# PLAN: [Título Descriptivo]
+# PLAN: [Título Descriptivo] — DEPRECADA
 
-> **Instrucciones para Agentes:**
-> - Para **crear** o modificar este plan: Usar la skill `writing-plans`.
-> - Para **ejecutar** este plan: Usar la skill `executing-plans` para proceder tarea por tarea con verificaciones intermedias.
-> - **Criterio de calidad:** Evaluar trade-offs de cada cambio respecto a: puntos únicos de fallo, degradación suave, y acoplamiento entre módulos. Aceptar complejidad solo cuando el ROI lo justifique (Principio Core #2).
+> **Deprecación:** esta plantilla propia queda retirada como norma vigente.
+> Usar la plantilla común en `../../../sdd-kit/templates/plan.md` (y
+> `spec.md`, `tasks.md`) con el proceso en
+> `../../../sdd-kit/SDD_BOOTSTRAP.md` §1.2, §7.
+> No mantener dos plantillas vigentes ni exigir skills por nombre.
+> Lo que sigue se conserva solo como historia localizable.
 
 - **Estado:** [Propuesto | En Ejecución | Completado | Archivado]
 - **Fecha:** YYYY-MM-DD

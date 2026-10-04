@@ -6,6 +6,8 @@
 
 **AEGEN** es una plataforma robusta y escalable para construir y orquestar agentes de IA complejos. Su objetivo es procesar peticiones en lenguaje natural y ejecutar tareas complejas de forma autónoma.
 
+Metodología de trabajo: SDD (proceso común en `../sdd-kit/SDD_BOOTSTRAP.md`; principios locales en `docs/constitution.md`, entrada en `docs/sdd/README.md`, reglas del agente en `AGENTS.md`).
+
 ## 📖 Manual del Proyecto
 
 Toda la filosofía de desarrollo, los estándares de codificación, la guía de arquitectura, el estado actual y la hoja de ruta del proyecto se encuentran documentados en nuestro manual principal y carpetas especializadas.

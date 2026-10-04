@@ -1,6 +1,6 @@
 # Manual de Desarrollo AEGEN
 
-Este documento explica **cómo operar** en el entorno de desarrollo de AEGEN. Para conocer los estándares técnicos obligatorios, consulta primero **[AGENTS.md](../../AGENTS.md)**.
+Este documento explica **cómo operar** en el entorno de desarrollo de AEGEN. Proceso común: **[SDD_BOOTSTRAP](../../../sdd-kit/SDD_BOOTSTRAP.md)** (única autoridad). Principios locales: **[constitution](../constitution.md)**. Entrada SDD: **[README](../sdd/README.md)**. Estándares técnicos obligatorios: **[AGENTS.md](../../AGENTS.md)**.
 
 ## 🚀 Inicio Rápido (Quick Start)
 
@@ -15,16 +15,20 @@ cp .env.example .env  # Y editar con tus llaves
 
 # 3. Desarrollo activo
 make dev          # Inicia contenedores con recarga en caliente (hot-reload)
-make verify       # Ejecuta la suite de validación completa (lint + test + arch)
+make dev-check    # Chequeo rápido de arquitectura (ver limitaciones de verify abajo)
 ```
 
-## 📋 Flujo de Trabajo Obligatorio
+## 📋 Flujo de Trabajo (proceso común + controles locales)
 
-Antes de escribir una sola línea de código, debes seguir este proceso:
+Proceso común en `../../../sdd-kit/SDD_BOOTSTRAP.md` §1.2, §8–§9
+(niveles, autorización por alcance, validación veraz). Controles locales:
 
-1.  **Planificación:** Crea un plan detallado en `docs/planes/YYYY-MM-DD-nombre.md` y obtén aprobación.
+1.  **Planificación:** nivel según el método común; para estructural, plan en
+    `docs/planes/YYYY-MM-DD-nombre.md` (plantilla propia deprecada, ver
+    `../planes/plantilla-plan.md`).
 2.  **Desarrollo:** Mantén los archivos bajo los límites de LOC definidos en `AGENTS.md` (150 objetivo, 200 máximo para lógica).
-3.  **Verificación Continua:** Ejecuta `make verify` frecuentemente.
+3.  **Verificación:** comprobaciones directas con salida comprobada (ver tabla abajo).
+    `make verify` es una ayuda con limitaciones conocidas, no evidencia suficiente.
 4.  **Formateado:** Usa `make format` antes de cada commit.
 
 ## 🛠️ Comandos Esenciales
@@ -32,14 +36,30 @@ Antes de escribir una sola línea de código, debes seguir este proceso:
 | Comando | Función |
 | :--- | :--- |
 | `make dev` | Docker + Hot-reload para desarrollo rápido. |
-| `make verify` | CI completa: Ruff, MyPy, Bandit y Pytest. |
+| `make verify` | Ayuda con limitaciones (ver abajo); no es garantía por sí sola. |
 | `make format` | Corrección automática de estilo y orden de imports. |
 | `make status` | Estado del proyecto, arquitectura y sincronización. |
 | `make sync-docs` | Sincroniza documentación con el estado del proyecto. |
 
-## 🧪 Estándares de Pruebas (Testing)
+## ✅ Validación local (controles reales)
 
-AEGEN exige una **cobertura mínima del 50%** (objetivo progresivo: 85%).
+| Cambio | Comprobación directa |
+|---|---|
+| `.py` | `uv run python -m ruff check .`, `uv run python -m mypy src tests`, `uv run python -m pytest tests/`, `uv run python scripts/simple_check.py` (mostrar salida) |
+| Schemas/interfaces | Anterior + test de integración del subsistema afectado |
+| Solo docs | Lectura, enlaces afectados y diff |
+
+Limitaciones conocidas (sin corregir scripts en esta tarea): `Makefile:lint`
+ignora el error de mypy, `Makefile:test` convierte el fallo de pytest en mensaje
+y excluye `tests/unit/test_cbt_safety.py` y `tests/unit/test_profile_manager.py`;
+`pyproject.toml` lleva `--no-cov`, sin mínimo vigente. Por eso no se declara
+éxito por el mensaje final de `verify`.
+
+## 🧪 Cobertura (declaración histórica)
+
+Cobertura histórica 50 % con objetivo 85 %, sin gate vigente confirmado en
+`pyproject.toml` (`--no-cov`). No se introduce otro umbral aquí.
+
 - **Unitarias:** Lógica pura con mocks de entrada/salida.
 - **Integración:** Flujos entre componentes con Redis/SQLite reales.
 - **E2E:** Flujo completo desde Telegram hasta la respuesta final.

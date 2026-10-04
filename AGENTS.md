@@ -3,14 +3,17 @@
 - Repositorio: https://github.com/JhomC3/aegen
 - Stack: Python 3.13 · FastAPI · LangGraph · SQLite/sqlite-vec · Redis · Telegram
 - Issues/PRs en GitHub: usar heredoc `<<'EOF'` para newlines reales; nunca `"\\n"` inline.
+- Proceso común: `../sdd-kit/SDD_BOOTSTRAP.md` (única autoridad del método).
+  Principios locales: `docs/constitution.md`. Entrada SDD: `docs/sdd/README.md`.
+  Este `AGENTS.md` es entrada técnica local, no un método competidor.
 
 ## Principios Core (Inmutables)
 
 1. **Arquitectura Evolutiva:** De monolito funcional a sistema distribuido cuando las métricas lo justifiquen.
-2. **Pragmatismo Medible:** Complejidad solo si ROI (Retorno de Inversión) > umbral definido.
-3. **Gobernanza Automática:** Las reglas se ejecutan mediante scripts, no solo se recuerdan.
+2. **Pragmatismo con evidencia:** Complejidad solo con necesidad y beneficio demostrables.
+3. **Gobernanza explícita:** Las reglas viven en la documentación y se automatizan donde el riesgo lo justifica; sin automatización universal obligatoria.
 4. **LLM-First (IA Primero):** Diseñado para ser usado y entendido por Inteligencias Artificiales.
-5. **Observabilidad Nativa:** Métricas y trazas implementadas desde el inicio.
+5. **Observabilidad apropiada al riesgo:** Métricas y trazas en flujos críticos desde el inicio; sin observabilidad universal como puerta para todo cambio.
 
 ## Estructura del Proyecto y Organización de Módulos
 
@@ -220,7 +223,9 @@ async def reply_to_telegram_chat(chat_id: str, text: str) -> bool: ...
 ## Guías de Testing
 
 - Framework: **pytest** con `pytest-asyncio` (mode=auto), `pytest-cov`, `pytest-mock`, `pytest-snapshot`.
-- Coverage: `--cov-fail-under=50` actual en pyproject.toml. Objetivo progresivo: 85%.
+- Cobertura: declaración histórica 50 % con objetivo 85 %; `pyproject.toml` lleva
+  `--no-cov` en `addopts`, sin mínimo vigente confirmado. No se declara
+  enforcement ausente ni se introduce otro umbral aquí.
 - Naming: `test_<funcionalidad>.py` colocados en el subdirectorio correspondiente:
   - `tests/unit/api/` — tests de routers y adapters
   - `tests/unit/core/` — tests de schemas, config, logging
@@ -230,7 +235,13 @@ async def reply_to_telegram_chat(chat_id: str, text: str) -> bool: ...
   - `tests/integration/` — tests end-to-end (API, conversación, memoria)
   - `tests/performance/` — benchmarks
 - Fixtures compartidas: `tests/conftest.py`. Datos de fixture: `tests/fixture/`.
-- Ejecutar SIEMPRE antes de push: `make verify` (lint + test + architecture check).
+- Para futuras tareas de código, comprobaciones directas con salida comprobada
+  (sin presentar `make verify` como garantía):
+  `uv run python -m ruff check .`, `uv run python -m mypy src tests`,
+  `uv run python -m pytest tests/`, `uv run python scripts/simple_check.py`.
+  La suite excluye históricamente `tests/unit/test_cbt_safety.py` y
+  `tests/unit/test_profile_manager.py`; es parcial por esas exclusiones.
+  No ejecutarlas como condición de una tarea exclusivamente documental.
 - Tests async: no necesitan decorador `@pytest.mark.asyncio` (mode=auto en pyproject.toml).
 - Mocking: usar `pytest-mock` (fixture `mocker`). Para HTTP: usar `respx`.
 - Snapshots: `pytest-snapshot` con `--snapshot-update` para regenerar.
@@ -248,7 +259,10 @@ async def reply_to_telegram_chat(chat_id: str, text: str) -> bool: ...
   - `docs(scope): mensaje` — cambios de documentación
   - `test(scope): mensaje` — adición o corrección de tests
   - `chore(scope): mensaje` — mantenimiento, dependencias, CI
-- **Validación pre-commit:** `make verify` DEBE pasar al 100% (cero errores de Ruff, Mypy y arquitectura) antes de declarar una tarea como finalizada o realizar un commit. No se permiten excepciones "parciales".
+- **Validación pre-commit:** ver «Verificación durante la ejecución» y controles
+  locales abajo. `make verify` es una ayuda con limitaciones conocidas
+  (no es evidencia suficiente de éxito por sí sola); declarar cumplido solo
+  con evidencia por requisito.
 - **PR Template:** `.github/PULL_REQUEST_TEMPLATE.md` — seguir el checklist de verificación.
 - **CI Pipeline:** Push/PR a `main` o `develop` dispara `make verify` en Ubuntu.
 - Agrupar cambios relacionados; no mezclar refactors no relacionados en el mismo PR.
@@ -266,7 +280,7 @@ async def reply_to_telegram_chat(chat_id: str, text: str) -> bool: ...
 ## Documentación
 
 - **Idioma:** Toda la documentación en **Español**. Términos técnicos en inglés se permiten entre paréntesis ().
-- **Fuente de Verdad:** `AGENTS.md` es el documento rector para agentes. La documentación detallada vive en `docs/`.
+- **Fuente:** proceso común en `../sdd-kit/SDD_BOOTSTRAP.md`; principios locales en `docs/constitution.md`. Este `AGENTS.md` es entrada técnica. La documentación detallada vive en `docs/`.
 - **Estructura:**
   - Arquitectura detallada: `docs/arquitectura/` (subsistemas: agentes, core, memoria, personalidad, interfaces)
   - Guías operativas: `docs/guias/` (manual-desarrollo, manual-despliegue, manual-gestion-conocimiento)
@@ -280,32 +294,32 @@ async def reply_to_telegram_chat(chat_id: str, text: str) -> bool: ...
 
 ## Planificación y Niveles de Cambio
 
-### Niveles de cambio
+Proceso común: `../sdd-kit/SDD_BOOTSTRAP.md` §1.2 (trivial / localizado /
+estructural), §8 (autorización por alcance) y §9 (validación veraz).
+Esta sección conserva solo ejemplos y controles locales de AEGEN.
+
+### Niveles de cambio (ejemplos locales)
 
 No todo cambio merece el mismo proceso. La burocracia excesiva degrada la calidad tanto como la falta de proceso.
 
-| Nivel | Ejemplos | Proceso requerido |
+| Nivel (criterios en método común §1.2) | Ejemplos | Registro y validación local |
 |---|---|---|
-| **Trivial** | Fix de typo, ajuste de config, corrección de docs | Sin plan formal. Describir el cambio en el commit message. `make verify` si toca `.py`. |
-| **Localizado** | Bug fix en un archivo, ajuste de lógica sin cambiar interfaces | Plan ligero: describir qué, por qué, y archivos afectados directamente en la conversación. `make verify` obligatorio. |
-| **Estructural** | Cruza múltiples módulos, modifica interfaces/schemas, añade especialista, altera el pipeline | Plan formal con plantilla completa (`docs/planes/plantilla-plan.md`). Análisis de impacto, ADR si aplica. Aprobación del usuario antes de implementar. |
+| **Trivial** | Fix de typo, corrección de docs, ajuste de config sin cambio de conducta, reglas nuevas ni contratos | Sin plan formal. Describir el cambio en el commit message. Comprobaciones directas si toca `.py`. Si el ajuste cambia conducta, no es trivial: subir de nivel. |
+| **Localizado** | Bug fix en un archivo, ajuste de lógica sin cambiar interfaces | Actualizar la spec vigente o crear spec breve con aceptación explícita; plan/tareas en la misma spec o conversación. Comprobaciones directas del subsistema. |
+| **Estructural** | Cruza múltiples módulos, modifica interfaces/schemas, añade especialista, altera el pipeline | Spec+plan+tareas; análisis de impacto; ADR si aplica (ver criterios abajo). |
 
-Los planes activos se almacenan en `docs/planes/`. Al completar un plan: cambiar su estado a "Completado" y moverlo a `docs/planes/archivo/`.
+Los planes existentes en `docs/planes/` (activos e históricos) se conservan localizables; al completar uno, cambiar su estado a "Completado" y moverlo a `docs/planes/archivo/`. El trabajo estructural nuevo se registra con el método común (spec+plan+tareas y plantillas del kit); `docs/planes/plantilla-plan.md` está deprecada.
 
 ### Juicio técnico del agente
 
-Las directrices de este documento constringen el **proceso de verificación**, no el **juicio técnico**. El agente debe:
-
-- Proponer soluciones arquitectónicamente superiores cuando las identifique, incluso si difieren del plan aprobado o de la idea original del usuario. Esto incluye reorientar funcionalidades cuando una alternativa produce mejor resultado. Documentar la desviación.
-- Elegir la solución más simple que resuelva el problema sin sobre-ingeniería.
-- Evaluar si un cambio necesita plan formal o si la burocracia excede el valor del cambio.
+Ver método común §0 (criterio propio, niveles y disenso). Local: elegir la solución más simple que resuelva el problema; si una alternativa superior difiere del plan o de la idea original, proponerla y documentar la desviación.
 
 ### Antes de crear código nuevo (cambios localizados y estructurales)
 
 1. Verificar si la funcionalidad ya existe (`grep` en `src/` por nombre, clase, o función similar).
-2. **Solo para cambios estructurales:** Leer los ADRs relevantes en `adr/`, completar el Análisis de Impacto de la plantilla, verificar alineación con `PLAN-MAESTRO-ESTRATEGICO.md` en `docs/planes/`, y crear el plan en `docs/planes/` con formato `YYYY-MM-DD-nombre-descriptivo.md`.
-3. Obtener aprobación explícita del usuario antes de implementar.
-- Si una instrucción del usuario contradice los Principios Core de `AGENTS.md`, pedir aclaración antes de proceder.
+2. **Solo para cambios estructurales:** Leer los ADRs relevantes en `adr/`, registrar el análisis de impacto en el plan común (plantillas del kit, no la plantilla propia deprecada) y, si el cambio es estratégico, verificar alineación con `PLAN-MAESTRO-ESTRATEGICO.md` en `docs/planes/`. No crear planes aislados en `docs/planes/` para trabajo nuevo.
+3. Autorización por alcance (método común §8): continuar dentro del alcance autorizado; preguntar solo por decisión de producto, contradicción irresoluble o ampliación material.
+- Si una instrucción del usuario contradice los Principios Core de `docs/constitution.md`, pedir aclaración antes de proceder.
 
 ### Cuándo es obligatorio un ADR
 
@@ -317,20 +331,27 @@ Un ADR es obligatorio si el cambio:
 
 Para cualquier otro cambio, un ADR no es necesario.
 
-### Verificación durante la ejecución (Micro-Gates)
+### Verificación durante la ejecución (controles locales)
 
-- **Archivos `.py` modificados:** Ejecutar `make verify` inmediatamente después de cada tarea. Si falla, la tarea está **bloqueada** -- no se puede avanzar a la siguiente. Corregir o revertir.
-- **Schemas o interfaces modificados:** `make verify` + ejecutar el test de integración específico del subsistema afectado.
-- **Solo documentación:** Verificación al final de todas las fases.
-- **Regla absoluta:** No existe "deuda de verificación". Un fallo de verify no se pospone.
+Limitación conocida: `make verify` es una ayuda, no evidencia suficiente.
+`Makefile:lint` ignora el error de mypy (`-` delante) y `Makefile:test`
+convierte el fallo de pytest en un mensaje (`|| echo ...`); `pyproject.toml`
+lleva `--no-cov`, sin mínimo vigente. No declarar éxito por su mensaje final.
+
+- **Archivos `.py` modificados:** comprobaciones directas con salida comprobada
+  (ruff, mypy, pytest del subsistema, `scripts/simple_check.py`). Si fallan,
+  la tarea está **bloqueada** — no se avanza. Corregir o revertir.
+- **Schemas o interfaces modificados:** comprobaciones directas + test de integración específico del subsistema afectado.
+- **Solo documentación:** lectura, enlaces afectados y diff al final.
+- **Regla:** método común §9 (fallo pertinente impide declarar cumplido; preexistentes se registran sin reparar fuera de alcance).
 
 ### Checklist pre-commit obligatorio
 
 Antes de ejecutar `git add/commit`:
-1. `git status` muestra SOLO archivos relacionados con el plan (sin archivos huérfanos ni olvidados).
+1. Revisar `git status`; seleccionar y preparar solo los archivos propios del plan, preservando los demás (ajenos o sin seguimiento) sin modificarlos ni incorporarlos.
 2. Si se crearon archivos nuevos: confirmar que aparecen y agregarlos explícitamente.
 3. Si se eliminaron archivos: `grep -r 'from <modulo_eliminado>' src/` confirma que nadie los importa.
-4. `make verify` pasa al 100%.
+4. Evidencia por requisito según el tipo de cambio (ver arriba); sin casillas de éxito ficticio.
 5. Si el cambio toca el pipeline de mensajería: ejecutar `pytest tests/integration/test_telegram_webhook.py` y verificar con `grep -r 'from <modulo_modificado>' src/api/ src/agents/` que las dependencias del pipeline siguen intactas.
 
 ## Gestión de Dependencias
@@ -356,8 +377,8 @@ Antes de ejecutar `git add/commit`:
 ## Notas Específicas para Agentes
 
 - **AEGEN** = infraestructura técnica (este repositorio). **MAGI** = la interfaz conversacional que el usuario ve.
-- `AGENTS.md` es la fuente de verdad para directrices de agentes. Leerlo al iniciar una sesión de trabajo.
-- Verificar con `make verify` que todo pasa antes de declarar cualquier tarea como finalizada.
+- Proceso común en `../sdd-kit/SDD_BOOTSTRAP.md`; principios locales en `docs/constitution.md`. Leer ambos al iniciar una sesión de trabajo.
+- Evidencia por requisito antes de declarar cualquier tarea como finalizada; no declarar éxito por el mensaje final de `make verify`.
 - Responder con respuestas de alta confianza: verificar en código; no adivinar.
 - Cuando trabajes en un Issue o PR de GitHub, imprimir la URL completa al final de la tarea.
 - **Versión actual:** v0.8.4 según CHANGELOG.md.
@@ -365,4 +386,4 @@ Antes de ejecutar `git add/commit`:
 - Al añadir un nuevo AGENTS.md en cualquier subdirectorio, crear también un symlink `CLAUDE.md` apuntando al mismo archivo.
 
 ---
-*Este documento unifica las reglas de operación de agentes y los estándares técnicos del proyecto. Si encuentras una forma mejor de trabajar, propón un cambio a AGENTS.md.*
+*Esta es la entrada técnica local (proceso común + principios locales enlazados arriba). Si encuentras una forma mejor de trabajar, propón un cambio aquí o al método común, según corresponda.*

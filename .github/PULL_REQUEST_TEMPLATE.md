@@ -11,14 +11,14 @@ Describe de forma concisa el "qué" y el "porqué" de este cambio.
 - ¿Cuál es la solución a alto nivel?
 -->
 
-## ✅ Checklist de Verificación
+## ✅ Checklist de Verificación (por tipo de cambio; «no aplica» justificado vale)
 
-Asegúrate de que tu PR cumple con los siguientes puntos. Marca las casillas completadas.
+Asegúrate de que tu PR cumple con los siguientes puntos. Marca las casillas completadas o justifica «no aplica».
 
--   [ ] **He leído y seguido las directrices de [AGENTS.md](AGENTS.md).**
--   [ ] **Mi código sigue los estándares definidos en `AGENTS.md`.**
--   [ ] **He ejecutado `make verify` localmente y todos los checks pasan.**
--   [ ] **He añadido tests que prueban mis cambios.**
+-   [ ] **He leído y seguido las directrices de [AGENTS.md](../AGENTS.md)** (proceso común + controles locales).
+-   [ ] **Mi cambio sigue los estándares definidos en `AGENTS.md`** (o justifico la excepción).
+-   [ ] **Evidencia de validación:** comprobaciones directas con salida (ruff/mypy/pytest del subsistema) o, en solo docs, lectura+enlaces+diff. `make verify` solo es ayuda con limitaciones conocidas, no garantía por sí sola.
+-   [ ] **Tests:** he añadido tests para cambios de código/contrato; en solo docs, «no aplica» justificado.
 -   [ ] La documentación relevante ha sido actualizada (si aplica).
 -   [ ] El `CHANGELOG.md` ha sido actualizado con los cambios significativos (si aplica).
 
