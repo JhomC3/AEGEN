@@ -1,12 +1,21 @@
+"""Debounce por chat y flujo de consolidación de una ráfaga.
+
+La espera y los reintentos del cerrojo viven en ``lock_wait``; la adquisición
+atómica y el latido viven en ``processing_lock``. Este módulo conserva el punto
+de entrada público ``process_buffered_events`` y el flujo de la ráfaga.
+"""
+
 import asyncio
 import logging
+from contextlib import suppress
 from datetime import datetime
 from uuid import uuid4
 
 from src.api.routers.privacy import handle_privacy_command, is_privacy_command
+from src.api.services import lock_wait, processing_lock
 from src.api.services.event_processor import process_event_task
 from src.api.services.fragment_consolidator import consolidate_fragments
-from src.core import dependencies, schemas
+from src.core import schemas
 from src.core.config import settings
 from src.core.ingestion_buffer import ingestion_buffer
 from src.tools import telegram_interface
@@ -20,21 +29,6 @@ async def _check_debounce(chat_id: int, task_seq: int) -> bool:
     if current_seq != task_seq:
         logger.debug(f"Debounce: Seq {task_seq} != {current_seq}. Abortando.")
         return False
-    return True
-
-
-async def _wait_for_lock(chat_id: int, task_seq: int, lock_key: str) -> bool:
-    """Espera si el chat está ocupado y re-verifica debounce."""
-    if not dependencies.redis_connection:
-        return True
-
-    is_processing = await dependencies.redis_connection.get(lock_key)
-    if is_processing:
-        logger.info(f"Chat {chat_id} ocupado. Esperando ráfaga tardía...")
-        await asyncio.sleep(2.0)
-        # Re-verificar debounce tras la espera
-        return await _check_debounce(chat_id, task_seq)
-
     return True
 
 
@@ -65,21 +59,30 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str) ->
     if not await _check_debounce(chat_id, task_seq):
         return
 
-    # 3. Cerrojo de Procesamiento (Lock)
-    lock_key = f"lock:processing:{chat_id}"
-    if not await _wait_for_lock(chat_id, task_seq, lock_key):
+    # 3. Cerrojo de Procesamiento (Lock atómico, espera acotada y reintento)
+    lock_token = await lock_wait.wait_for_processing_lock(chat_id)
+    if lock_token is None:
+        lock_wait.schedule_lock_retry(chat_id, task_seq, trace_id)
         return
 
-    # 4. Recuperar fragmentos (Flush)
-    fragments = await ingestion_buffer.flush_all(str(chat_id))
-    if not fragments:
-        return
-
-    # 5. Ejecución con Protección (Try/Finally)
-    if dependencies.redis_connection:
-        await dependencies.redis_connection.setex(lock_key, 60, "true")
+    renew_task: asyncio.Task[None] | None = None
+    if lock_token:
+        renew_task = asyncio.create_task(
+            processing_lock.keep_processing_lock_alive(chat_id, lock_token)
+        )
 
     try:
+        # Si mientras esperábamos llegó una tarea más nueva, esa tarea es la
+        # responsable de consolidar; esta libera el cerrojo sin consumir.
+        if not await _check_debounce(chat_id, task_seq):
+            return
+
+        # 4. Recuperar fragmentos (Flush)
+        fragments = await ingestion_buffer.flush_all(str(chat_id))
+        if not fragments:
+            return
+
+        # 5. Ejecución con Protección (Try/Finally)
         # Feedback visual
         await telegram_interface.telegram_manager.send_chat_action(
             str(chat_id), "typing"
@@ -118,5 +121,13 @@ async def process_buffered_events(chat_id: int, task_seq: int, trace_id: str) ->
     except Exception as e:
         logger.error(f"Error procesando ráfaga para {chat_id}: {e}", exc_info=True)
     finally:
-        if dependencies.redis_connection:
-            await dependencies.redis_connection.delete(lock_key)
+        if renew_task is not None:
+            renew_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await renew_task
+        await processing_lock.release_processing_lock(chat_id, lock_token)
+
+
+async def cancel_pending_lock_retries() -> None:
+    """Mantiene el nombre público; delega en el módulo de espera."""
+    await lock_wait.cancel_pending_lock_retries()

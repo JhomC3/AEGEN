@@ -34,19 +34,32 @@ class HybridSearch:
         vw: float = 0.7,
         kw: float = 0.3,
     ) -> list[dict[str, Any]]:
-        """Búsqueda principal híbrida (Vectorial + Keyword) con Two-Stage y Time Decay."""
+        """Búsqueda híbrida (Vectorial + Keyword) con Two-Stage y Time Decay."""
         from src.core.config import settings
 
         pool_limit = getattr(settings, "MEMORY_RETRIEVAL_POOL", 100)
         top_k = getattr(settings, "MEMORY_RETRIEVAL_TOP_K", limit)
 
-        emb = await self.embedding_service.embed_query(query)
-        v_res, k_res = await asyncio.gather(
-            self.vector_search.search(emb, pool_limit, chat_id, namespace),
-            self.keyword_search.search(
+        emb = None
+        try:
+            emb = await self.embedding_service.embed_query(query)
+        except Exception as e:
+            logger.warning(
+                "Embeddings no disponibles; búsqueda solo por palabra clave: %s", e
+            )
+
+        if not emb:
+            v_res: list = []
+            k_res = await self.keyword_search.search(
                 query, pool_limit, chat_id, namespace, source_skill
-            ),
-        )
+            )
+        else:
+            v_res, k_res = await asyncio.gather(
+                self.vector_search.search(emb, pool_limit, chat_id, namespace),
+                self.keyword_search.search(
+                    query, pool_limit, chat_id, namespace, source_skill
+                ),
+            )
         rrf = self._merge_rrf(v_res, k_res, rrf_k, vw, kw)
         sorted_ids = sorted(rrf.items(), key=lambda x: x[1], reverse=True)[:pool_limit]
         if not sorted_ids:
@@ -75,7 +88,8 @@ class HybridSearch:
             if isinstance(created_at, str):
                 try:
                     # SQLite suele guardar como YYYY-MM-DD HH:MM:SS o formato ISO
-                    # Reemplazamos espacio por T para simplificar el parseo ISO si es necesario
+                    # Reemplazamos espacio por T para simplificar el parseo ISO
+                    # si es necesario
                     dt_str = created_at
                     if " " in dt_str and "T" not in dt_str:
                         dt_str = dt_str.replace(" ", "T")

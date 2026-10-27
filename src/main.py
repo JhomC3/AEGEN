@@ -68,8 +68,46 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
         watcher = KnowledgeWatcher(global_knowledge_loader)
         await watcher.start()
 
+        # Procesar ráfagas que quedaron en Redis al apagar, sin esperar un
+        # mensaje nuevo. La recuperación corre en segundo plano.
+        from src.api.services.startup_recovery import recover_pending_buffers
+
+        try:
+            recovered = await recover_pending_buffers()
+            logger.info("Recuperación de buffers pendientes: %d.", recovered)
+        except Exception:
+            logger.exception("No se pudo iniciar la recuperación de buffers")
+
         logger.info("Arranque completado.")
         yield
+
+        # Cancelar reintentos de cerrojo al inicio del apagado: los mensajes
+        # pendientes quedan en el buffer y no se crean tareas nuevas.
+        from src.api.services.debounce_manager import cancel_pending_lock_retries
+        from src.api.services.startup_recovery import cancel_startup_recovery_tasks
+
+        try:
+            await cancel_pending_lock_retries()
+        except Exception:
+            logger.exception("No se pudieron cancelar los reintentos de cerrojo")
+
+        try:
+            await cancel_startup_recovery_tasks()
+        except Exception:
+            logger.exception("No se pudieron cancelar las recuperaciones de arranque")
+
+        # Dar una ventana de reinicio a los buffers que sigan pendientes. Se
+        # hace antes de cerrar Redis y solo en un apagado ordenado.
+        try:
+            from src.core.ingestion_buffer import ingestion_buffer
+
+            recuperados = await ingestion_buffer.extend_pending_ttl()
+            logger.info(
+                "Buffers pendientes conservados para el próximo arranque: %d.",
+                recuperados,
+            )
+        except Exception:
+            logger.exception("No se pudo extender el TTL de los buffers pendientes")
 
         await watcher.stop()
         from src.agents.workers.worker_manager import WorkerManager

@@ -46,32 +46,34 @@ async def check_vector_db() -> ServiceStatus:
 async def check_llm_connection() -> ServiceStatus:
     """
     Verifica la conectividad del LLM.
-    Rápido: usa caché de 5 minutos o retorna OK inmediato.
-    El healthcheck profundo del LLM está en /system/llm-health.
+    Rápido: usa el último resultado real cacheado (5 minutos). Sin evidencia
+    previa reporta PENDING; el chequeo profundo está en /system/llm-health.
     """
     now = time.time()
-    if (
-        _llm_health_cache["status"] is not None
+    cached = _llm_health_cache["status"]
+    cache_fresco = (
+        cached is not None
         and now - _llm_health_cache["timestamp"] < LLM_HEALTH_CACHE_TTL
-    ):
-        return cast(ServiceStatus, _llm_health_cache["status"])
+    )
+    if cache_fresco:
+        return cast(ServiceStatus, cached)
 
-    # No bloqueamos el healthcheck principal con llamadas al LLM.
-    # Si hay un valor en caché previo, lo usamos. Si no, OK temporal.
-    _llm_health_cache["status"] = ServiceStatus.OK
-    _llm_health_cache["timestamp"] = now
-    return ServiceStatus.OK
+    # No bloqueamos el healthcheck principal con llamadas al LLM y no
+    # declaramos salud que no se ha comprobado.
+    return ServiceStatus.PENDING
 
 
 async def _check_service(name: str, check_fn: Any) -> tuple[ServiceHealth, bool]:
     """Helper para ejecutar un chequeo de servicio y retornar el estado."""
     status = await check_fn()
     is_healthy = status == ServiceStatus.OK
-    return ServiceHealth(
-        name=name,
-        status=status,
-        details="Connected" if is_healthy else "Connection failed",
-    ), is_healthy
+    if is_healthy:
+        details = "Connected"
+    elif status == ServiceStatus.PENDING:
+        details = "Not checked (see /system/llm-health)"
+    else:
+        details = "Connection failed"
+    return ServiceHealth(name=name, status=status, details=details), is_healthy
 
 
 @router.get(
@@ -132,10 +134,15 @@ async def health_check(
 async def llm_health_check() -> dict[str, Any]:
     """
     Verifica la conexión y salud del proveedor LLM configurado.
+    Actualiza el caché usado por /system/health con evidencia real.
     """
     from src.core.engine import check_llm_health
 
-    return await check_llm_health()
+    result = await check_llm_health()
+    healthy = result.get("status") == "healthy"
+    _llm_health_cache["status"] = ServiceStatus.OK if healthy else ServiceStatus.ERROR
+    _llm_health_cache["timestamp"] = time.time()
+    return result
 
 
 @router.get(

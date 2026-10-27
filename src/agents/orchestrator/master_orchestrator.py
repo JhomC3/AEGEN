@@ -64,8 +64,12 @@ class MasterOrchestrator:
             logger.info("[%s] <<< Finalizada ejecución del grafo.", session_id)
             return cast(dict[str, Any], final_state_dict)
         except Exception as e:
-            logger.error("[%s] Error catastrófico: %s", session_id, e)
-            initial_state["error_message"] = f"Error de ejecución: {e}"
+            # El detalle queda en logs; el mensaje de estado es apto para el
+            # usuario y no expone trazas ni respuestas crudas del proveedor.
+            logger.error("[%s] Error catastrófico: %s", session_id, e, exc_info=True)
+            initial_state["error_message"] = (
+                "Error interno al procesar la solicitud. Inténtalo de nuevo."
+            )
             return dict(initial_state)
 
     def get_cache_stats(self) -> dict[str, Any]:

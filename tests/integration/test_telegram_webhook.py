@@ -50,12 +50,13 @@ async def test_telegram_webhook_success_flow(
         mock_download_tool,
     )
 
-    # Mockear la herramienta de respuesta de Telegram
-    mock_reply_tool = MagicMock()
-    mock_reply_tool.ainvoke = AsyncMock(return_value=True)
+    # Mockear el manager de Telegram (contrato real de _send_response)
+    fake_manager = MagicMock()
+    fake_manager.send_message = AsyncMock(return_value=True)
+    fake_manager.send_chat_action = AsyncMock(return_value=True)
+    monkeypatch.setattr("src.tools.telegram_interface.telegram_manager", fake_manager)
     monkeypatch.setattr(
-        "src.tools.telegram_interface.reply_to_telegram_chat",
-        mock_reply_tool,
+        "src.tools.telegram_interface.get_telegram_manager", lambda: fake_manager
     )
 
     # 2. Preparar la Petición
@@ -123,7 +124,6 @@ async def test_telegram_webhook_success_flow(
 
     # Verificar que la herramienta de respuesta fue llamada con el texto correcto
     expected_message = "Este es un texto de prueba."
-    mock_reply_tool.ainvoke.assert_awaited_once_with({
-        "chat_id": str(test_chat_id),
-        "text": expected_message,
-    })
+    fake_manager.send_message.assert_awaited_once_with(
+        str(test_chat_id), expected_message
+    )

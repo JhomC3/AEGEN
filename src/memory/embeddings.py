@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import logging
 from typing import Any, cast
@@ -32,8 +33,12 @@ class EmbeddingService:
             )
 
             if not api_key:
-                logger.error("GOOGLE_API_KEY not found in settings")
-                raise ValueError("GOOGLE_API_KEY is required")
+                # La memoria semántica es opcional: no tumbar el arranque.
+                logger.error(
+                    "GOOGLE_API_KEY no configurada; los embeddings fallarán "
+                    "y la búsqueda usará solo palabra clave."
+                )
+                return
 
             genai.configure(api_key=api_key)
             EmbeddingService._configured = True
@@ -90,7 +95,8 @@ class EmbeddingService:
             embedding_blob = np.array(embedding, dtype=np.float32).tobytes()
             db = await store.get_db()
             await db.execute(
-                "INSERT OR IGNORE INTO embedding_cache (content_hash, embedding) VALUES (?, ?)",
+                "INSERT OR IGNORE INTO embedding_cache "
+                "(content_hash, embedding) VALUES (?, ?)",
                 (content_hash, embedding_blob),
             )
             await db.commit()
@@ -118,8 +124,10 @@ class EmbeddingService:
         if miss_indices:
             miss_texts = [texts[idx] for idx in miss_indices]
             try:
-                # SDK sincrónico
-                response = genai.embed_content(
+                # SDK sincrónico: ejecutarlo en un hilo para no bloquear el
+                # event loop mientras el proveedor responde o falla.
+                response = await asyncio.to_thread(
+                    genai.embed_content,
                     model=self.model_name,
                     content=miss_texts,
                     task_type=task_type,

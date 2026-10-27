@@ -14,6 +14,11 @@ class IngestionBuffer:
     Permite capturar ráfagas de mensajes y procesarlos como uno solo.
     """
 
+    BUFFER_TTL_SECONDS = 60
+    # Ventana de recuperación tras un apagado ordenado. Sin esto, un reinicio
+    # más largo que el TTL de la ráfaga perdería los mensajes pendientes.
+    SHUTDOWN_RECOVERY_TTL_SECONDS = 3600
+
     def __init__(self) -> None:
         self.MSG_BUFFER_PREFIX = "ingest:buffer:"
         self.SEQ_COUNTER_PREFIX = "ingest:seq:"
@@ -42,13 +47,71 @@ class IngestionBuffer:
         current_seq = await redis.incr(seq_key)
 
         # 3. Establecer TTL corto (evitar fugas si algo falla)
-        await redis.expire(buffer_key, 60)
-        await redis.expire(seq_key, 60)
+        await redis.expire(buffer_key, self.BUFFER_TTL_SECONDS)
+        await redis.expire(seq_key, self.BUFFER_TTL_SECONDS)
 
         logger.debug(
             f"Event pushed to ingestion buffer for {chat_id}. Seq: {current_seq}"
         )
         return current_seq
+
+    async def refresh_ttl(self, chat_id: str) -> None:
+        """Renueva el TTL mientras hay una ráfaga esperando el cerrojo.
+
+        Sin esto, una espera superior al TTL haría desaparecer los mensajes
+        pendientes aunque la tarea siguiera viva.
+        """
+        redis = self._get_redis()
+        buffer_key = f"{self.MSG_BUFFER_PREFIX}{chat_id}"
+        seq_key = f"{self.SEQ_COUNTER_PREFIX}{chat_id}"
+        await redis.expire(buffer_key, self.BUFFER_TTL_SECONDS)
+        await redis.expire(seq_key, self.BUFFER_TTL_SECONDS)
+
+    async def list_pending_chats(self) -> list[int]:
+        """Lista los chats con una lista de fragmentos viva en Redis.
+
+        Se usa al arrancar para recuperar ráfagas sin esperar un mensaje nuevo.
+        """
+        redis = self._get_redis()
+        prefix = self.MSG_BUFFER_PREFIX
+        chats: set[int] = set()
+
+        async for key in redis.scan_iter(match=f"{prefix}*"):
+            key_str = key.decode("utf-8") if isinstance(key, bytes) else key
+            suffix = key_str[len(prefix) :]
+            try:
+                chats.add(int(suffix))
+            except ValueError:
+                logger.warning("Clave de buffer no reconocida: %s", key_str)
+
+        return sorted(chats)
+
+    async def ensure_sequence(self, chat_id: str) -> int:
+        """Recupera la secuencia y la crea si el contador expiró antes que la lista."""
+        current_seq = await self.get_current_sequence(chat_id)
+        if current_seq > 0:
+            return current_seq
+
+        redis = self._get_redis()
+        seq_key = f"{self.SEQ_COUNTER_PREFIX}{chat_id}"
+        created = await redis.set(seq_key, 1, nx=True, ex=self.BUFFER_TTL_SECONDS)
+        if created:
+            return 1
+        return await self.get_current_sequence(chat_id)
+
+    async def extend_pending_ttl(
+        self, ttl_seconds: int = SHUTDOWN_RECOVERY_TTL_SECONDS
+    ) -> int:
+        """Extiende el TTL de los buffers vivos para el próximo arranque.
+
+        Solo cubre un apagado ordenado; un SIGKILL deja el TTL normal de 60 s.
+        """
+        redis = self._get_redis()
+        chats = await self.list_pending_chats()
+        for chat_id in chats:
+            await redis.expire(f"{self.MSG_BUFFER_PREFIX}{chat_id}", ttl_seconds)
+            await redis.expire(f"{self.SEQ_COUNTER_PREFIX}{chat_id}", ttl_seconds)
+        return len(chats)
 
     async def get_current_sequence(self, chat_id: str) -> int:
         """Retorna la secuencia actual sin modificarla."""

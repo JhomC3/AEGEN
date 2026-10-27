@@ -127,7 +127,10 @@ class SkillBasedSpecialist(SpecialistInterface):
             return str(await tool.ainvoke(tool_args))
         except Exception:
             logger.exception("Error executing skill tool %s", self._name)
-            return "Tuve un problema técnico al procesar tu solicitud."
+            state["error_message"] = (
+                f"La habilidad '{self._name}' no pudo completar la solicitud."
+            )
+            return "No pude completar la solicitud. Inténtalo de nuevo."
 
     async def _delegate_to_worker(self, chat_id: str, tool_args: dict[str, Any]) -> str:
         """Spawnea un worker asíncrono para la tarea."""

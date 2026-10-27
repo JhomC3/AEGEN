@@ -76,6 +76,7 @@ async def _run_orchestration(
         error_message=None,
         conversation_history=conversation_history,
         session_id=str(event.chat_id),
+        rag_context=None,
     )
 
     try:
@@ -95,7 +96,9 @@ async def _run_orchestration(
 async def _send_response(
     chat_id: str, final_state: dict[str, Any], task_id: str
 ) -> str:
-    response_content = final_state.get("payload", {}).get("response")
+    payload = final_state.get("payload") or {}
+    response_content = payload.get("response")
+    error_message = final_state.get("error_message")
 
     logger.info(
         "[TaskID: %s] _send_response: response_content type=%s, "
@@ -103,14 +106,17 @@ async def _send_response(
         task_id,
         type(response_content).__name__,
         len(str(response_content)) if response_content else 0,
-        final_state.get("error_message"),
+        error_message,
     )
 
-    message = (
-        final_state.get("error_message") or str(response_content)
-        if response_content and str(response_content).strip()
-        else "La tarea se completó, pero el agente generó una respuesta vacía."
-    )
+    # Precedencia explícita: un error nunca se oculta; una respuesta válida
+    # solo se usa cuando no hay error que reportar.
+    if error_message and str(error_message).strip():
+        message = str(error_message).strip()
+    elif response_content and str(response_content).strip():
+        message = str(response_content)
+    else:
+        message = "La tarea se completó, pero el agente generó una respuesta vacía."
 
     try:
         # Llamar directamente al manager en vez del @tool wrapper

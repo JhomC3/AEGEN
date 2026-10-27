@@ -222,8 +222,10 @@ async def conversational_chat_tool(
         )
         return result
     except Exception as e:
+        # El fallo debe llegar al especialista para marcar error_message y no
+        # convertir una disculpa genérica en una respuesta exitosa.
         logger.error("Error en MAGI chat: %s", e, exc_info=True)
-        return "Lo siento, tuve un problema interno. ¿Reintentamos?"
+        raise
 
 
 # Exportar para SkillLoader
