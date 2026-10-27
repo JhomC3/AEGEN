@@ -291,3 +291,23 @@ storage/
 
 # SQLite Local Storage
 data/*.db
+
+# Dominio Senda (fusión SDD 001): DB, tokens, secretos y backups operativos
+apps/entrenamiento/data/
+
+# Artefactos y entregas locales (se versionan fuentes, no paquetes ni respaldos)
+.tmp/
+/.tmp-gcp/
+/entrega-senda/
+/entrega-reparacion-aegen/
+.env.save
+.env.test-*
+hc_sync_token
+csrf_secret
+ts_authkey
+local.properties
+.gradle/
+sdk/
+
+# El dominio conserva su lock para poder instalarlo desde GitHub.
+!apps/entrenamiento/uv.lock
