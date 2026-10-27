@@ -38,3 +38,13 @@ lectura externa aprobados al repetir con red (10 tests en esa reejecución,
 incluidos siete ya contados). Total distinto del dominio: 971. Mypy del dominio:
 167 archivos sin errores. Los hooks pueden normalizar espacios e imports;
 las correcciones de estilo se verifican con regresiones pertinentes.
+
+Tras normalizar imports y formato del dominio se repitieron 107 tests de cardio,
+resúmenes y seguridad: todos aprobados. La copia fuente Android corresponde al
+corte histórico de SENDA, sin recompilar ni instalar APK en esta consolidación.
+
+Las habilidades de desarrollo se guardan con su lock de procedencia. Sus dos
+auxiliares CLI se adaptan a pathlib, logging y anotaciones de retorno para
+cumplir los controles del repositorio, conservando su función y salida. No se
+ejecutan contra datos operativos. El validador de estructura/configuración y
+el auxiliar JSON se comprueban de forma directa.
