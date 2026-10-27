@@ -17,6 +17,7 @@ def detect_explicit_command(text: str) -> str | None:
         "chat_specialist": [r"^/chat", r"^/magi"],
         # Futuros especialistas
         "coding_specialist": [r"^/coding", r"^/code", r"^/programar"],
+        "senda_specialist": [r"^/senda", r"^/bienestar"],
     }
 
     for specialist, patterns in commands.items():

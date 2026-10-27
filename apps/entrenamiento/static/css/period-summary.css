@@ -1,0 +1,174 @@
+/* period-summary.css — Panel derecho de resumen periódico (Fase 2).
+   Vocabulario ps-*. Dimensiones vía --summary-w; colores solo por token;
+   el Δ usa signo textual (la información nunca depende solo del color). */
+/* UNA sola zona de scroll vertical (bloque A): el contenedor externo es flex
+   column con overflow hidden (cascade.css); .ps-panels desplaza en Y.
+   El scroll X queda confinado a tablas históricas de 7 columnas (ps-table--exercise)
+   — global, músculo y ejercicio usan el mismo ancho y desplazan horizontalmente
+   dentro de .ps-panels cuando no caben. */
+#ps-content {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    flex-direction: column;
+    overflow: hidden;
+}
+.ps-panels {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px 6px 12px;
+}
+.ps-panels:has(.ps-table--exercise) {
+    overflow-x: auto;
+}
+/* El panel destaca por espacio, jerarquía y contraste, no por brillo:
+   se suprime SOLO aquí el marco metálico degradado global de .panel. */
+#period-summary-wrap.panel::before {
+    display: none;
+}
+.ps-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    padding: 0 8px;
+    border-bottom: 1px solid var(--t-surfaces-neutral-800);
+    scrollbar-width: thin;
+}
+.ps-tab {
+    appearance: none;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--t-surfaces-neutral-400);
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: var(--t-tracking-xs);
+    padding: 8px 10px;
+    white-space: nowrap;
+}
+.ps-tab:hover {
+    color: var(--t-surfaces-neutral-100);
+}
+.ps-tab:focus-visible {
+    outline: 2px solid var(--t-focus-ring);
+    outline-offset: -2px;
+    border-radius: var(--t-radius-sm);
+}
+.ps-tab.ps-tab-active {
+    border-bottom-color: var(--t-burgundy-400);
+    color: var(--t-surfaces-neutral-100);
+}
+/* (definición única arriba; aquí solo densidad) */
+.ps-panel:focus-visible {
+    outline: 2px solid var(--t-focus-ring);
+    outline-offset: 2px;
+}
+.ps-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+/* Las tablas históricas (7 columnas: Periodo, VAR, Series, Reps, Peso, RIR, RM)
+   no caben en --summary-w del escritorio: se desplazan horizontalmente dentro
+   de .ps-panels. Todas las vistas históricas usan ps-table--exercise. */
+.ps-table--exercise {
+    min-width: 460px;
+}
+/* Columnas progresivas por VIEWPORT: el ancho del panel es constante en
+   escritorio (--summary-w), así que una container query no puede distinguir
+   móvil de escritorio. El discriminador correcto es el viewport: <480px las
+   secundarias colapsan visualmente PERO permanecen en la accesibilidad
+   (patrón visually-hidden, no display:none). */
+@media (max-width: 480px) {
+    .ps-table .col-peso,
+    .ps-table .col-rir {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+    }
+}
+.ps-table th,
+.ps-table td {
+    padding: 8px 7px;
+    text-align: left;
+    border-bottom: 1px solid var(--t-surfaces-neutral-800);
+}
+/* Los nombres largos de ejercicio envuelven; las tablas históricas de 7 columnas
+   desplazan horizontalmente dentro de .ps-panels cuando no caben. */
+.ps-table tbody th {
+    word-break: break-word;
+    min-width: 0;
+}
+.ps-table thead th {
+    color: var(--t-surfaces-neutral-400);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: var(--t-tracking-md);
+    text-transform: uppercase;
+}
+.ps-table tbody th {
+    font-weight: 500;
+    color: var(--t-surfaces-neutral-100);
+}
+.ps-table .num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+.ps-delta {
+    font-weight: 700;
+    color: var(--t-surfaces-neutral-100);
+}
+/* UX-3 revisada: fila histórica + highlight sutil + detalle */
+.ps-row.is-selected {
+    background: var(--t-overlay-white-004);
+    border-left: 2px solid var(--t-burgundy-400);
+}
+.ps-row.is-selected th {
+    font-weight: 600;
+}
+.ps-row-toggle {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    padding: 0;
+}
+.ps-row-toggle:focus-visible {
+    outline: 2px solid var(--t-focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--t-radius-sm);
+}
+.ps-detail[hidden] {
+    display: none !important;
+}
+.ps-detail td {
+    background: var(--t-surfaces-neutral-900);
+    overflow: visible;
+}
+.ps-detail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 7px;
+    margin: 0;
+    list-style: none;
+    font-size: 12px;
+    color: var(--t-surfaces-neutral-300);
+}
+.ps-detail {
+    overflow: visible;
+}

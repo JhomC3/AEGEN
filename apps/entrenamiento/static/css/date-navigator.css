@@ -1,0 +1,82 @@
+/* date-navigator.css — owns: #date-navigator, date strip and day buttons. */
+
+/* Navegador de fechas */
+.date-num {
+    position: relative;
+    flex: none;
+    min-width: 26px;
+    padding: 6px 4px 9px;
+    border-radius: var(--t-radius-md);
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--t-surfaces-neutral-400);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    transition: color .15s;
+    cursor: pointer;
+}
+.date-num:hover {
+    color: var(--t-detail-white);
+}
+.date-num.selected {
+    color: var(--t-burgundy-400);
+    background: var(--t-overlay-burgundy-025);
+}
+.date-dot {
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 3px;
+    height: 3px;
+    border-radius: var(--t-radius-pill);
+    background: var(--t-burgundy-400);
+}
+.nav-arrow {
+    flex: none;
+    width: 28px;
+    height: 28px;
+    border-radius: var(--t-radius-lg);
+    border: 1px solid var(--t-surfaces-neutral-800);
+    background: var(--t-surfaces-matte-950);
+    color: var(--t-surfaces-neutral-400);
+    font-size: 12px;
+    font-weight: 900;
+    cursor: pointer;
+    transition: all .15s;
+}
+.nav-arrow:hover {
+    border-color: var(--t-burgundy-600);
+    color: var(--t-burgundy-400);
+}
+.today-btn {
+    flex: none;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: var(--t-radius-lg);
+    border: none;
+    background: transparent;
+    color: var(--t-surfaces-neutral-400);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: var(--t-tracking-2xl);
+    cursor: pointer;
+    transition: color .15s;
+}
+.today-btn:hover {
+    color: var(--t-burgundy-400);
+}
+/* El input date es invisible pero focuseable: anillo en el label al enfocar. */
+label:focus-within:has(#date-jump) {
+    outline: 2px solid var(--t-focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--t-radius-lg);
+}
+.no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}

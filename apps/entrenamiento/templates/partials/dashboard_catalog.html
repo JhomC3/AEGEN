@@ -1,0 +1,39 @@
+{# dashboard_catalog.html — Catálogo índice minimalista (spec 022, lenguaje Rumbo).
+   Grupos siempre expandidos (sin plegado): cada músculo es un título seleccionable
+   y cada ejercicio una fila de texto. La selección es solo texto burdeos
+   (.is-selected + aria-pressed); sin chips, sin bordes, sin puntos. #}
+
+{% if dashboard_catalog %}
+<div class="flex flex-col gap-2">
+    {% for group in dashboard_catalog %}
+    <section class="indice-grupo" data-group="{{ group.name }}">
+        <h2 class="indice-titulo"><button
+                type="button"
+                class="indice-titulo-btn{% if group.name in selected_muscles %} is-selected{% endif %}"
+                data-action="toggle-muscle"
+                data-foco="{{ group.name }}"
+                aria-label="Seleccionar músculo {{ group.name }}"
+                aria-pressed="{{ 'true' if group.name in selected_muscles else 'false' }}"
+            >{{ group.name }}</button></h2>
+        <ul class="indice-lista">
+            {% for exercise in group.exercises %}
+            <li>
+            <button
+                type="button"
+                class="indice-fila{% if exercise.name in selected_exercises %} is-selected{% endif %}"
+                data-exercise="{{ exercise.name }}"
+                data-foco="{{ exercise.name }}"
+                data-action="toggle-exercise"
+                data-padre="{{ group.name }}"
+                aria-label="Seleccionar ejercicio {{ exercise.name }}"
+                aria-pressed="{{ 'true' if exercise.name in selected_exercises else 'false' }}"
+            >
+                <span>{{ exercise.name }}</span>
+            </button>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endfor %}
+</div>
+{% endif %}

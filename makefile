@@ -32,7 +32,7 @@ install: ## Instala dependencias de desarrollo usando uv
 lint: ## Ejecuta linters (ruff, mypy)
 	@echo "Running linters..."
 	$(PYTHON) -m ruff check .
-	-$(PYTHON) -m mypy src tests
+	$(PYTHON) -m mypy src tests
 
 verify: ## Validación completa: linting + tests + architecture simple
 	@echo "🎯 AEGEN Verification Suite..."
@@ -56,7 +56,7 @@ format: ## Formatea el código usando ruff
 
 test: ## Ejecuta pruebas unitarias y de integración con pytest
 	@echo "Running tests..."
-	$(PYTHON) -m pytest tests/ --ignore=tests/unit/test_cbt_safety.py --ignore=tests/unit/test_profile_manager.py || echo "Tests failed but continuing..."
+	$(PYTHON) -m pytest tests/
 
 migrate-facts: ## Ejecuta el script de migración de hechos a atómicos
 	@echo "Migrating legacy JSON facts to atomic database facts..."

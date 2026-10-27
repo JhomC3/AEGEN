@@ -1,0 +1,14 @@
+{# Barra semanal x/210. Contenido de #rumbo-semana. #}
+<section class="panel panel-default" aria-label="Semana">
+    <h2 class="panel-title">Semana {{ semana.lunes }} → {{ semana.domingo }}</h2>
+    <p class="rumbo-score"><span class="rumbo-num">{{ semana.puntos }}</span>/{{ semana.max }}</p>
+    <div class="rumbo-bar" role="progressbar" aria-valuenow="{{ semana.puntos }}"
+         aria-valuemin="0" aria-valuemax="{{ semana.max }}" aria-label="Puntos de la semana">
+        <span class="rumbo-bar-fill" style="width: {{ (100 * semana.puntos // semana.max) if semana.max else 0 }}%"></span>
+    </div>
+    <ol class="rumbo-dias">
+        {% for d in semana.dias %}
+        <li{% if d.fecha == fecha_iso %} aria-current="true" class="rumbo-hoy"{% endif %}>{{ d.fecha[8:10] }} · <span class="rumbo-num">{{ d.puntos }}</span></li>
+        {% endfor %}
+    </ol>
+</section>

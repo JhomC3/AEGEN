@@ -1,0 +1,71 @@
+/* indice.css — vocabulario canónico de catálogos (spec 022, lenguaje Rumbo).
+   Títulos 13px en mayúsculas, filas de texto sin bordes, divisor hairline
+   entre grupos (último sin él). Solo tokens; selección en texto burdeos
+   (.is-selected); foco con anillo visible (WCAG 2.4.7). */
+.indice-grupo {
+    border-bottom: 1px solid var(--t-surfaces-neutral-700);
+}
+.indice-grupo:last-child {
+    border: 0;
+}
+.indice-titulo {
+    color: var(--t-detail-white);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: var(--t-tracking-lg);
+    text-transform: uppercase;
+    margin: 12px 0 4px;
+}
+.indice-titulo-btn {
+    background: transparent;
+    border: 0;
+    padding: 0;
+    font: inherit;
+    letter-spacing: inherit;
+    text-transform: inherit;
+    color: inherit;
+    cursor: pointer;
+    text-align: left;
+}
+.indice-titulo-btn:focus-visible {
+    outline: 2px solid var(--t-focus-ring);
+    outline-offset: 2px;
+    border-radius: var(--t-radius-sm);
+}
+.indice-lista {
+    list-style: none;
+    margin: 0 0 8px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+.indice-fila {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    width: 100%;
+    background: transparent;
+    border: 0;
+    padding: 4px 4px 4px 12px;
+    cursor: pointer;
+    color: var(--t-surfaces-neutral-300);
+    font-size: 13px;
+    text-align: left;
+    font-family: inherit;
+}
+.indice-fila:hover {
+    color: var(--t-detail-white);
+}
+.indice-fila:focus-visible {
+    outline: 2px solid var(--t-focus-ring);
+    outline-offset: -1px;
+}
+.indice-fila.is-selected,
+.indice-titulo-btn.is-selected {
+    color: var(--t-burgundy-400);
+}
+.indice-fila[aria-disabled="true"] {
+    color: var(--t-surfaces-neutral-500);
+    cursor: default;
+}

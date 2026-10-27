@@ -24,6 +24,7 @@ class SpecialistMapper:
         IntentType.VULNERABILITY: ["cbt_specialist"],
         IntentType.TOPIC_SHIFT: ["chat_specialist"],
         IntentType.PSICOTRADING: ["psicotrading_specialist"],
+        IntentType.BIENESTAR: ["senda_specialist"],
     }
 
     def map_intent_to_specialist(

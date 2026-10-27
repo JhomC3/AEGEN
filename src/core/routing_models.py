@@ -26,6 +26,7 @@ class IntentType(str, Enum):
     VULNERABILITY = "vulnerability"
     TOPIC_SHIFT = "topic_shift"
     PSICOTRADING = "psicotrading"
+    BIENESTAR = "bienestar"
 
 
 class EntityInfo(BaseModel):

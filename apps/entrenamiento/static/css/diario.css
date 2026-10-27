@@ -1,0 +1,110 @@
+/* Diario sobre el shell de Splits (spec 017): solo quedan el scoping de la
+ * página (#daily-page), las tabs propias y la reserva CLS del banner. El
+ * layout (splits-page/layout/catalog-col/editor-col), paneles y botones
+ * vienen de components.css; los diálogos conservan su estilo popup. */
+#daily-page .daily-date-heading { display: flex; align-items: baseline; gap: .7rem; margin: 1.25rem 0 1rem; flex-wrap: wrap; }
+#daily-page .daily-date-heading .panel-title { margin: 0; }
+#daily-page .daily-view-header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+#daily-page .daily-view-header .panel-title { margin: 0; }
+#daily-page .daily-tabs { display: flex; gap: .25rem; border-bottom: 1px solid var(--t-surfaces-neutral-800); margin-bottom: 1.25rem; }
+#daily-page .daily-tabs [role="tab"] { padding: .7rem 1rem; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--t-surfaces-neutral-400); font-size: 12px; font-weight: 900; letter-spacing: var(--t-tracking-xl); text-transform: uppercase; cursor: pointer; }
+#daily-page .daily-tabs [role="tab"][aria-selected="true"] { color: var(--t-burgundy-400); border-bottom-color: var(--t-burgundy-600); }
+#daily-page .daily-view { display: flex; flex-direction: column; gap: .85rem; }
+#daily-page .daily-view[hidden] { display: none; }
+/* Aside por vista: apilado con aire; el hidden nativo manda sobre el flex. */
+#daily-page #daily-training-aside, #daily-page #daily-food-aside { display: flex; flex-direction: column; gap: .85rem; min-width: 0; }
+#daily-page #daily-training-aside[hidden], #daily-page #daily-food-aside[hidden] { display: none; }
+#daily-page .daily-aside-tools { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+/* Aside full-height solo desktop: sticky + scroll interno, sin hueco.
+   max-height (no height fija): con poco contenido el aside se ciñe y no
+   empuja la página (spec 041). */
+@media (min-width: 1024px) {
+    #daily-page .splits-catalog-col {
+        position: sticky;
+        top: 16px;
+        max-height: calc(100dvh - 164px);
+        overflow-y: auto;
+        align-self: start;
+    }
+}
+/* H07 (spec 048, D-1 ancho completo): sin tope propio; la columna editora
+   usa el ancho útil común como Splits/Rumbo (flex-1 del layout). Las tablas
+   gestionan su ancho (max-content + scroll interno); en móvil no cambia. */
+/* (regla `#daily-page .splits-editor-col { max-width: 960px; }` retirada) */
+/* Gear por tarjeta (clases pt-* únicas: sin scope de página). */
+.pt-card { position: relative; }
+/* Asides en lenguaje índice (spec 022, scope #daily-page: el popup del
+   Dashboard comparte estos parciales y no se toca). Títulos estilo índice y
+   separador hairline entre tarjetas; acciones, menús y formularios intactos. */
+#daily-page .splits-catalog-col .panel-title {
+    color: var(--t-detail-white);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: var(--t-tracking-lg);
+    text-transform: uppercase;
+    margin: 12px 0 4px;
+}
+#daily-page .splits-catalog-col #plantillas-list,
+#daily-page .splits-catalog-col #nutrition-templates {
+    gap: 0;
+}
+#daily-page .splits-catalog-col .pt-card {
+    background: transparent;
+    border: 0;
+    border-bottom: 1px solid var(--t-surfaces-neutral-700);
+}
+#daily-page .splits-catalog-col .pt-card:last-child {
+    border-bottom: 0;
+}
+.pt-menu-btn { flex: none; width: 28px; padding: 0; display: inline-flex; align-items: center; justify-content: center; }
+.pt-menu-btn[aria-expanded="true"] { color: var(--t-burgundy-400); border-color: var(--t-burgundy-600); }
+.pt-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    z-index: var(--t-z-dropdown);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 150px;
+    padding: 6px;
+    background: var(--t-surfaces-matte-950);
+    border: 1px solid var(--t-surfaces-neutral-800);
+    border-radius: var(--t-radius-lg);
+    box-shadow: var(--t-glow-neon-border);
+}
+.pt-menu[hidden] { display: none; }
+.pt-menu .pt-btn, .pt-menu .btn { width: 100%; }
+/* Banner de sugerencia async (load + re-fetch por fecha): altura mínima
+   reservada para que su llegada no empuja la tabla (CLS). El aviso de
+   descanso puede ser más alto: salto residual menor aceptado. */
+#daily-page #suggestion-banner { display: block; min-height: 28px; }
+.daily-dialog { width: min(92vw, 620px); max-height: min(88vh, 760px); padding: 0; border: 0; background: transparent; color: var(--t-surfaces-neutral-100); }
+.daily-dialog::backdrop { background: var(--t-overlay-backdrop-popup); backdrop-filter: blur(var(--t-blur-2xl)) saturate(1.2); -webkit-backdrop-filter: blur(var(--t-blur-2xl)) saturate(1.2); }
+@supports not (backdrop-filter: blur(1px)) {
+    .daily-dialog::backdrop { background: var(--t-overlay-backdrop-popup-solid); }
+}
+.daily-dialog-card { max-height: inherit; overflow-y: auto; padding: 1.25rem; background: var(--t-surfaces-matte-900); border: 1px solid var(--t-overlay-white-008); border-radius: var(--t-radius-2xl); box-shadow: var(--t-elevation-card); }
+.daily-dialog-header { display: flex; align-items: start; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.daily-dialog-header h2 { margin: .2rem 0 0; font-size: 1rem; letter-spacing: var(--t-tracking-md); }
+.daily-dialog .panel { border: 0; padding: 0; background: transparent; }
+@media (max-width: 639px) {
+    #daily-page .daily-view-header { align-items: flex-start; flex-direction: column; }
+    #daily-page .workspace-nav { width: 100%; }
+    #daily-page .workspace-nav .btn { flex: 1; }
+    /* H01 (spec 044): a 320px las dos tabs no caben en una fila (306px > 272px
+       disponibles) y ensanchaban la página. Con salto de línea permitido la
+       fila única se conserva donde cabe (390px) y se apila donde no (320px). */
+    #daily-page .daily-tabs { flex-wrap: wrap; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .daily-dialog::backdrop { backdrop-filter: none; -webkit-backdrop-filter: none; }
+}

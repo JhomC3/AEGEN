@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Senda — Progreso de entrenamiento{% endblock %}</title>
+    <meta name="description" content="Seguimiento de entrenamiento, alimentación y salud: series, RIR, volumen, nutrición diaria y sincronización con Health Connect.">
+    <link rel="icon" href="{{ static_url('favicon.svg') }}" type="image/svg+xml">
+    <!-- Tailwind compilado estáticamente (sin CDN runtime) -->
+    <link rel="stylesheet" href="{{ static_url('css/tailwind.css') }}">
+    <!-- HTMX CDN (SRI pinned, deferred) -->
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js" integrity="sha384-D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC" crossorigin="anonymous" defer></script>
+    <!-- SortableJS CDN (SRI pinned, deferred) -->
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js" integrity="sha384-HZZ/fukV+9G8gwTNjN7zQDG0Sp7MsZy5DDN6VfY3Be7V9dvQpEpR2jF2HlyFUUjU" crossorigin="anonymous" defer></script>
+    <!-- Plotly se carga bajo demanda (ver static/js/chart-interaction.js) -->
+    <link rel="stylesheet" href="{{ static_url('css/app.css') }}">
+    {% block head_extra %}{% endblock %}
+</head>
+<body class="bg-matte-950 text-neutral-100 min-h-screen font-sans antialiased selection:bg-burgundy-700 selection:text-white">
+    <a class="skip-link" href="#main-content">Saltar al contenido principal</a>
+    {% include "partials/notices.html" %}
+
+    {% include "partials/confirm_modal.html" %}
+
+    {% block content %}{% endblock %}
+
+    {% include "partials/app_config.html" %}
+    <script type="module" src="{{ static_url('js/app.js') }}"></script>
+</body>
+</html>

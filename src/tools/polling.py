@@ -106,8 +106,10 @@ def main() -> None:
 
     logger.info("Iniciando Polling Service v0.5.0")
 
-    # Esperar a que la API local esté disponible antes de iniciar el polling
-    health_url = "http://app:8000/system/health"
+    # Esperar a que la API local esté disponible antes de iniciar el polling.
+    # Se deriva de LOCAL_API_URL para funcionar fuera de Docker (en Docker
+    # sigue siendo http://app:8000/...).
+    health_url = API_URL.rsplit("/api/", 1)[0] + "/system/health"
     logger.info("Esperando disponibilidad de API en %s ...", health_url)
     startup_retries = 0
     while startup_retries < 60:

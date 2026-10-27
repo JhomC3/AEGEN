@@ -1,0 +1,38 @@
+<div class="panel panel-tight">
+    <div class="flex items-center justify-between gap-2 px-1 pt-1">
+        <div class="panel-title-box">
+            <h3 class="panel-title panel-title-neon truncate">Cardio</h3>
+        </div>
+    </div>
+    {% if not cardio %}
+    <p class="empty-state px-1 pb-1">Sin sesiones de ejercicio sincronizadas este día.</p>
+    {% endif %}
+    {% for c in cardio %}
+    <div class="card mx-1">
+        <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-bold text-neutral-200 truncate">{{ c.titulo }}</span>
+            <span class="text-xs text-neutral-400">{{ "%.0f"|format(c.duracion_min) }} min</span>
+        </div>
+        {% if c.velocidad_kmh is not none or c.inclinacion_pct is not none or c.notas %}
+        <div class="text-xs text-neutral-400">
+            {% if c.velocidad_kmh is not none %}<span class="mr-2">Vel {{ "%.1f"|format(c.velocidad_kmh) }} km/h</span>{% endif %}
+            {% if c.inclinacion_pct is not none %}<span class="mr-2">Inc {{ "%.1f"|format(c.inclinacion_pct) }}%</span>{% endif %}
+            {% if c.notas %}<span>{{ c.notas }}</span>{% endif %}
+        </div>
+        {% endif %}
+        <form data-action="cardio-annotation-save" class="flex items-end gap-1.5">
+            <input type="hidden" name="hc_id" value="{{ c.hc_id }}">
+            <input type="hidden" name="fecha" value="{{ fecha_iso }}">
+            <label class="flex flex-col gap-0.5 flex-1" for="cardio-vel-{{ c.hc_id }}">
+                <span class="text-xs text-neutral-400 uppercase tracking-wider">Vel (km/h)</span>
+                <input id="cardio-vel-{{ c.hc_id }}" type="number" name="velocidad_kmh" step="0.1" min="0" value="{{ c.velocidad_kmh if c.velocidad_kmh is not none else '' }}" class="field-input field-input-sm">
+            </label>
+            <label class="flex flex-col gap-0.5 flex-1" for="cardio-inc-{{ c.hc_id }}">
+                <span class="text-xs text-neutral-400 uppercase tracking-wider">Inc (%)</span>
+                <input id="cardio-inc-{{ c.hc_id }}" type="number" name="inclinacion_pct" step="0.5" min="0" value="{{ c.inclinacion_pct if c.inclinacion_pct is not none else '' }}" class="field-input field-input-sm">
+            </label>
+            <button type="submit" class="btn btn-text">Guardar</button>
+        </form>
+    </div>
+    {% endfor %}
+</div>

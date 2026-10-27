@@ -1,0 +1,40 @@
+<!-- editor_popup.html — cuerpo de la ventana emergente de registro:
+     navegador + título de fecha + alimentación + sesión.
+     Replica los contenedores del contrato JS (#nutrition-panel, #session-editor,
+     #editor-notice, #save-outcome) como en la home anterior. -->
+{{ navigator_html | safe }}
+
+<section id="session-date-title" class="flex items-baseline gap-1.5">
+    <h3 class="panel-title panel-title-neon truncate">{{ dia }} {{ fecha_display }}</h3>
+    <span class="text-xs text-neutral-400 flex-none">Semana {{ semana }}</span>
+</section>
+
+<div id="nutrition-templates-section">{{ nutrition_templates_html | safe }}</div>
+
+<section id="nutrition-panel" data-editmode="0" class="panel panel-tight relative">
+    <div id="nutrition-notice" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="nutrition-editor-wrap">
+        {{ nutrition_editor_html | safe }}
+    </div>
+</section>
+
+<div id="session-editor" data-editmode="0" class="panel panel-tight relative">
+    <div id="editor-notice" role="status" aria-live="polite" aria-atomic="true"></div>
+    <div id="save-outcome" data-ok="0" hidden></div>
+    <section id="session-editor-wrap">
+        {{ editor_html | safe }}
+    </section>
+</div>
+
+<!-- Alta contextual + plantillas de entrenamiento -->
+<div id="exercise-create">
+    {{ exercise_form_html | safe }}
+</div>
+
+<div id="alimento-create">
+    {{ alimento_form_html | safe }}
+</div>
+
+<div id="plantillas-section">
+    {{ plantillas_html | safe }}
+</div>

@@ -1,0 +1,14 @@
+/* app.css — CSS import manifest. Order defines cascade precedence. (v3) */
+@import "tokens.css";
+@import "theme.css";
+@import "components.css";
+@import "indice.css";
+@import "date-navigator.css";
+@import "session-editor.css";
+@import "templates.css";
+@import "period-summary.css";
+@import "chart-tooltip.css";
+@import "cascade.css";
+@import "nutrition-trend.css";
+@import "health-panels.css";
+@import "diario.css";

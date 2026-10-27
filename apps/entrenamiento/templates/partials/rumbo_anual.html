@@ -1,0 +1,26 @@
+{# Tendencia anual: línea SVG trailing 52 semanas. Contenido de #rumbo-anual.
+   H09 (spec 046): sin ningún punto registrado no se pinta un SVG vacío con
+   «pico 0/210», sino un estado explícito y compacto (pico 0 = sin datos,
+   pues el mínimo diario registrable es 3). #}
+<section class="panel panel-default" aria-label="Año">
+    <h2 class="panel-title">Año · puntos por semana</h2>
+    {% set maximo = 210 %}
+    {% set puntos = serie | map(attribute='puntos') | list %}
+    {% set pico = puntos | max if puntos else 0 %}
+    {% if pico > 0 %}
+    <svg class="rumbo-trend" viewBox="0 0 520 120" role="img"
+         aria-label="Tendencia anual: máximo {{ pico }} de {{ maximo }} puntos en una semana">
+        {% for s in serie %}
+        {% set x = (loop.index0 * 10) | int %}
+        {% set h = ((s.puntos / maximo) * 100) | int if maximo else 0 %}
+        <rect x="{{ x }}" y="{{ 110 - h }}" width="8" height="{{ h if h > 0 else 0 }}">
+            <title>{{ s.semana }}: {{ s.puntos }}</title>
+        </rect>
+        {% endfor %}
+        <line x1="0" y1="110" x2="520" y2="110" class="rumbo-trend-eje" />
+    </svg>
+    <p class="rumbo-hint">52 semanas · pico <span class="rumbo-num">{{ pico }}/{{ maximo }}</span></p>
+    {% else %}
+    <p>Todavía no hay puntuaciones guardadas este año. Guarda tu primer día en Rumbo para ver la tendencia.</p>
+    {% endif %}
+</section>

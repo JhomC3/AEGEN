@@ -1,0 +1,81 @@
+[project]
+name = "gym-tracker-dashboard"
+version = "0.1.0"
+description = "Gym progression dashboard with FastAPI, htmx and SQLite"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "jinja2>=3.1.0",
+    "pandas>=2.0.0",
+    "plotly>=5.0.0",
+    "python-multipart>=0.0.7",
+    "requests>=2.31.0",
+    "watchdog>=4.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "httpx>=0.27.0",
+    "pandas-stubs>=2.2.0",
+    "playwright>=1.40.0",
+    "ruff>=0.4.0",
+    "mypy>=1.10.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+# Worktrees de tareas paralelas viven en .tmp/ (AGENTS.md §0.5): se excluyen
+# para que los gates del checkout principal no linten el WIP de otras ramas.
+# (extend-exclude: se suma a los excludes por defecto de ruff.)
+extend-exclude = [".tmp/"]
+
+[tool.ruff.lint.per-file-ignores]
+# app.py routes: FastAPI's Form(...)/Query(...) default-arg idiom (B008);
+# safe-fallback helpers mandated by AGENTS.md (BLE001);
+# best-effort backup/delete that must never block the editor (S110);
+# naive local dates are the dashboard's calendar contract (DTZ*).
+"app.py" = ["B008", "BLE001", "S110", "DTZ005", "DTZ007", "DTZ011"]
+# Rutas y fragmentos (spec 009): mismo idioma FastAPI que app.py
+# (defaults Form/Query, safe-fallbacks con BLE001, fechas ingenuas).
+"src/routes/*.py" = ["B008", "BLE001", "DTZ011"]
+"src/ui_fragments.py" = ["B008", "BLE001", "DTZ011"]
+"src/http_shared.py" = ["B008", "BLE001", "DTZ011"]
+# Tests generate today-relative dates without tz on purpose.
+"tests/*" = ["DTZ005", "DTZ007", "DTZ011"]
+"tests/e2e/*" = ["DTZ005", "DTZ007", "DTZ011"]
+# Backup/undo orchestration uses naive local timestamps by design.
+"src/migrations/runner.py" = ["DTZ005", "DTZ007", "DTZ011"]
+"src/migrations/v005_recompute_semana.py" = ["DTZ005", "DTZ007", "DTZ011"]
+"src/migrations/v006_iso_dates.py" = ["DTZ005", "DTZ007", "DTZ011"]
+"src/migrations/v024_rumbo_respuestas.py" = ["DTZ005", "DTZ007", "DTZ011"]
+"src/parser.py" = ["DTZ005", "DTZ007", "DTZ011"]
+"src/database.py" = ["DTZ005", "DTZ007", "DTZ011"]
+"src/db_*.py" = ["DTZ005", "DTZ007", "DTZ011"]
+# Naive local dates: the dashboard calendar contract (fechas d/m/yy).
+"src/dashboard_service.py" = ["DTZ005", "DTZ007", "DTZ011"]
+"src/suggestion_service.py" = ["DTZ005", "DTZ007", "DTZ011"]
+"src/training_service.py" = ["DTZ005", "DTZ007", "DTZ011"]
+"scripts/verify_editor.py" = ["DTZ005", "DTZ007", "DTZ011"]
+"scripts/audit_ui.py" = ["BLE001", "DTZ005", "DTZ007", "DTZ011"]
+# CLI import aborts on any fetch/parse failure without touching the DB (BLE001).
+"scripts/import_nutrition.py" = ["BLE001"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["app.py", "src", "tests"]
+# Cinturón extra para invocaciones tipo `mypy .`: nunca los worktrees de .tmp/.
+exclude = "\\.tmp/"
+
+# plotly ships no type stubs; silence only those imports, never user code.
+[[tool.mypy.overrides]]
+module = ["plotly", "plotly.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "--cov=src --cov=app --cov-branch --cov-report=term-missing --cov-fail-under=90"

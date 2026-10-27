@@ -1,0 +1,88 @@
+# Overlay Compose para Senda + Tailscale — CONFIGURACIÓN EJECUTABLE.
+# Uso (en la VM, sin datos vivos aún):
+#   docker compose -f docker-compose.yml -f ops/proxy/compose-senda.yml config  # revisar
+#   docker compose -f docker-compose.yml -f ops/proxy/compose-senda.yml up -d --build senda tailscale
+#
+# Fuente única de secretos: el `.env` raíz (gitignored, 600). Los nombres
+# coinciden con `start_server.sh` (SENDA_SYNC_TOKEN/SENDA_CSRF_SECRET) y con
+# Tailscale (TS_AUTHKEY, solo en el host, nunca en el chat).
+# Red privada: `magi_network` (definida en docker-compose.yml).
+# AEGEN alcanza a Senda por http://senda:8000 (DNS interno Docker, sin cambios).
+# Tailscale comparte el netns de senda (`network_mode: service:senda`): el
+# backend es literalmente http://127.0.0.1:8000 (loopback), único destino que
+# `tailscale serve` admite como proxy, y no publica ningún puerto.
+
+services:
+  senda:
+    build:
+      context: ../../apps/entrenamiento
+      dockerfile: Dockerfile
+    container_name: senda_domain
+    # SIN puertos publicados: solo red interna.
+    environment:
+      - UV_NO_SYNC=1
+      - TZ=America/Bogota
+      - SENDA_SYNC_TOKEN=${SENDA_SYNC_TOKEN:?falta en .env}
+      - SENDA_CSRF_SECRET=${SENDA_CSRF_SECRET:?falta en .env}
+      - GYM_LAN_SYNC_ONLY=1
+      - GYM_SYNC_RATE_LIMIT_PER_MINUTE=${SENDA_RATE_LIMIT:-30}
+      # El serve termina TLS delante de uvicorn: el navegador usa https:// pero
+      # el backend ve http. Sin este flag, el check Origin rechazaría toda
+      # mutación del dashboard servido. Es configuración, no detección: solo
+      # vale porque el único ingreso al dashboard es el proxy local (netns
+      # compartido). No afecta a la API (exenta de CSRF) ni al gate.
+      - GYM_BEHIND_TLS_PROXY=1
+    volumes:
+      - senda_data:/app/data
+    networks:
+      - magi_network
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request,sys;sys.exit(0 if urllib.request.urlopen('http://localhost:8000/healthz',timeout=5).status==200 else 1)",
+        ]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  tailscale:
+    image: tailscale/tailscale@sha256:c507f3a2a6ab1cabd8d809b98edeb41edbd5c3fb6ad9632ffd098b4c7d0b4065
+    container_name: magi_tailscale
+    # Comparte red con senda: el proxy ve el backend por loopback.
+    network_mode: service:senda
+    environment:
+      # TS_AUTHKEY: clave REUTILIZABLE (nodo no efímero) + tag `senda`,
+      # generada en la consola tailnet. Llega al `.env` vía
+      # `~/senda-secretos/ts_authkey` (transferencia privada) que lee
+      # prepare-senda.sh; nunca en el chat. Antes de desplegar, verificar en
+      # consola que el tag existe y sus grants limitan a tus dispositivos.
+      - TS_AUTHKEY=${TS_AUTHKEY:?falta en .env}
+      - TS_EXTRA_ARGS=--advertise-tags=tag:senda --accept-dns --hostname=senda-gcp
+      - TS_STATE_DIR=/var/lib/tailscale
+      - TS_AUTH_ONCE=true
+      - TS_USERSPACE=true
+    volumes:
+      - tailscale_state:/var/lib/tailscale
+      - /dev/net/tun:/dev/net/tun
+    restart: unless-stopped
+    # Daemon + serve HTTPS con certificados de la propia tailnet (sin funnel:
+    # nada público). Sintaxis vigente `serve --bg --https=<puerto> <destino>`.
+    # Sin `sleep`: espera readiness real con tope y verifica el serve.
+    # Usa containerboot oficial. Tras autenticar por primera vez, habilitar
+    # Serve con: tailscale serve --bg --https=443 http://127.0.0.1:8000
+    # Serve persiste en el volumen de estado; nunca habilitar Funnel.
+    healthcheck:
+      test: ["CMD-SHELL", "tailscale status >/dev/null 2>&1"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+
+volumes:
+  senda_data:
+  tailscale_state:

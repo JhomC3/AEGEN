@@ -1,0 +1,25 @@
+{# Nombres de las 3 tareas diarias. Contenido de #rumbo-yo.
+   Las 3 respuestas viven en el histórico de preguntas (sidebar). #}
+<section class="panel panel-default" aria-label="Tareas">
+    <h2 class="panel-title">Tareas del día</h2>
+    <form hx-post="/rumbo/yo" hx-swap="none" class="rumbo-form">
+        <input type="hidden" name="fecha" value="{{ fecha_iso }}">
+        <input type="hidden" name="quien_soy" value="{{ yo.quien_soy }}">
+        <input type="hidden" name="quien_no" value="{{ yo.quien_no }}">
+        <input type="hidden" name="construyendo" value="{{ yo.construyendo }}">
+        <div class="rumbo-nombres">
+            <label class="sr-only" for="rumbo-t1-nombre">Tarea 1</label>
+            <input id="rumbo-t1-nombre" name="t1_nombre" class="field-input field-input-sm" maxlength="100"
+                   autocomplete="off" value="{{ yo.t1_nombre }}">
+            <label class="sr-only" for="rumbo-t2-nombre">Tarea 2</label>
+            <input id="rumbo-t2-nombre" name="t2_nombre" class="field-input field-input-sm" maxlength="100"
+                   autocomplete="off" value="{{ yo.t2_nombre }}">
+            <label class="sr-only" for="rumbo-t3-nombre">Tarea 3</label>
+            <input id="rumbo-t3-nombre" name="t3_nombre" class="field-input field-input-sm" maxlength="100"
+                   autocomplete="off" value="{{ yo.t3_nombre }}">
+        </div>
+        <div class="rumbo-actions">
+            <button type="submit" class="btn btn-ghost" disabled>Guardar nombres</button>
+        </div>
+    </form>
+</section>

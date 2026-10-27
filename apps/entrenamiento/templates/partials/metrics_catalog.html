@@ -1,0 +1,33 @@
+{# metrics_catalog.html — Sección Salud dentro del catálogo izquierdo (spec 022).
+   Espejo del índice de ejercicios: grupos siempre expandidos + filas multi-toggle
+   con aria-pressed; series sin datos marcadas aria-disabled (informan cobertura,
+   no se ocultan). La selección vive en ?metricas= y la aplica el servidor en el
+   render inicial; los toggles son visibilidad instantánea en cliente
+   (chart-interaction.js). La gráfica única vive en el slot de nutrition-trend
+   (índice 0–100, tooltip con valor real). #}
+{% if metrics_catalog %}
+<div class="flex flex-col gap-2">
+    {% for group in metrics_catalog %}
+    <section class="indice-grupo" data-mgroup="{{ group.group }}">
+        <h2 class="indice-titulo"><span>{{ group.group }}</span></h2>
+        <ul class="indice-lista">
+            {% for metric in group.metrics %}
+            <li>
+            <button
+                type="button"
+                class="indice-fila"
+                data-metric="{{ metric.key }}"
+                data-action="toggle-metric"
+                aria-label="Alternar métrica {{ metric.label }}"
+                aria-pressed="{{ 'true' if metric.pressed else 'false' }}"
+                {% if metric.disabled %}aria-disabled="true"{% endif %}
+            >
+                <span>{{ metric.label }}</span>
+            </button>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endfor %}
+</div>
+{% endif %}

@@ -25,3 +25,16 @@ no equivale a despliegue ni al cierre de la integración.
 Se corrige el fixture del test de undo de bienestar: el mensaje usa la misma
 fecha explícita del registro simulado, en lugar de «hoy». Evita que el test
 dependa del calendario; no cambia conducta de producto ni excluye el test.
+
+Los hooks conservan el mypy de AEGEN para sus fuentes y añaden un chequeo
+completo separado de SENDA desde su directorio y con su configuración. Aplicar
+el contrato Python 3.13/strict de AEGEN al dominio Python 3.11 producía 1846
+errores ajenos al contrato del dominio; no se debilitan las reglas de ninguno.
+Prerrequisito local: ambos entornos instalados (raíz y apps/entrenamiento).
+
+Verificación de consolidación: 61 tests de API, skills, loader, memoria y
+webhook aprobados; dominio sin e2e: 968 aprobados en sandbox y los tres casos de
+lectura externa aprobados al repetir con red (10 tests en esa reejecución,
+incluidos siete ya contados). Total distinto del dominio: 971. Mypy del dominio:
+167 archivos sin errores. Los hooks pueden normalizar espacios e imports;
+las correcciones de estilo se verifican con regresiones pertinentes.

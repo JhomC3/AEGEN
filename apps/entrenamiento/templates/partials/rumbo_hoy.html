@@ -1,0 +1,23 @@
+{# Hoy: 3 sliders 1–10 + score. Contenido de #rumbo-hoy.
+   Spec 044 H05: el encabezado distingue puntuación guardada (data-guardado)
+   y previsión del borrador. Sin registro muestra "Sin registro" explícito;
+   el borrador solo se muestra cuando difiere de lo guardado. Rango 1–10. #}
+<section class="panel panel-default" aria-label="Hoy">
+    {% set guardado = (dia.t1 + dia.t2 + dia.t3) if dia else none %}
+    <h2 class="panel-title">Hoy · <span class="rumbo-guardado" data-guardado="{{ guardado if guardado is not none else '' }}">{% if guardado is not none %}{{ guardado }}/30{% else %}Sin registro{% endif %}</span><span class="rumbo-borrador"{% if guardado is not none %} hidden{% endif %}> · Borrador <span class="rumbo-num">{{ (guardado if guardado is not none else 15) }}/30</span></span></h2>
+    <form hx-post="/rumbo/dia" hx-swap="none" class="rumbo-form">
+        <input type="hidden" name="fecha" value="{{ fecha_iso }}">
+        {% for clave, nombre in [('t1', yo.t1_nombre), ('t2', yo.t2_nombre), ('t3', yo.t3_nombre)] %}
+        {% set valor = dia[clave] if dia else 5 %}
+        <div class="rumbo-slider-row">
+            <label for="rumbo-{{ clave }}">{{ nombre }}</label>
+            <input type="range" id="rumbo-{{ clave }}" name="{{ clave }}" min="1" max="10"
+                   value="{{ valor }}" data-rumbo-slider>
+            <output class="rumbo-num">{{ valor }}</output>
+        </div>
+        {% endfor %}
+        <div class="rumbo-actions">
+            <button type="submit" class="btn btn-primary" disabled>Guardar día</button>
+        </div>
+    </form>
+</section>

@@ -1,0 +1,55 @@
+<div class="panel panel-default">
+    <h3 class="panel-title panel-title-neon panel-title-divider">Entrenamientos</h3>
+    {% if plantillas %}
+    <div id="plantillas-list" class="flex flex-col gap-2.5">
+        {% for p in plantillas %}
+        <div class="pt-card card" draggable="true" id="pt-card-{{ p.id }}" data-pt-id="{{ p.id }}" data-pt-nombre="{{ p.nombre }}">
+            <span class="text-xs font-bold text-neutral-200 truncate">{{ p.nombre }}</span>
+            <div class="flex gap-1">
+                <button type="button" data-action="apply-template" data-template-id="{{ p.id }}" class="btn btn-outline flex-1">Aplicar</button>
+                <button
+                    type="button"
+                    data-action="toggle-template-menu"
+                    class="btn btn-outline pt-menu-btn"
+                    aria-haspopup="menu"
+                    aria-expanded="false"
+                    aria-label="Opciones"
+                ><svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                </button>
+            </div>
+            <div class="pt-menu" role="menu" aria-label="Opciones de plantilla" hidden>
+                <button type="button" role="menuitem" data-action="edit-template" data-template-id="{{ p.id }}" class="btn btn-outline">Editar</button>
+                <button type="button" role="menuitem" data-action="delete-template" data-template-id="{{ p.id }}" data-template-name="{{ p.nombre }}" class="btn btn-outline btn-outline-danger">Eliminar</button>
+            </div>
+            {% if editing_id == p.id %}
+            <form hx-post="/plantilla/editar/{{ p.id }}" hx-swap="none" class="flex flex-col gap-1.5 mt-1.5 pt-1.5 border-t border-neutral-800">
+                {% if error %}<p class="form-error">{{ error }}</p>{% endif %}
+                <input name="nombre" aria-label="Nombre del entreno" value="{{ p.nombre }}" class="w-full cell-input" placeholder="Nombre del entreno">
+                <div id="plantilla-edit-rows-{{ p.id }}" class="flex flex-col gap-1">
+                    {% for ej in p.ejercicios %}
+                    <div class="pt-row flex gap-1 items-center">
+                        <select name="ejercicio" class="pt-select cell-select">
+                            <option value="{{ ej }}" selected>{{ ej }}</option>
+                            {% for c in catalog %}{% if c != ej %}<option value="{{ c }}">{{ c }}</option>{% endif %}{% endfor %}
+                        </select>
+
+                        <button type="button" data-action="template-row-remove" class="row-btn" title="Quitar ejercicio" aria-label="Quitar ejercicio">−</button>
+                    </div>
+                    {% endfor %}
+                </div>
+                <button type="button" data-action="template-row-add" class="row-btn self-start" title="Agregar ejercicio" aria-label="Agregar ejercicio a la plantilla">+</button>
+                <div class="flex gap-1 items-center">
+                    <button type="button" data-action="refresh-templates" class="btn-x" aria-label="Cancelar" title="Cancelar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+                    </button>
+                    <button type="submit" class="btn-check" aria-label="Guardar" title="Guardar">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+                    </button>
+                </div>
+            </form>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>

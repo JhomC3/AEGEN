@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Release/default: HTTPS only. Cleartext is NEVER permitted here; debug
+  builds get their own override file (src/debug/res/xml) that adds explicit
+  development hosts only.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>

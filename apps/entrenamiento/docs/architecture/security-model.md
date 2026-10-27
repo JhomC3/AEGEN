@@ -1,0 +1,231 @@
+# Security Model
+
+> **Deployment assumption (default):** this dashboard is a **personal, loopback-only**
+> application. It has no authentication or authorization layer. The only safe default
+> deployment is binding to `127.0.0.1` (`uvicorn app:app --host 127.0.0.1`).
+> Any LAN or internet exposure requires an authentication and authorization design
+> before release (see "Before exposing on a network" below).
+
+## 1. Assets and trust boundaries
+
+| Asset | Notes |
+|---|---|
+| Browser clients | Same-origin htmx; CDN resources loaded with pinned versions |
+| `GET` routes | Read-only data + charts |
+| `POST` mutating routes | Session save/delete, template CRUD/reorder, undo, exercise create |
+| SQLite DB (`data/lifestyle.db`) | Local file; backups in `data/backups/` before pending migrations and mutations |
+| Google Sheets import | `/sync`-style import path is separate (`src/fetcher.py`, `src/parser.py`); not part of the HTTP surface |
+
+All data originates from the owner's own training log; the primary threats are
+accidental data loss and drive-by browser attacks, not a motivated adversary.
+
+## 2. Controls in place
+
+### 2.1 Security headers (all responses, via `src/security.py`)
+
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: same-origin`
+- `X-Frame-Options: DENY` (no framing; equivalent CSP `frame-ancestors 'none'`)
+- `Content-Security-Policy` — restrictive `default-src 'self'`, explicit pinned CDN
+  origins for script/style, **no `'unsafe-inline'` and no nonce in `script-src`**,
+  `object-src 'none'`, `base-uri 'self'`,
+  `form-action 'self'`, `connect-src 'self'`, `img-src 'self' data:`.
+
+**Inline script policy (decided in the remediation programme):**
+
+- All inline event handlers and the Tailwind runtime config were removed
+  (Tasks 2/6); `app.js` is the only first-party executable source.
+- **Tailwind is built statically** (`scripts/build_css.sh` →
+  `static/css/tailwind.css`, committed) with the burgundy/matte palette in
+  `tailwind.config.js`. The CDN runtime is gone: `base.html` no longer loads
+  `cdn.tailwindcss.com` and the CSP does not allow it. `style-src` keeps
+  `'unsafe-inline'` because **Plotly** injects `<style>` elements at runtime
+  (CSS injection is not script execution) — documented as the only remaining
+  global inline allowance.
+- **Plotly charts are data-driven**: the figure travels as JSON inside a
+  `<script type="application/json" id="unified-chart-data">` element (inert,
+  never executed, same pattern as `#app-config`) and `static/js/chart-interaction.js`
+  renders it client-side with `Plotly.newPlot` into `#unified-chart-plot`.
+  The payload is escaped for inline embedding (`_json_for_inline` neutralizes
+  `<`, `>`, `&`, `'` so hostile names cannot close the script element;
+  regression-tested). The CSP is therefore **static** — no nonce round-trip is
+  needed and htmx-injected fragments never contain executable inline scripts.
+- The `#app-config` block is `type="application/json"` (data, never executed;
+  not subject to `script-src`).
+
+### 2.1.1 Subresource Integrity (SRI)
+
+Third-party `<script src="https://…">` tags in `templates/base.html` are pinned
+with `integrity` (sha384) + `crossorigin="anonymous"` (all three CDNs serve
+`Access-Control-Allow-Origin: *`):
+
+| Resource | URL | sha384 |
+|---|---|---|
+| htmx 1.9.10 | `https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js` | `D1Kt99CQMDuVetoL1lrYwg5t+9QdHe7NLX/SoJYkXDFfX37iInKRy5xLSi8nO7UC` |
+| SortableJS 1.15.6 | `https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js` | `HZZ/fukV+9G8gwTNjN7zQDG0Sp7MsZy5DDN6VfY3Be7V9dvQpEpR2jF2HlyFUUjU` |
+| Plotly 2.32.0 | `https://cdn.plot.ly/plotly-2.32.0.min.js` | `7TVmlZWH60iKX5Uk7lSvQhjtcgw2tkFjuwLcXoRSR4zXTyWFJRm9aPAguMh7CIra` |
+
+**Static Tailwind build:** `scripts/build_css.sh` compiles
+`static/css/input.css` (Tailwind 3.4.17 vía npx, contenido: templates + JS) into
+`static/css/tailwind.css` (minified, committed). Regenerar sin diff tras tocar
+clases: `./scripts/build_css.sh && git diff --exit-code static/css/tailwind.css`.
+No third-party runtime is involved in styles.
+
+### 2.2 Output encoding and event boundary
+
+- Jinja autoescape stays enabled (default for `Jinja2Templates`).
+- **User values are data attributes and text nodes only.** No inline event
+  handlers exist in templates; interactions go through `data-action` attributes
+  read via `element.dataset` by delegated ES-module listeners (see
+  `current-ui-contract.md` §3). Dynamic values never become JavaScript source.
+- **OOB messages and fragments render through Jinja partials**
+  (`templates/partials/oob_*.html` via `src/response_fragments.py`); request
+  values are never concatenated into HTML. The only `| safe` content is a
+  server-rendered Jinja fragment or the Plotly figure JSON (data script).
+- Client-configurable data (exercise names, template names, dates) is rendered
+  through Jinja escaping only. The former executable-JS interpolation
+  (`const CATEGORIA_MAP = {{ ... | safe }}`) was replaced by the `#app-config`
+  `type="application/json"` pattern parsed via `textContent` (Task 1.3).
+- Review checklist before any new template: no `| safe` on user-supplied values;
+  never build HTML/JS/URLs by string-interpolating request data (use parameterized
+  SQL and form encoding); no inline `on*=` attributes.
+
+### 2.3 SQL safety
+
+- All SQL is parameterized (`?` placeholders); no client data is interpolated
+  into statements.
+
+### 2.4 Server-side error handling
+
+- Domain errors (`ValidationError`, `NotFoundError`, `ConflictError`) are mapped
+  to safe 400 responses with user-facing Spanish messages.
+- **Unexpected exceptions are never exposed.** They are logged with
+  `logger.exception` and translated to a generic "Ocurrió un error inesperado."
+  (500) by `translate_error`; no SQLite/internal message reaches the browser.
+- Read fallbacks in `dashboard_service` catch only `sqlite3.Error`/`OSError`
+  (documented empty-result behaviour), never `Exception`.
+
+### 2.5 CSRF / cross-origin protection
+
+- **Same-origin browser flows** carry a signed CSRF token injected into
+  `#app-config` and validated for mutating requests, plus `Origin` validation as
+  defence in depth (Task 5.2). For loopback-only deployments this is documented
+  as adequate: a cross-site attacker cannot read the token (CSP `connect-src 'self'`
+  blocks token exfiltration) and cannot reach the loopback server from a browser
+  without the token.
+- **Origin validation compares against the request's `Host` header**, not the
+  socket bind address (`scope['server']` in uvicorn is the bind address, so
+  `--host 0.0.0.0` would never match a browser Origin). `Host` is set by the
+  browser from the URL and cannot be altered by XHR/fetch — the same trust level
+  as `Origin` (OWASP/Django pattern). This makes the check work for any hostname
+  used to reach the server (`127.0.0.1`, `localhost`, `0.0.0.0`, LAN IP); the
+  token check is unaffected and still mandatory. Without a `Host` header
+  (HTTP/1.0) the check falls back to `scope['server']`.
+- **macOS note:** on Darwin, `getsockname()` on an accepted socket returns the
+  concrete local address (`127.0.0.1`) even when the listener binds `0.0.0.0`
+  (verified empirically; differs from Linux). Combined with the old
+  `scope['server']`-based check, this rejected browsers that opened
+  `http://0.0.0.0:8000` while the server expected `http://127.0.0.1:8000`.
+  With the `Host`-header check, any URL the client actually used is accepted.
+- **Rejections are logged** with the cause (`CSRF reject (origin)` vs
+  `CSRF reject (token)`, including `origin`/`host`/`path`), so a 403 diagnosis
+  is a single server-log line.
+- **Use `http://127.0.0.1:8000`** (or `localhost`) in the browser — not the
+  `http://0.0.0.0:8000` address uvicorn prints at startup.
+- **CSRF tokens do not expire by time.** Their HMAC signature is still required,
+  and changing `GYM_CSRF_SECRET` invalidates existing tokens. A rejected request
+  returns 403 with a clear "recarga la página" notice.
+- **Before any non-loopback deployment:** Origin/token checks must stay enabled,
+  the CSRF secret must come from the environment (`GYM_CSRF_SECRET`), and this
+  document must be updated with the exposure model. On startup, the app logs a
+  warning while `GYM_CSRF_SECRET` is unset (dev secret active).
+
+### 2.6 LAN exposure: sync-only gate (`src/network_access.py`)
+
+CSRF does not authenticate users: a remote peer could load the dashboard and
+read a valid token. The LAN is therefore **HealthSync + training API only**:
+
+- **`LanSyncOnlyMiddleware`** (activated by `GYM_LAN_SYNC_ONLY=1`, set only by
+  `scripts/start_server.sh`) classifies each request by the ASGI
+  `scope['client']` address (`ipaddress.ip_address(...).is_loopback`; covers
+  `127.0.0.0/8` and `::1`). Loopback traffic passes untouched.
+- **Remote traffic is allowed only for `POST /sync/health-connect`** (exact path
+  match, never a prefix), which authenticates with `X-Sync-Token`, **and the
+  training diary API v1** (`ALLOWED_REMOTE_ROUTES`: `GET`/`POST`/`DELETE`
+  `/api/v1/sesion` + `GET /api/v1/ejercicios`, exact method + path, same
+  `X-Sync-Token`; contract in `training-api-contract.md`). Every other
+  remote request — dashboard, static, exports, htmx mutations — is rejected with a
+  bare **403** (empty body, no HTML) before the request body is parsed.
+- **Reusing one `X-Sync-Token` for Health Connect ingest and the training API
+  is an explicit decision** (personal single-owner app, no user accounts): if
+  the token leaks, the impact grows from "injecting Health Connect rows" to
+  "rewriting training history". Accepted; never log the token or payloads.
+- **`X-Forwarded-For` is never trusted**; only the TCP peer address.
+- **Rate limit:** bounded per-peer fixed window, `GYM_SYNC_RATE_LIMIT_PER_MINUTE` (default 30/min)
+  (default 30/min). Exceeding it returns **429 + `Retry-After`**.
+- **Startup consistency:** lifespan raises `RuntimeError` if the gate is on
+  without `GYM_CSRF_SECRET`, or if a secret is set without the gate (the
+  dashboard would be reachable from the LAN). A manual
+  `uvicorn app:app --host 0.0.0.0` without the flag is an **accepted risk**,
+  not a supported configuration.
+- The middleware is registered **outside** the CSRF middleware: remote
+  dashboard traffic never reaches CSRF parsing. The exact-path CSRF exemption
+  for `/sync/health-connect` remains, since the sync endpoint keeps its own
+  credential.
+
+### 2.7 Tailscale serve (GCP): el proxy local es loopback, la IP tailnet no
+
+Recorrido único autorizado al dashboard: `https://<MagicDNS de senda>:443`
+vía `tailscale serve --bg --https=443 http://127.0.0.1:8000` (sin funnel,
+sin puertos publicados). El sidecar comparte el netns de senda, así que el
+proxy re-origina cada conexión desde 127.0.0.1 y uvicorn (sin
+`--proxy-headers`) publica ese peer real en `scope['client']`: el dashboard
+servido pasa el gate como loopback. La autorización la dan la pertenencia a
+la tailnet + ACL/grants (`tag:senda`); CSRF + Origin son segunda capa.
+
+- `http://<ip-tailnet>:8000/` directo llega con peer 100.x: es remoto y el
+  dashboard responde **403 por diseño** (solo la API con token). Ese 403 no
+  es un fallo a "arreglar" permitiendo el rango: en `100.64.0.0/10` no se
+  confía jamás, y `X-Forwarded-For` se sigue ignorando.
+- Tras el proxy, el navegador usa `https://` pero uvicorn ve `http`: el
+  scheme efectivo para el check de Origin lo fija la configuración
+  (`GYM_BEHIND_TLS_PROXY=1`, solo en el compose de senda), nunca una
+  cabecera del cliente. Sin ese flag, las mutaciones servidas fallan
+  cerradas (403), no abiertas.
+
+## 3. Before exposing on a network
+
+The dashboard itself is **never** exposed publicly: the only remote surface is
+`POST /sync/health-connect` (token-authenticated, rate-limited) **plus the
+training diary API v1** (`GET`/`POST`/`DELETE /api/v1/sesion`,
+`GET /api/v1/ejercicios`, same token; see `training-api-contract.md`). UI access
+from another network is only allowed through the tailnet serve path (§2.7),
+never through a public port. Any future publicly reachable UI would require
+real authentication first.
+
+1. Add authentication (login + session cookies) and authorization (owner-only).
+2. Move CSRF secret to a managed environment variable; disable fallback secrets.
+3. Keep the dashboard loopback-only; expose only HealthSync (the gate).
+4. Re-run the full security test suite and the browser suite against the new
+   deployment origin.
+
+## 4. Runbook
+
+- Safe local run: `uv run uvicorn app:app --host 127.0.0.1 --port 8000`
+- Verify headers: `curl -sI http://127.0.0.1:8000/ | grep -iE 'content-security|x-frame|x-content'`
+- Security tests: `uv run pytest tests/test_security.py -v`
+
+### 2.6 API sync endpoint (POST /sync/health-connect)
+
+- **Not a browser flow**: it is JSON-only and never rendered as HTML. The CSRF
+  middleware exempts **exactly** this path **and `POST`/`DELETE /api/v1/sesion**
+  (training API v1, own credential; `CSRF_EXEMPT_PATHS` in
+  `src/security.py`); any other path keeps full form-CSRF protection
+  (covered by tests in `tests/test_security.py`).
+- **Authentication** is the `X-Sync-Token` header compared with
+  `secrets.compare_digest` against `HC_SYNC_TOKEN` (env). Unset env → the
+  endpoint answers `503 "not configured"` (never a silent open door).
+- **Never logged**: tokens, payload values or health data. Errors return only
+  generic details; the server log records the failure without the body.
+- **Transport**: HTTPS only in the Android client (HTTP URLs are rejected
+  locally before any request); untrusted certificates fail closed.

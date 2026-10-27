@@ -1,0 +1,55 @@
+{# Rumbo simple (spec 019): 3 respuestas, tendencia anual, barra semanal, 3 sliders. #}
+{% extends "base.html" %}
+{% block title %}Senda — Rumbo{% endblock %}
+{% block head_extra %}<link rel="stylesheet" href="{{ static_url('css/rumbo.css') }}">{% endblock %}
+{% block content %}
+<main id="main-content" class="rumbo-page" tabindex="-1">
+    <header class="splits-page-header">
+        {% include "partials/workspace_brand.html" %}
+    </header>
+
+    <div class="splits-layout">
+        <aside class="splits-catalog-col" aria-label="Preguntas del ejercicio">
+            <div id="rumbo-preguntas">
+                {% include "partials/rumbo_preguntas.html" %}
+            </div>
+        </aside>
+
+        <div class="splits-editor-col">
+            <div id="rumbo-anual">
+                {% include "partials/rumbo_anual.html" %}
+            </div>
+            <div id="rumbo-semana">
+                {% include "partials/rumbo_semana.html" %}
+            </div>
+            <div id="rumbo-hoy">
+                {% include "partials/rumbo_hoy.html" %}
+            </div>
+            <div id="rumbo-yo">
+                {% include "partials/rumbo_yo.html" %}
+            </div>
+        </div>
+    </div>
+
+    <dialog id="rumbo-pregunta-dialog" class="daily-dialog" aria-labelledby="rumbo-pregunta-title">
+        <div class="daily-dialog-card">
+            <div id="rumbo-pregunta-body"></div>
+        </div>
+    </dialog>
+</main>
+
+<noscript>
+    <div class="notice notice-error" role="alert">
+        Rumbo necesita JavaScript para guardar y usar las preguntas.
+    </div>
+    <style>
+        /* H04 (spec 045): sin JS los envíos nacen `disabled` (sin botón
+           operativo no hay submit implícito por Enter) y además se ocultan,
+           así que ningún control ofrece guardar ni provoca un envío GET
+           con datos. Con JS este bloque es inerte. */
+        .rumbo-page .rumbo-actions {
+            display: none;
+        }
+    </style>
+</noscript>
+{% endblock %}

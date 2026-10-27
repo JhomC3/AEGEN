@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Senda — Diario{% endblock %}
+{% block content %}
+<main id="daily-page" class="splits-page" data-vista="{{ vista }}" tabindex="-1">
+    <span id="main-content" tabindex="-1" class="sr-only">Contenido principal</span>
+    <header class="splits-page-header">
+        {% include "partials/workspace_brand.html" %}
+    </header>
+
+    <div class="splits-layout">
+        <aside class="splits-catalog-col" aria-label="Plantillas y altas">
+            <section id="daily-training-aside" aria-label="Plantillas de entrenamiento"{% if vista != 'entrenamiento' %} hidden{% endif %}>
+                <div id="plantillas-section">{{ plantillas_html | safe }}</div>
+                <details class="split-catalog-group">
+                    <summary class="split-catalog-summary">Nuevo ejercicio</summary>
+                    <div class="split-catalog-body">
+                        <div id="exercise-create" class="w-full">{{ exercise_form_html | safe }}</div>
+                    </div>
+                </details>
+            </section>
+            <section id="daily-food-aside" aria-label="Plantillas de alimentación"{% if vista != 'alimentacion' %} hidden{% endif %}>
+                <div class="panel panel-default daily-aside-tools">
+                    <span class="panel-title">Plantillas<span id="daily-food-template-count">{% if food_template_count %} · {{ food_template_count }}{% endif %}</span></span>
+                    <button type="button" class="btn btn-primary" data-action="open-daily-dialog" data-dialog="food-create-dialog">Nuevo alimento</button>
+                </div>
+                <div id="nutrition-templates-section">{{ nutrition_templates_html | safe }}</div>
+            </section>
+        </aside>
+
+        <div class="splits-editor-col">
+            {{ navigator_html | safe }}
+            <p class="sr-only" id="navigator-legend">{% if vista == 'alimentacion' %}Los días con punto tienen alimentación guardada.{% else %}Los días con punto tienen entrenamiento guardado.{% endif %}</p>
+
+            <section class="daily-date-heading" aria-live="polite">
+                <h2 id="daily-date-title" class="panel-title panel-title-neon">{{ dia }} {{ daily_date_title }}</h2>
+            </section>
+
+            <nav class="daily-tabs" role="tablist" aria-label="Tipo de registro">
+                <button type="button" role="tab" id="daily-tab-entrenamiento" data-action="daily-mode" data-vista="entrenamiento"
+                        aria-selected="{{ 'true' if vista == 'entrenamiento' else 'false' }}"
+                        aria-controls="daily-training-view"
+                        tabindex="{{ 0 if vista == 'entrenamiento' else -1 }}">Entrenamiento</button>
+                <button type="button" role="tab" id="daily-tab-alimentacion" data-action="daily-mode" data-vista="alimentacion"
+                        aria-selected="{{ 'true' if vista == 'alimentacion' else 'false' }}"
+                        aria-controls="daily-food-view"
+                        tabindex="{{ 0 if vista == 'alimentacion' else -1 }}">Alimentación</button>
+            </nav>
+
+            <section id="daily-training-view" class="daily-view" role="tabpanel" aria-labelledby="daily-tab-entrenamiento"{% if vista != 'entrenamiento' %} hidden{% endif %}>
+                <section id="session-editor" data-editmode="0" class="daily-editor-card panel panel-tight relative">
+                    <div id="editor-notice" role="status" aria-live="polite" aria-atomic="true"></div>
+                    <div id="suggestion-banner" hx-get="/sugerencia/banner?fecha={{ fecha_iso }}" hx-trigger="load" hx-swap="innerHTML"></div>
+                    <div id="save-outcome" data-ok="0" hidden></div>
+                    <div id="session-editor-wrap">{{ editor_html | safe }}</div>
+                </section>
+            </section>
+
+            <section id="daily-food-view" class="daily-view" role="tabpanel" aria-labelledby="daily-tab-alimentacion"{% if vista != 'alimentacion' %} hidden{% endif %}>
+                <section id="nutrition-panel" data-editmode="0" class="daily-editor-card panel panel-tight relative">
+                    <div id="nutrition-notice" role="status" aria-live="polite" aria-atomic="true"></div>
+                    <div id="nutrition-editor-wrap">{{ nutrition_editor_html | safe }}</div>
+                </section>
+            </section>
+        </div>
+    </div>
+</main>
+<dialog id="food-create-dialog" class="daily-dialog" aria-labelledby="food-create-title">
+    <div class="daily-dialog-card">
+        <header class="daily-dialog-header">
+            <div><h2 id="food-create-title">Nuevo alimento</h2></div>
+            <button type="button" class="btn-x" data-action="close-daily-dialog" aria-label="Cerrar"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button>
+        </header>
+        <div id="alimento-create">{{ alimento_form_html | safe }}</div>
+    </div>
+</dialog>
+
+<noscript>
+    <div class="notice notice-error" role="alert">
+        El diario requiere JavaScript para editar, navegar y guardar.
+    </div>
+</noscript>
+
+{% endblock %}

@@ -1,0 +1,47 @@
+{# Cuerpo del popup (specs 024/026): 3 regiones fijas — header, zona central con
+   scroll, nav clavada abajo. #}
+<header class="rumbo-pregunta-header">
+    <h2 id="rumbo-pregunta-title">{{ pregunta.completa }}</h2>
+    <button type="button" class="btn-x" data-action="close-rumbo-dialog" aria-label="Cerrar">×</button>
+</header>
+<div class="rumbo-dialog-cuerpo">
+<div id="rumbo-respuesta-notice"></div>
+{% if vigente %}
+<p class="rumbo-respuesta-grande">{{ vigente }}</p>
+{% endif %}
+<details class="rumbo-nueva">
+    <summary class="btn btn-ghost">{% if vigente %}Actualizar respuesta{% else %}Agregar respuesta{% endif %}</summary>
+    <form hx-post="/rumbo/respuesta" hx-swap="none" class="rumbo-form">
+        <input type="hidden" name="pregunta" value="{{ pregunta.id }}">
+        <label class="sr-only" for="rumbo-respuesta-texto">Tu respuesta</label>
+        <textarea id="rumbo-respuesta-texto" name="respuesta" class="field-input rumbo-textarea"
+                  maxlength="2000" rows="4" placeholder="Escribe con honestidad brutal…"></textarea>
+        <div class="rumbo-actions">
+            <button type="submit" class="btn btn-primary" disabled>Guardar</button>
+        </div>
+    </form>
+</details>
+{% if historial|length > 1 %}
+<ol class="rumbo-historial" tabindex="0" aria-label="Respuestas anteriores">
+    {% for h in historial[1:] %}
+    <li><p>{{ h.respuesta }}</p><p class="rumbo-hint">{{ h.origen }} · {{ h.created_at }}</p></li>
+    {% endfor %}
+</ol>
+{% endif %}
+</div>
+<nav class="rumbo-pregunta-nav" aria-label="Navegar preguntas">
+    <span>
+        {% if anterior %}
+        <button type="button" class="btn btn-ghost"
+                hx-get="/rumbo/pregunta/{{ anterior.id }}" hx-target="#rumbo-pregunta-body"
+                hx-swap="innerHTML">← {{ anterior.corta }}</button>
+        {% endif %}
+    </span>
+    <span>
+        {% if siguiente %}
+        <button type="button" class="btn btn-ghost"
+                hx-get="/rumbo/pregunta/{{ siguiente.id }}" hx-target="#rumbo-pregunta-body"
+                hx-swap="innerHTML">{{ siguiente.corta }} →</button>
+        {% endif %}
+    </span>
+</nav>

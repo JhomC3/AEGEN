@@ -1,0 +1,21 @@
+# Caddyfile para Senda — PROPUESTA para revisión. Dominio pendiente del dueño.
+# Solo necesario si se elige superficie pública (ver topologia-conexion.md:
+# TLS no autoriza; el dashboard además exige perímetro privado u OAuth).
+#
+# {
+#     email dueno@example.com
+# }
+#
+# senda.example.com {
+#     reverse_proxy senda:8000 {
+#         header_up Host {host}
+#         header_up X-Forwarded-Proto {scheme}
+#     }
+# }
+#
+# Notas:
+# - El dashboard usa cookies CSRF + chequeo Origin vs Host: el proxy debe
+#   conservar Host (aquí se hace) y servir HTTPS (la app nunca confía en
+#   X-Forwarded-For para identidad de red).
+# - La API móvil y el sync usan X-Sync-Token + rate-limit del dominio.
+# - Nada de este archivo expone el puerto 8000 del dominio a Internet.

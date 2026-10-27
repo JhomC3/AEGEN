@@ -1,0 +1,9 @@
+/* templates.css — owns: #plantillas-section list and cards. */
+
+/* Tarjetas de entrenos: arrastrables desde cualquier zona no interactiva */
+#plantillas-list .pt-card {
+    cursor: grab;
+}
+#plantillas-list .pt-card.dragging {
+    opacity: 0.5;
+}

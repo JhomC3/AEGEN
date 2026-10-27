@@ -23,6 +23,9 @@ repos:
     rev: v1.10.0
     hooks:
       - id: mypy
+        # Dominio independiente: su propio src/, Python 3.11 y configuración.
+        # Se comprueba completo en mypy-senda, no con el contrato de AEGEN.
+        exclude: ^apps/entrenamiento/
         # Instala el proyecto local con sus dependencias de desarrollo y los stubs de tipos explícitos.
         additional_dependencies:
           - .[dev]
@@ -31,3 +34,12 @@ repos:
           - types-redis
         # La configuración de mypy se gestiona centralmente en pyproject.toml
         args: [--config-file=pyproject.toml]
+
+  - repo: local
+    hooks:
+      - id: mypy-senda
+        name: mypy SENDA (configuración del dominio)
+        entry: bash -c 'cd apps/entrenamiento && uv run --no-sync mypy app.py src tests'
+        language: system
+        files: ^apps/entrenamiento/.*\.py$
+        pass_filenames: false

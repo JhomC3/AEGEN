@@ -1,0 +1,12 @@
+{# Contenido de #splits-section: lista de items acordeón (splits guardados) o
+   panel con CTA "Crear nuevo split". Los items llegan ya renderizados
+   (eager) en `splits_html`. #}
+{% if splits_html %}
+<div id="splits-list" class="flex flex-col gap-4">
+    {{ splits_html | safe }}
+</div>
+{% else %}
+<div class="panel panel-default split-empty-state" id="splits-empty">
+    <button type="button" data-action="split-new" class="btn btn-create">Crear nuevo split</button>
+</div>
+{% endif %}

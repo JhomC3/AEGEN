@@ -1,0 +1,32 @@
+{# save_template_form.html — alta "guardar como plantilla" compartida por sesión
+   y nutrición (spec 013 RF-9, paso 5.7). Namespace por dominio con ids
+   explícitos (los esquemas no derivan uno del otro); el JS de cada dominio
+   no cambia. Requiere en contexto: wrap_id, form_id, post_url, toggle_action,
+   toggle_class, toggle_label, name_label, name_placeholder, cancel_action,
+   confirm_action, save_label. #}
+<button
+    type="button"
+    data-action="{{ toggle_action }}"
+    class="edit-toggle {{ toggle_class }}"
+    aria-label="{{ toggle_label }}"
+    title="{{ toggle_label }}"
+>
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"></path></svg>
+</button>
+<div id="{{ wrap_id }}" class="hidden">
+    <form id="{{ form_id }}" hx-post="{{ post_url }}" hx-swap="none" class="flex items-center gap-1.5">
+        <input
+            name="nombre"
+            aria-label="{{ name_label }}"
+            placeholder="{{ name_placeholder }}"
+            title="Enter para guardar"
+            class="w-36 sm:w-44 cell-input"
+        >
+        <button type="button" data-action="{{ cancel_action }}" class="btn-x" aria-label="Cancelar" title="Cancelar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"></path></svg>
+        </button>
+        <button type="button" data-action="{{ confirm_action }}" class="btn-check" aria-label="{{ save_label }}" title="{{ save_label }}">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+        </button>
+    </form>
+</div>

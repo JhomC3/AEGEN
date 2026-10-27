@@ -1,0 +1,20 @@
+{# Sidebar índice (spec 027): filas de texto sin bordes, grupos como secciones.
+   Sin clases de chip, sin puntos. #}
+<nav class="panel panel-default rumbo-indice" aria-label="Preguntas">
+    {% for bloque in grupos %}
+    <section class="rumbo-indice-grupo" data-group="{{ bloque.grupo }}">
+        <h2 class="rumbo-indice-titulo">{{ bloque.grupo }}</h2>
+        <ul class="rumbo-indice-lista">
+            {% for p in bloque.preguntas %}
+            <li>
+                <button type="button" class="rumbo-indice-fila"
+                        hx-get="/rumbo/pregunta/{{ p.id }}" hx-target="#rumbo-pregunta-body"
+                        hx-swap="innerHTML">
+                    <span>{{ p.corta }}</span>
+                </button>
+            </li>
+            {% endfor %}
+        </ul>
+    </section>
+    {% endfor %}
+</nav>

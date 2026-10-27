@@ -1,0 +1,32 @@
+{# Grupos del catálogo de splits (spec 022, lenguaje Rumbo): secciones siempre
+   expandidas, filas de texto; los chips conservan clases y data-hooks de
+   Sortable (`split-catalog-chip`, `data-catalog-list`) y su agarre grab:
+   el catálogo clona al arrastrar y agrega al hacer clic. #}
+{% for group, group_items in catalog | groupby('grupo_muscular') %}
+<section class="indice-grupo split-catalog-group" data-group="{{ group }}">
+    <h2 class="indice-titulo">{{ group }}</h2>
+    <div class="split-catalog-body" data-catalog-list="{{ group }}">
+        {% for ej in group_items %}
+        <button type="button" class="split-item-card split-catalog-chip indice-fila"
+             data-action="split-add-item"
+             data-ejercicio="{{ ej.ejercicio }}" data-grupo="{{ ej.grupo_muscular }}"
+             data-item-type="ejercicio"
+             title="Arrastra al día o haz clic para agregar {{ ej.ejercicio }} al día seleccionado">
+            <span class="split-item-name">{{ ej.ejercicio }}</span>
+        </button>
+        {% endfor %}
+    </div>
+</section>
+{% endfor %}
+<section class="indice-grupo split-catalog-group" data-group="HIIT">
+    <h2 class="indice-titulo">HIIT</h2>
+    <div class="split-catalog-body" data-catalog-list="HIIT">
+        <button type="button" class="split-item-card split-catalog-chip indice-fila"
+             data-action="split-add-item"
+             data-ejercicio="HIIT" data-grupo="HIIT"
+             data-item-type="hiit"
+             title="Arrastra al día o haz clic para agregar HIIT al día seleccionado">
+            <span class="split-item-name">HIIT</span>
+        </button>
+    </div>
+</section>

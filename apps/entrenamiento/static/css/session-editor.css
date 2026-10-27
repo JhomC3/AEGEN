@@ -1,0 +1,582 @@
+/* session-editor.css — owns: #session-editor panel, rows, RM, edit state.
+   Los selectores cubren también #nutrition-panel para que ambos editores
+   compartan exactamente la misma estética y mecánica. */
+
+/* Aviso del editor de sesión: superpuesto arriba del panel, más grande y atenuado */
+#editor-notice {
+    position: absolute;
+    top: 10px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    z-index: var(--t-z-editor-notice);
+    pointer-events: none;
+}
+#editor-notice .notice {
+    font-size: 13px;
+    padding: 10px 20px;
+    border-radius: var(--t-radius-lg);
+}
+#editor-notice .notice-success {
+    background: var(--t-semantics-success-bg);
+    border: 1px solid var(--t-semantics-success-border);
+    color: var(--t-semantics-success-text);
+}
+#editor-notice .notice-error {
+    background: var(--t-semantics-danger-bg);
+    border: 1px solid var(--t-semantics-danger-border);
+    color: var(--t-semantics-danger-text);
+}
+
+/* Lápiz de edición: encendido = editable, apagado = solo lectura */
+.edit-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--t-radius-pill);
+    background: var(--t-overlay-white-004);
+    border: 1px solid var(--t-overlay-white-006);
+    backdrop-filter: blur(var(--t-blur-xl));
+    -webkit-backdrop-filter: blur(var(--t-blur-xl));
+    transition: color .15s, background .15s, box-shadow .15s;
+    cursor: pointer;
+}
+.edit-toggle.on {
+    color: var(--t-detail-white);
+    background: var(--t-overlay-white-014);
+    box-shadow: var(--t-glow-on-edit);
+}
+.edit-toggle.off {
+    color: var(--t-overlay-white-035);
+}
+.edit-toggle.off:hover {
+    color: var(--t-overlay-white-070);
+}
+.save-template-btn,
+.nutrition-template-btn {
+    color: var(--t-overlay-white-035);
+}
+.save-template-btn.on,
+.nutrition-template-btn.on {
+    color: var(--t-detail-white);
+    background: var(--t-overlay-white-014);
+    box-shadow: var(--t-glow-on-edit);
+}
+.delete-session-btn,
+.nutrition-delete-btn {
+    color: var(--t-overlay-white-030);
+}
+.delete-session-btn.on,
+.nutrition-delete-btn.on {
+    color: var(--t-detail-white);
+    background: var(--t-overlay-white-014);
+    box-shadow: var(--t-glow-on-edit);
+}
+
+/* Destino de drop de entrenos/plantillas (editor en modo editable) */
+#session-editor.drop-target,
+#nutrition-panel.drop-target {
+    outline: 2px dashed var(--t-overlay-burgundy-055);
+    outline-offset: -2px;
+}
+#session-editor .sortable-placeholder {
+    display: none;
+}
+
+/* Hover de fila: solo cuando el modo editable está activo, en cualquier fecha */
+#session-editor[data-editmode="1"] .set-row:hover,
+#nutrition-panel[data-editmode="1"] .nutrition-row:hover {
+    background: var(--t-overlay-white-004);
+}
+
+/* Drag and drop de filas (solo en modo editable, solo sesión) */
+#session-editor[data-editmode="1"] .set-row {
+    cursor: grab;
+}
+#session-editor[data-editmode="1"] .set-row.sortable-chosen {
+    cursor: grabbing;
+}
+#session-editor .sortable-ghost {
+    opacity: 0.4;
+    background: var(--t-overlay-burgundy-020);
+}
+#session-editor .sortable-chosen {
+    background: var(--t-overlay-white-006);
+}
+
+/* H06 (spec 046, scope Diario): altura por estado en vez de fija. Con pocas
+   filas la tabla mide su contenido exacto desde 1 fila (sin zona muerta y
+   con Guardar al alcance); por encima de la cota se conserva el máximo con
+   scroll interno. La altura sigue siendo determinista en CSS servido por
+   estado (filas conocidas al renderizar), sin medición JS. El popup del
+   Dashboard conserva sus alturas fijas (congelado). */
+#daily-page #session-editor .table-scroll,
+#daily-page #nutrition-panel .table-scroll {
+    height: auto;
+    max-height: var(--table-h);
+}
+#session-editor {
+    --table-h: 452px;
+}
+#nutrition-panel {
+    --table-h: 516px;
+}
+#session-editor .table-scroll,
+#nutrition-panel .table-scroll {
+    height: var(--table-h);
+    scrollbar-gutter: stable;
+}
+#session-editor .table-scroll thead tr {
+    height: 20px;
+}
+#session-editor .table-scroll tbody tr.set-row,
+#nutrition-panel .table-scroll tbody tr.nutrition-row {
+    height: 24px;
+}
+/* Firefox no soporta ::-webkit-scrollbar: usa scrollbar estándar fino y sutil.
+   (En Chrome/Safari estas propiedades anulan ::-webkit-scrollbar, por eso van aisladas.) */
+@supports not selector(::-webkit-scrollbar) {
+    #session-editor .table-scroll,
+    #nutrition-panel .table-scroll {
+        scrollbar-width: thin;
+        scrollbar-color: var(--t-surfaces-scrollbar-thumb) transparent;
+    }
+}
+#session-editor .table-scroll table,
+#nutrition-panel .table-scroll table {
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+/* H01 (spec 044, scope Diario): la tabla de sesión no se comprime en móvil.
+   Patrón espejo de nutrición: max-content + min 100% para scroll contenido,
+   columna Ejercicio con mínimo útil. Scope #daily-page para no mover el popup
+   del Dashboard (congelado). La cadena flex necesita min-width:0 para que el
+   ancho mínimo de la tabla no ensanche la página (el scroll queda confinado
+   al .table-scroll). */
+#daily-page #session-editor .table-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+}
+#daily-page #session-editor .table-scroll table {
+    width: max-content;
+    min-width: 100%;
+}
+#daily-page #daily-training-view,
+#daily-page #session-editor,
+#daily-page #session-editor-wrap,
+#daily-page #session-editor form {
+    min-width: 0;
+    max-width: 100%;
+}
+/* Contención final: el scroll ancho vive solo en .table-scroll; el panel
+   recorta cualquier resto propagado para no ensanchar la página. `clip` no
+   crea contenedor de scroll (preserva sticky interno); fallback a hidden. */
+#daily-page #session-editor {
+    overflow-x: clip;
+}
+@supports not (overflow: clip) {
+    #daily-page #session-editor {
+        overflow-x: hidden;
+    }
+}
+#daily-page #session-editor .table-scroll th:nth-child(2),
+#daily-page #session-editor .table-scroll td:nth-child(2) {
+    min-width: 140px;
+}
+#daily-page #session-editor .ej-select {
+    min-width: 120px;
+}
+/* Separador de sesión (mismo caso que nutrición). */
+#session-editor .table-scroll tbody td:not(.set-actions-column) {
+    box-shadow: var(--t-elevation-hairline-h);
+}
+#session-editor .table-scroll thead th,
+#nutrition-panel .table-scroll thead th {
+    position: sticky;
+    top: 0;
+    background: var(--t-surfaces-neutral-900);
+    z-index: var(--t-z-table-head);
+}
+/* Nutrición: 3 filas de cabecera apiladas con offsets propios y fondo sólido
+   (sin heredar el tintado de la fila, que quedaba transparente al hacer scroll). */
+#nutrition-panel .table-scroll thead tr:nth-child(1) th {
+    top: 0;
+    z-index: var(--t-z-table-head-1);
+    height: 36px;
+    background: var(--t-surfaces-neutral-900);
+}
+#nutrition-panel .table-scroll thead tr:nth-child(2) th {
+    top: 36px;
+    z-index: var(--t-z-table-head-2);
+    background: var(--t-surfaces-neutral-900);
+}
+#nutrition-panel .table-scroll thead tr:nth-child(3) th {
+    top: 60px;
+    z-index: var(--t-z-table-head-2);
+    background: var(--t-surfaces-matte-900);
+}
+#session-editor .table-scroll::-webkit-scrollbar,
+#nutrition-panel .table-scroll::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+}
+#session-editor .table-scroll::-webkit-scrollbar-track,
+#nutrition-panel .table-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+#session-editor .table-scroll::-webkit-scrollbar-thumb,
+#nutrition-panel .table-scroll::-webkit-scrollbar-thumb {
+    background: var(--t-surfaces-scrollbar-thumb);
+    border-radius: var(--t-radius-pill);
+}
+/* Nutrición: scrollbar discreta solo vía ::-webkit-scrollbar (3px, pista
+   transparente). Sin scrollbar-width/color aquí: en Chrome/Safari anulan el
+   estilo propio y devuelven la barra nativa (Firefox: bloque @supports). */
+#nutrition-panel .table-scroll::-webkit-scrollbar {
+    width: 3px;
+    height: 3px;
+}
+#nutrition-panel .table-scroll::-webkit-scrollbar-track {
+    background: transparent;
+}
+#nutrition-panel .table-scroll::-webkit-scrollbar-thumb {
+    background: var(--t-surfaces-scrollbar-thumb);
+    border-radius: var(--t-radius-pill);
+}
+#nutrition-panel .table-scroll::-webkit-scrollbar-thumb:hover {
+    background: var(--t-surfaces-scrollbar-hover);
+}
+
+/* Foco interior en celdas: el td recorta (overflow hidden, 2px verticales)
+   y el outline global (2px + offset 2px) se cortaba arriba/abajo. En negativo
+   pinta dentro del input y nunca se recorta. */
+#session-editor .cell-input:focus-visible,
+#session-editor .cell-select:focus-visible,
+#nutrition-panel .cell-input:focus-visible,
+#nutrition-panel .cell-select:focus-visible {
+    outline-offset: -2px !important;
+}
+
+#session-editor .editor-header-actions svg,
+#nutrition-panel .editor-header-actions svg {
+    width: 13px;
+    height: 13px;
+}
+/* La columna de acciones ocupa 0: los botones viven en una píldora flotante
+   sticky-right (ver .row-actions abajo). El <col> se conserva para que
+   table-layout: fixed no reparta su ancho al resto. */
+#session-editor .set-actions-column,
+#nutrition-panel .set-actions-column {
+    width: 0;
+}
+#session-editor .row-actions .row-btn,
+#nutrition-panel .row-actions .row-btn {
+    position: relative;
+    width: 14px;
+    height: 14px;
+    font-size: 12px;
+}
+/* Hit area >= 24px (WCAG 2.5.8) sin engordar la fila: mismo patrón que
+   .split-item-remove (área visual compacta + ::before expansor). */
+#session-editor .row-actions .row-btn::before,
+#nutrition-panel .row-actions .row-btn::before {
+    content: '';
+    position: absolute;
+    inset: -5px;
+}
+/* Píldora flotante de acciones (ambos editores): celda sticky-right sobre
+   la tabla. Aparición por opacidad en hover (no display: rompería clics e2e);
+   focus-within por teclado, :active en táctil, oculta en readonly. */
+#session-editor td.set-actions-column,
+#nutrition-panel td.set-actions-column {
+    position: sticky;
+    right: 0;
+    z-index: var(--t-z-table-actions);
+    overflow: visible;
+    background: transparent;
+}
+#session-editor .row-actions,
+#nutrition-panel .row-actions {
+    display: inline-flex;
+    width: auto;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--t-overlay-white-004);
+    border: 1px solid var(--t-overlay-white-008);
+    border-radius: var(--t-radius-pill);
+    padding: 2px 5px;
+    backdrop-filter: blur(var(--t-blur-xl));
+    -webkit-backdrop-filter: blur(var(--t-blur-xl));
+}
+#nutrition-panel .nutrition-row:focus-within .row-actions,
+#nutrition-panel .nutrition-row:active .row-actions,
+#session-editor .set-row:focus-within .row-actions,
+#session-editor .set-row:active .row-actions {
+    opacity: 1;
+}
+#session-editor[data-editmode="0"] .row-actions,
+#nutrition-panel[data-editmode="0"] .row-actions {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+/* H11 (spec 047, scope Diario): sin hover las acciones de fila en edición
+   están siempre visibles (descubrimiento táctil). Solo edición (`=1`), así
+   el readonly conserva su ocultación; escritorio y popup intactos. */
+@media (hover: none) {
+    #daily-page #session-editor[data-editmode="1"] .set-row .row-actions,
+    #daily-page #nutrition-panel[data-editmode="1"] .nutrition-row .row-actions {
+        opacity: 1;
+    }
+}
+/* H11-R2 (spec 047, scope Diario): RIR vive en la píldora con botones de
+   24px (las mitades en celda no caben a 24px en filas de 24px). Ocultos
+   fuera del Diario para no alterar el popup congelado; steppers en celda
+   ocultos solo en Diario (el popup los conserva). Teclado intacto. */
+.row-actions .row-btn-rir {
+    display: none;
+}
+#daily-page .row-actions .row-btn-rir {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+}
+#daily-page .row-actions .row-btn-rir::before {
+    content: none;
+}
+#daily-page .rir-step {
+    display: none;
+}
+#daily-page #session-editor input[name="rir"] {
+    padding-right: 8px;
+}
+/* H11-R2d2 (spec 047, scope Diario): geometría compartida táctil y
+   escritorio. Gaps de 10px (centros a ≥24px) y píldora de 24px exactos
+   (tangente entre filas): ningún vecino se activa en el área ajena y ningún
+   área baja del mínimo. Expansores completos en ambas superficies. */
+#daily-page #session-editor .row-actions,
+#daily-page #nutrition-panel .row-actions {
+    column-gap: 10px;
+    padding: 0;
+    border: 0;
+}
+/* H11-R2: visibilidad y cuneta táctiles. La cuneta acoge la píldora
+   absoluta para que no flote sobre las celdas de datos. Anchos
+   deterministas (cajas fijas + gaps): sesión 106px, nutrición 38px,
+   con 2px de holgura. */
+@media (hover: none) {
+    #daily-page #session-editor[data-editmode="1"] .row-actions,
+    #daily-page #nutrition-panel[data-editmode="1"] .row-actions {
+        opacity: 1;
+    }
+    /* Cuneta de acciones en táctil: la píldora absoluta cabe entera en la
+       columna de acciones (ancho 0 en escritorio) en vez de flotar sobre
+       las celdas de datos. Anchos deterministas (cajas fijas + gaps):
+       sesión 106px, nutrición 38px, con 2px de holgura. */
+    #daily-page #session-editor .set-actions-column {
+        width: 108px;
+    }
+    #daily-page #nutrition-panel .set-actions-column {
+        width: 40px;
+    }
+}
+
+/* Colapso de panel: se oculta todo salvo la primera fila del header
+   (caja de título + fecha + chevron), que permanece para re-expandir. */
+#session-editor.collapsed .panel-content > *:not(:first-child),
+#nutrition-panel.collapsed .panel-content > *:not(:first-child) {
+    display: none;
+}
+.collapse-chevron {
+    transition: transform .15s;
+}
+#session-editor.collapsed .collapse-chevron,
+#nutrition-panel.collapsed .collapse-chevron {
+    transform: rotate(-90deg);
+}
+
+/* readonly: el placeholder "s" de Desc vacía no debe parecer dato */
+#session-editor input:disabled::placeholder,#nutrition-panel input:disabled::placeholder{color:transparent}
+
+/* Caja del título del panel (izquierda superior) */
+#session-editor .panel-title-box,
+#nutrition-panel .panel-title-box {
+    border: 1px solid var(--t-overlay-white-008);
+    border-radius: var(--t-radius-lg);
+    background: var(--t-overlay-black-025);
+    padding: 5px 12px;
+}
+
+/* Nutrición (21 nutrientes): anchos en px + width:max-content para que la
+   tabla desborde con scroll horizontal confinado. */
+#nutrition-panel {
+    --nutri-food-w: 180px;
+}
+#nutrition-panel .table-scroll {
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+}
+#nutrition-panel .table-scroll:focus-visible {
+    outline: 2px solid var(--t-focus-ring);
+    outline-offset: -2px;
+}
+#nutrition-panel .table-scroll table {
+    width: max-content;
+    min-width: 100%;
+}
+#nutrition-panel .food-col {
+    width: var(--nutri-food-w);
+}
+#nutrition-panel .qty-col {
+    width: 92px;
+}
+/* Tiers de nutriente según el nombre (S/M); la unidad va en 2ª línea. */
+#nutrition-panel .nutrient-col-s {
+    width: 64px;
+}
+#nutrition-panel .nutrient-col-m {
+    width: 80px;
+}
+/* Cabecera en dos líneas: nombre + unidad (detalle en title/aria). */
+#nutrition-panel .table-scroll thead tr:nth-child(1) th .nutri-h {
+    display: block;
+}
+#nutrition-panel .table-scroll thead tr:nth-child(1) th .nutri-u {
+    display: block;
+    font-weight: 400;
+    text-transform: none;
+}
+/* Cabecera fila 1 en dos líneas; filas 2-3 en una. Alturas 36/24/24px
+   para offsets sticky exactos (36/60px). */
+#nutrition-panel .table-scroll thead th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    height: 24px;
+    box-sizing: border-box;
+    vertical-align: middle;
+}
+#nutrition-panel .table-scroll tbody td:not(.set-actions-column),
+#nutrition-panel .nutri-target-row th,
+#nutrition-panel .nutri-consumed-row th {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-variant-numeric: tabular-nums;
+}
+/* Alimento + Cantidad fijas: sticky-left con fondo sólido (oculta lo que
+   pasa por debajo) y separador; z: esquina fila 1 a 8, cuerpo a 2. */
+#nutrition-panel .table-scroll thead th:first-child,
+#nutrition-panel .table-scroll tbody td:first-child {
+    left: 0;
+}
+#nutrition-panel .table-scroll thead th:nth-child(2),
+#nutrition-panel .table-scroll tbody td:nth-child(2) {
+    left: var(--nutri-food-w);
+}
+#nutrition-panel .table-scroll thead tr:nth-child(1) th:nth-child(-n+2) {
+    z-index: var(--t-z-table-corner);
+}
+/* Esquinas Objetivo/Consumido a z 7 (sobre deslizantes, bajo fila 1). */
+#nutrition-panel .table-scroll thead tr:nth-child(2) th:nth-child(-n+2),
+#nutrition-panel .table-scroll thead tr:nth-child(3) th:nth-child(-n+2) {
+    z-index: var(--t-z-table-head-1);
+}
+#nutrition-panel .table-scroll thead th:nth-child(-n+2),
+#nutrition-panel .table-scroll tbody td:nth-child(-n+2) {
+    position: sticky;
+}
+#nutrition-panel .table-scroll tbody td:nth-child(-n+2) {
+    z-index: var(--t-z-table-cell);
+    background: var(--t-surfaces-neutral-900);
+    transition: background-color .15s cubic-bezier(.4, 0, .2, 1);
+}
+#nutrition-panel .table-scroll thead th:nth-child(2) {
+    box-shadow: var(--t-elevation-hairline-v);
+}
+#nutrition-panel[data-editmode="1"] .nutrition-row:hover td:nth-child(-n+2) {
+    background: var(--t-surfaces-neutral-800);
+}
+/* Separadores solo-pintado (el divide-y de tr no pinta con border-separate
+   en Chrome; el inset no ocupa layout y el paso sigue siendo rowH). */
+#nutrition-panel .table-scroll tbody td:not(.set-actions-column) {
+    box-shadow: var(--t-elevation-hairline-h);
+}
+#nutrition-panel .table-scroll tbody td:nth-child(2):not(.set-actions-column) {
+    box-shadow: var(--t-elevation-hairline-hv);
+}
+
+/* RIR: cualquier decimal es válido (step="any"); las flechas propias avanzan 0,1.
+   Se ocultan los spinners nativos del input number, cuyo salto seguiría al step. */
+#session-form input[name="rir"]::-webkit-outer-spin-button,
+#session-form input[name="rir"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+#session-form input[name="rir"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+}
+/* Cantidad (nutrición): mismo patrón que RIR — los spinners nativos robaban
+   ~16px dentro de la columna y recortaban valores de 3 cifras. */
+#nutrition-form input[name="cantidad"]::-webkit-outer-spin-button,
+#nutrition-form input[name="cantidad"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+#nutrition-form input[name="cantidad"] {
+    -moz-appearance: textfield;
+    appearance: textfield;
+    font-variant-numeric: tabular-nums;
+}
+.rir-step {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    color: var(--t-surfaces-neutral-400);
+    font-size: 12px;
+    line-height: 1.1;
+    cursor: pointer;
+    transition: color .15s, background .15s;
+}
+/* Hit area ensanchada a 24px sin engordar la fila: cada mitad expande hacia
+   FUERA (nunca hacia la mitad vecina, para no interceptar sus clics). */
+.rir-step:first-child::before {
+    content: '';
+    position: absolute;
+    inset: -6px -6px 0 -6px;
+}
+.rir-step:last-child::before {
+    content: '';
+    position: absolute;
+    inset: 0 -6px -6px -6px;
+}
+.rir-step:hover:not(:disabled) {
+    color: var(--t-detail-white);
+    background: var(--t-overlay-white-006);
+}
+.rir-step:disabled {
+    cursor: default;
+    opacity: 0.15;
+}
+
+/* Badge RIR (FALLO/FORZADA): burdeos sólido sobre la fila */
+.rir-badge {
+    font-size: 12px;
+    font-weight: 900;
+    padding: 0 4px;
+    border-radius: var(--t-radius-sm);
+    background: var(--t-burgundy-700);
+    color: var(--t-detail-white);
+}

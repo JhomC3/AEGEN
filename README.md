@@ -8,6 +8,21 @@
 
 Metodología de trabajo: SDD (proceso común en `../sdd-kit/SDD_BOOTSTRAP.md`; principios locales en `docs/constitution.md`, entrada en `docs/sdd/README.md`, reglas del agente en `AGENTS.md`).
 
+## Estado de SENDA y reparación de AEGEN — 2026-10-27
+
+- [Reparación del recorrido de respuesta](specs/002-reparacion-aegen/spec.md):
+  cambios y regresiones locales; validación real de Telegram pendiente.
+- [Integración SENDA](specs/001-fusion-dominio/spec.md): dominio independiente
+  en `apps/entrenamiento/`, subagente `senda_specialist`, comando `/senda` y
+  alias `/bienestar`. No se declara terminada la integración operativa.
+- [Procedimiento operativo](specs/002-reparacion-aegen/despliegue.md): preserva
+  el checkout modificado de la VM, sus datos y las imágenes anteriores.
+- [Consolidación Git](specs/002-reparacion-aegen/consolidacion-git.md): cambios
+  publicados por unidades; secretos, DB y entregas generadas fuera de Git.
+
+El código de este repositorio no se sincroniza automáticamente con el checkout
+hermano `entrenamiento`. Subir cambios a GitHub no actualiza GCP ni los datos.
+
 ## 📖 Manual del Proyecto
 
 Toda la filosofía de desarrollo, los estándares de codificación, la guía de arquitectura, el estado actual y la hoja de ruta del proyecto se encuentran documentados en nuestro manual principal y carpetas especializadas.

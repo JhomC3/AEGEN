@@ -1,0 +1,107 @@
+/* theme.css — design tokens and global rules. Owns: document-level styling. */
+:root {
+    color-scheme: dark;
+}
+body {
+    background-color: var(--t-surfaces-matte-950);
+}
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: var(--t-surfaces-matte-950);
+}
+::-webkit-scrollbar-thumb {
+    background: var(--t-surfaces-scrollbar-thumb);
+    border-radius: var(--t-radius-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--t-surfaces-scrollbar-hover);
+}
+
+/* Foco visible: fallback siempre visible; se suprime solo cuando el navegador
+   soporta :focus-visible (el anillo se muestra solo para navegación por teclado). */
+button {
+    -webkit-tap-highlight-color: transparent;
+}
+button:focus {
+    outline: 2px solid var(--t-focus-ring);
+    outline-offset: 2px;
+}
+@supports (selector(:focus-visible)) {
+    button:focus {
+        outline: none;
+    }
+    button:focus-visible,
+    input:focus-visible,
+    select:focus-visible,
+    textarea:focus-visible {
+        outline: 2px solid var(--t-focus-ring) !important;
+        outline-offset: 2px;
+    }
+}
+
+/* Movimiento reducido: sin animaciones ni transiciones (WCAG 2.3.3). */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}
+
+/* Skip-link: solo visible con teclado (WCAG 2.4.1). */
+.skip-link {
+    position: absolute;
+    top: -48px;
+    left: 12px;
+    z-index: var(--t-z-skip-link);
+    padding: 8px 14px;
+    border-radius: var(--t-radius-lg);
+    background: var(--t-surfaces-matte-900);
+    border: 1px solid var(--t-burgundy-600);
+    color: var(--t-detail-white);
+    font-size: 12px;
+    font-weight: 900;
+    letter-spacing: var(--t-tracking-lg);
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: top 0.15s ease;
+}
+.skip-link:focus-visible,
+.skip-link:focus {
+    top: 12px;
+    outline: 2px solid var(--t-focus-ring);
+    outline-offset: 2px;
+}
+#main-content:focus {
+    outline: none;
+}
+
+/* Neon glow effects (tokens: glow.*) */
+.neon-border {
+    box-shadow: var(--t-glow-neon-border);
+}
+.metallic-border {
+    position: relative;
+    background-clip: padding-box !important;
+}
+.metallic-border::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    bottom: -1px;
+    border-radius: inherit;
+    background: var(--t-glow-metallic-border);
+    z-index: var(--t-z-below);
+    pointer-events: none;
+}
+.neon-title {
+    text-shadow: var(--t-glow-neon-title);
+}

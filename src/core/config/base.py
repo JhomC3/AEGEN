@@ -33,6 +33,17 @@ class BaseAppSettings(BaseSettings):
     # Administrador del sistema
     ADMIN_CHAT_ID: str | None = None
 
+    # Dominio Senda (fusión SDD 001): URL loopback del proceso de dominio
+    # en el mismo host (el puerto LAN del dominio sirve al móvil; el agente
+    # usa siempre loopback). En pruebas se usa 127.0.0.1:8101.
+    BIENESTAR_DOMAIN_URL: str = "http://127.0.0.1:8000"
+    # Token compartido con la API v1 del dominio (nunca en logs ni en el LLM).
+    BIENESTAR_SYNC_TOKEN: SecretStr | None = None
+    # Chats autorizados para el dominio; vacío = solo ADMIN_CHAT_ID.
+    BIENESTAR_ALLOWED_CHAT_IDS: list[str] = []
+    # Zona horaria para fechas relativas («hoy», «ayer»).
+    BIENESTAR_TZ: str = "America/Bogota"
+
     # === LLM Models por Tarea ===
     # Chat Principal y Ruteo (Latencia ultra-baja)
     CHAT_MODEL: str = "openai/gpt-oss-120b"

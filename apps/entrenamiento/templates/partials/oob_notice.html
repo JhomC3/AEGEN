@@ -1,0 +1,3 @@
+<div id="{{ target }}" hx-swap-oob="innerHTML">
+    <div class="notice {{ kind }}" data-dismiss="{{ dismiss }}"{% if kind == "notice-error" %} role="alert"{% endif %}>{{ message }}</div>
+</div>
